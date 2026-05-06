@@ -2,6 +2,11 @@
 
 All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — short summary`.
 
+## 2026-05-06
+
+- Backend live on Render at `https://direct-inventory.onrender.com` — health check returns OK with both DB connections green.
+- Switched all references from the placeholder `direct-inventory-portal.onrender.com` to the actual `direct-inventory.onrender.com`.
+
 ## Unreleased
 
 - Initial scaffold (2026-05-06).

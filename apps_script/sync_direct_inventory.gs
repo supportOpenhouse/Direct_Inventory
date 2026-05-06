@@ -5,7 +5,7 @@
  *   1. Open the data sheet (id 1cTKri04m4HEj_JhTxH9FE9h70RL5gRMv4yGtv9g1BQM).
  *   2. Extensions → Apps Script. Paste this file as Code.gs.
  *   3. Project Settings → Script Properties → add:
- *        BACKEND_URL  = https://direct-inventory-portal.onrender.com
+ *        BACKEND_URL  = https://direct-inventory.onrender.com
  *        SYNC_TOKEN   = <same value as the backend env var SYNC_TOKEN>
  *   4. Run installTrigger() once. Approve the OAuth prompt.
  *

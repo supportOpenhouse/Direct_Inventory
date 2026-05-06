@@ -56,7 +56,7 @@ backend daily. No service account, no Sheets API to enable.
 2. **Extensions → Apps Script**. Paste [`apps_script/sync_direct_inventory.gs`](../apps_script/sync_direct_inventory.gs) as `Code.gs`.
 3. **Project Settings → Time zone**: set to `Asia/Kolkata`.
 4. **Project Settings → Script properties** → add:
-   - `BACKEND_URL` = `https://direct-inventory-portal.onrender.com`
+   - `BACKEND_URL` = `https://direct-inventory.onrender.com`
    - `SYNC_TOKEN` = the same value as the backend's `SYNC_TOKEN` env var (Render will auto-generate one — copy it from Render's env vars after first deploy)
 5. From the Apps Script editor, run `installTrigger()` once. Approve the OAuth prompt.
 6. Verify: run `runSync()` manually and check **View → Logs** for `HTTP 200` and the row counts.
@@ -69,11 +69,11 @@ After install, `runSync` fires automatically every day at ~11:30 IST.
 
 ```bash
 # 1. backend health
-curl https://direct-inventory-portal.onrender.com/api/health
+curl https://direct-inventory.onrender.com/api/health
 # expect: {"db":"connected","properties_db":"connected","status":"ok"}
 
 # 2. push path (mimics what Apps Script does)
-curl -X POST https://direct-inventory-portal.onrender.com/api/sync/sheet \
+curl -X POST https://direct-inventory.onrender.com/api/sync/sheet \
      -H "X-Sync-Token: $SYNC_TOKEN" \
      -H "Content-Type: application/json" \
      -d '{"rows":[{"source":"99acres","city":"Noida","society":"Test","listing_link":"https://example.com/x1"}]}'

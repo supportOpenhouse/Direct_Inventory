@@ -75,7 +75,7 @@ The OH-ID generator has full unit test coverage (rollover, suffix progression, c
 
 When a lead moves to `visit_scheduled`, the Visit Schedule modal opens and `POST /api/visits/schedule` forwards to `{FORMS_APP_URL}/api/external/schedule` with the shared `INTERNAL_API_KEY`. When the visit is marked complete in Forms, Forms calls back to `POST /api/visits/forms-webhook` and we flip the row to `visit_completed`.
 
-The webhook URL needs to be added to the Forms-app config: `https://direct-inventory-portal.onrender.com/api/visits/forms-webhook`.
+The webhook URL needs to be added to the Forms-app config: `https://direct-inventory.onrender.com/api/visits/forms-webhook`.
 
 ## Conventions (inherited from CP portal)
 
