@@ -1,0 +1,187 @@
+/* Direct Inventory Portal — visual language modeled on the supply screenshot */
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  background: #f5f1eb;
+  color: #0f172a;
+  font-size: 14px;
+}
+button { font-family: inherit; cursor: pointer; }
+a { color: inherit; }
+
+.app-shell { min-height: 100%; display: flex; flex-direction: column; }
+.topbar {
+  display: flex; align-items: center; gap: 24px;
+  background: #0f1115; color: #f8fafc; padding: 10px 20px;
+}
+.brand { display: flex; align-items: center; gap: 8px; }
+.brand-mark {
+  background: #fb923c; color: #0f1115; font-weight: 800;
+  border-radius: 6px; padding: 2px 7px; font-size: 13px;
+}
+.brand-name { font-weight: 700; }
+.brand-sub { color: #94a3b8; font-size: 13px; margin-left: 4px; }
+.topnav { display: flex; gap: 18px; flex: 1; }
+.topnav a { color: #cbd5e1; text-decoration: none; padding: 6px 8px; border-radius: 6px; }
+.topnav a.active { color: #fff; background: #1f2937; }
+.user-pill { display: flex; align-items: center; gap: 10px; }
+.role-chip {
+  background: #fb923c; color: #0f1115; font-weight: 700; font-size: 11px;
+  padding: 2px 8px; border-radius: 999px; text-transform: uppercase;
+}
+.user-name { font-size: 13px; }
+.btn-link { background: transparent; border: 0; color: #cbd5e1; font-size: 13px; }
+
+.main { padding: 16px 20px; flex: 1; }
+
+/* board */
+.board-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.city-tabs { display: flex; gap: 6px; }
+.tab {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 999px; padding: 6px 14px; font-weight: 600;
+}
+.tab-active { background: #0f1115; color: #fff; border-color: #0f1115; }
+.search-form { display: flex; gap: 8px; flex: 1; min-width: 280px; }
+.search-form input {
+  flex: 1; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff;
+}
+.toolbar-spacer { flex: 1; }
+.btn-primary {
+  background: #fb923c; color: #fff; border: 0; border-radius: 8px; padding: 8px 14px; font-weight: 700;
+}
+.btn-primary:disabled { opacity: 0.6; }
+.btn-ghost {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 14px; font-weight: 600;
+}
+
+.last-sync { color: #64748b; font-size: 12px; padding: 6px 10px; border-radius: 8px; background: #f1f5f9; cursor: help; }
+
+.stage-counts {
+  display: grid; grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 10px; margin: 14px 0;
+}
+.count-pill {
+  background: #fff; border-radius: 14px; padding: 14px 16px; text-align: left;
+}
+.count-pill .num { font-size: 28px; font-weight: 800; }
+.count-pill .lbl { font-size: 11px; letter-spacing: 1px; color: #64748b; margin-top: 2px; }
+
+.kanban {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 320px;
+  gap: 14px; overflow-x: auto; padding-bottom: 12px;
+}
+.kanban-col { display: flex; flex-direction: column; min-height: 200px; }
+.col-head {
+  display: flex; align-items: center; gap: 8px; padding: 6px 4px; font-weight: 700;
+}
+.stage-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.col-title { flex: 1; }
+.col-count { color: #94a3b8; font-weight: 600; }
+.col-body { display: flex; flex-direction: column; gap: 10px; }
+
+.card {
+  background: #fff; border-radius: 12px; padding: 12px 14px; cursor: pointer;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+}
+.card:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+.card-head { display: flex; justify-content: space-between; align-items: flex-start; }
+.card-society { font-weight: 700; font-size: 15px; }
+.card-meta { display: flex; align-items: center; gap: 8px; color: #94a3b8; font-size: 11px; }
+.city-chip { letter-spacing: 1px; font-weight: 700; }
+.oh-id { font-family: ui-monospace, Menlo, monospace; }
+.card-sub { color: #64748b; font-size: 12px; margin-top: 2px; }
+.card-tags { display: flex; gap: 6px; margin: 8px 0; }
+.tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 600; }
+.tag-bhk { background: #fff7ed; color: #9a3412; }
+.tag-area { background: #f1f5f9; color: #334155; }
+.card-prices { display: flex; gap: 24px; padding-top: 8px; border-top: 1px solid #f1f5f9; }
+.card-prices .lbl { font-size: 10px; color: #94a3b8; letter-spacing: 1px; }
+.card-prices .val { font-weight: 800; font-size: 16px; }
+.val-orange { color: #ea580c; }
+.card-foot { color: #94a3b8; font-size: 12px; margin-top: 8px; display: flex; gap: 6px; }
+.src { color: #475569; font-weight: 600; }
+.reject-reason {
+  margin-top: 8px; background: #fef2f2; color: #991b1b;
+  padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-block;
+}
+
+.card-expand {
+  background: #fafaf7; border-radius: 12px; padding: 12px 14px; margin-top: -8px;
+  border: 1px dashed #e5e7eb;
+}
+.exp-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin-bottom: 10px;
+  font-size: 13px;
+}
+.exp-lbl { display: block; color: #94a3b8; font-size: 11px; letter-spacing: 1px; }
+.exp-link { color: #2563eb; word-break: break-all; }
+.exp-actions { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+.exp-actions select, .exp-notes textarea {
+  width: 100%; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fff;
+  font-family: inherit; font-size: 13px;
+}
+.exp-notes { margin-top: 10px; }
+.exp-notes label { display: block; font-size: 11px; color: #94a3b8; letter-spacing: 1px; }
+.exp-saving { font-size: 11px; color: #64748b; margin-top: 4px; }
+
+/* login */
+.login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f5f1eb; }
+.login-card {
+  background: #fff; padding: 36px; border-radius: 20px; min-width: 360px;
+  box-shadow: 0 12px 36px rgba(15,17,21,0.08);
+}
+.login-brand { display: flex; align-items: center; gap: 10px; }
+.login-card h1 { font-size: 18px; margin: 0; }
+.login-hint { color: #64748b; margin: 14px 0 18px; }
+.login-google { display: flex; justify-content: center; }
+.login-error { color: #b91c1c; margin-top: 12px; font-size: 13px; }
+
+/* modal */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(15,17,21,0.4);
+  display: flex; align-items: center; justify-content: center; z-index: 100;
+}
+.modal {
+  background: #fff; border-radius: 16px; padding: 22px; min-width: 360px; max-width: 92vw;
+}
+.modal-wide { min-width: 640px; }
+.modal h3 { margin: 0 0 4px; }
+.modal-sub { color: #64748b; margin: 0 0 14px; font-size: 13px; }
+.modal label { display: block; font-size: 11px; color: #64748b; letter-spacing: 1px; margin-bottom: 4px; }
+.modal input, .modal select, .modal textarea {
+  width: 100%; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 12px;
+  font-family: inherit; font-size: 14px; background: #fff;
+}
+.modal-error { color: #b91c1c; margin-bottom: 8px; font-size: 13px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+
+/* form grid for add inventory */
+.form-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;
+}
+.form-grid > div { display: flex; flex-direction: column; }
+.form-grid input, .form-grid select { width: 100%; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; }
+.form-grid label { font-size: 11px; color: #64748b; letter-spacing: 1px; margin-bottom: 4px; }
+.form-wide { grid-column: span 3; }
+
+/* admin pages */
+.admin-page h2 { margin: 4px 0 14px; }
+.page-hint { color: #64748b; margin-top: -8px; }
+.card-block {
+  background: #fff; border-radius: 14px; padding: 18px; margin-bottom: 16px;
+}
+.card-block h3 { margin: 0 0 12px; font-size: 16px; }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th, .data-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+.data-table th { color: #64748b; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+.muted { color: #94a3b8; }
+.filters-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.filters-row input { padding: 6px 10px; border: 1px solid #e5e7eb; border-radius: 8px; }
+
+.city-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.pill { background: #f1f5f9; border: 0; padding: 6px 12px; border-radius: 999px; font-weight: 600; }
+.pill-on { background: #0f1115; color: #fff; }
+
+.loading { color: #64748b; padding: 20px; }

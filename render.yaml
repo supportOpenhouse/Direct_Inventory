@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: direct-inventory-portal-backend
+    env: python
+    region: singapore
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn backend.app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60
+    rootDir: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: DATABASE_URL
+        sync: false
+      - key: PROPERTIES_DB_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: ALLOWED_EMAIL_DOMAIN
+        value: openhouse.in
+      - key: SYNC_TOKEN
+        generateValue: true
+      - key: FORMS_APP_URL
+        sync: false
+      - key: INTERNAL_API_KEY
+        sync: false
+      - key: FRONTEND_ORIGIN
+        sync: false
