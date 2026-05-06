@@ -4,9 +4,8 @@ services:
     env: python
     region: singapore
     plan: free
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: gunicorn backend.app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60
-    rootDir: .
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60
     healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION

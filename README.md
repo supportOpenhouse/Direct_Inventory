@@ -34,21 +34,21 @@ RM/manager assignment uses the `rm_mapping` table — resolution order **society
 ## Local dev
 
 ```bash
-# 1. Backend
-cd backend
-cp .env.example .env       # fill DATABASE_URL, GOOGLE_OAUTH_CLIENT_ID, etc.
+# 1. Backend (run from repo root)
+cp backend/.env.example backend/.env   # fill DATABASE_URL, GOOGLE_OAUTH_CLIENT_ID, etc.
 python3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-psql "$DATABASE_URL" -f migrations/001_init.sql
-psql "$DATABASE_URL" -f migrations/002_seed_admin.sql
-psql "$DATABASE_URL" -f migrations/003_seed_test_users.sql
-.venv/bin/python -m backend.app           # http://localhost:5060
+psql "$DATABASE_URL" -f backend/migrations/001_init.sql
+psql "$DATABASE_URL" -f backend/migrations/002_seed_admin.sql
+psql "$DATABASE_URL" -f backend/migrations/003_seed_test_users.sql
+.venv/bin/python -m backend.app        # http://localhost:5060
+# (production: gunicorn wsgi:app — entry point is wsgi.py at repo root)
 
 # 2. Frontend
-cd ../frontend
-cp .env.example .env       # fill VITE_GOOGLE_OAUTH_CLIENT_ID
+cd frontend
+cp .env.example .env                   # fill VITE_GOOGLE_OAUTH_CLIENT_ID
 npm install
-npm run dev                # http://localhost:5174
+npm run dev                            # http://localhost:5174
 ```
 
 Port choices avoid clashing with the CP portal (5050 / 5173).
