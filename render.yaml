@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: direct-inventory-portal-backend
+    name: direct-inventory-portal
     env: python
     region: singapore
     plan: free
