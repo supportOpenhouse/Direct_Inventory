@@ -163,6 +163,11 @@ a { color: inherit; }
 }
 .exp-saving { font-size: 11px; color: #64748b; margin-top: 4px; }
 
+/* Visit Schedule modal */
+.modal-visit { width: 480px; max-width: 92vw; }
+.modal .req { color: #ef4444; }
+.assigned-by { color: #64748b; font-size: 13px; margin: 4px 0 12px; }
+
 /* login */
 .login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f5f1eb; }
 .login-card {

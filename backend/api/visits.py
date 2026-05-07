@@ -14,11 +14,30 @@ import requests
 from flask import Blueprint, g, jsonify, request
 
 from .. import config
-from ..db import get_conn
+from ..db import get_conn, get_props_conn
 from ..services.activity import log as log_activity
 from .auth import require_auth
 
 bp = Blueprint("visits", __name__, url_prefix="/api/visits")
+
+
+@bp.get("/field-execs")
+@require_auth("admin", "manager", "rm")
+def list_field_execs():
+    """Field executives = active rows in properties.users with can_visit=true."""
+    conn = get_props_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                """SELECT id, name, phone, email
+                   FROM users
+                   WHERE can_visit = TRUE AND is_active = TRUE AND phone IS NOT NULL
+                   ORDER BY name"""
+            )
+            rows = cur.fetchall()
+        return jsonify({"items": rows})
+    finally:
+        conn.close()
 
 
 @bp.post("/schedule")

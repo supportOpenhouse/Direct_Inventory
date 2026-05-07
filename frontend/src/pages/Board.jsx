@@ -111,6 +111,12 @@ export default function Board() {
       }
       return next;
     });
+    // If the stage changed, the chip counts and column membership are now stale —
+    // re-fetch counts and the active board view in the background.
+    if (updated.stage) {
+      refreshCounts();
+      if (stageFilter) refreshFiltered(page); else refreshKanban();
+    }
   }
 
   function selectStage(s) {

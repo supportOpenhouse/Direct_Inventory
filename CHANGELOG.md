@@ -10,6 +10,10 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- Visit Schedule modal: separate Date and Time fields, Field Exec dropdown sourced from `properties.users WHERE can_visit=TRUE`, "Assigned by: <current user>" line. Replaces the single datetime-local input + free-text phone.
+- New backend endpoint `GET /api/visits/field-execs` that surfaces the filtered properties.users list (read-only).
+- Stage-chip counts at the top of the board now refresh automatically after a card's stage changes (was stale after edits).
+
 - Card detail is now a centered popup modal instead of an inline panel below the card. Same fields (listing, posted, seller, source, stage, notes) plus a header strip with society/OH-ID/city/stage-dot.
 - Reject reason is a proper dropdown modal with the 6 labels (no more `window.prompt` asking for slugs). Selecting Rejected opens the modal; the row only flips after the user picks a reason.
 
