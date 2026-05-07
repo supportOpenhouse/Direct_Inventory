@@ -5,9 +5,14 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 ## 2026-05-06
 
 - Backend live on Render at `https://direct-inventory.onrender.com` — health check returns OK with both DB connections green.
+- Frontend live on Vercel at `https://direct-inventory-portal.vercel.app` (`supportopenhouses-projects` team). The `/api/*` proxy to Render is verified.
 - Switched all references from the placeholder `direct-inventory-portal.onrender.com` to the actual `direct-inventory.onrender.com`.
 
 ## Unreleased
+
+- Sheet sync: wrap each row in a `SAVEPOINT` so a single bad row no longer cascades-aborts the rest of the batch. Surface up to 5 error samples in the response body so sync failures are diagnosable from the Apps Script log.
+- Render: bump gunicorn `--timeout` from 60s to 180s in render.yaml (must also be updated in dashboard, since service was set up manually).
+- Apps Script: chunked sync — splits the sheet into 200-row batches per POST, prefixed all symbols with `DI_` so it can coexist with other Apps Scripts in the same project.
 
 - Initial scaffold (2026-05-06).
   - DB schema: `inventory`, `users`, `rm_mapping`, `oh_id_counter`, `activity_log`.

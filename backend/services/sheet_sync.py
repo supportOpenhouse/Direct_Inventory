@@ -83,12 +83,15 @@ def run_push_sync(conn, rows: list[dict], *, actor_email: str = "system:apps-scr
     started = datetime.now(tz=timezone.utc)
     fetched = len(rows)
     inserted = updated = skipped = errors = 0
+    error_samples: list[str] = []   # first few unique-ish error strings, surfaced in the response
 
     with conn, conn.cursor() as cur:
         for raw in rows:
+            cur.execute("SAVEPOINT row_save")
             try:
                 rec = _normalize_row(raw)
                 if not rec or not rec["city"] or not rec["listing_link"]:
+                    cur.execute("RELEASE SAVEPOINT row_save")
                     skipped += 1
                     continue
 
@@ -113,6 +116,7 @@ def run_push_sync(conn, rows: list[dict], *, actor_email: str = "system:apps-scr
                             rec["seller_name"], rec["posting_date"], rec["listing_link"],
                         ),
                     )
+                    cur.execute("RELEASE SAVEPOINT row_save")
                     updated += 1
                     continue
 
@@ -136,9 +140,21 @@ def run_push_sync(conn, rows: list[dict], *, actor_email: str = "system:apps-scr
                         rm_id, mgr_id,
                     ),
                 )
+                cur.execute("RELEASE SAVEPOINT row_save")
                 inserted += 1
-            except Exception:
+            except Exception as e:
+                # Roll back ONLY this row so subsequent rows in the same tx still work.
+                try:
+                    cur.execute("ROLLBACK TO SAVEPOINT row_save")
+                    cur.execute("RELEASE SAVEPOINT row_save")
+                except Exception:
+                    pass
                 log.exception("sync row failed")
+                if len(error_samples) < 5:
+                    msg = f"{type(e).__name__}: {e}"
+                    snippet = msg[:300]
+                    if snippet not in error_samples:
+                        error_samples.append(snippet)
                 errors += 1
 
         log_activity(
@@ -155,5 +171,8 @@ def run_push_sync(conn, rows: list[dict], *, actor_email: str = "system:apps-scr
             },
         )
 
-    return {"fetched": fetched, "inserted": inserted, "updated": updated,
-            "skipped": skipped, "errors": errors}
+    return {
+        "fetched": fetched, "inserted": inserted, "updated": updated,
+        "skipped": skipped, "errors": errors,
+        "error_samples": error_samples,
+    }

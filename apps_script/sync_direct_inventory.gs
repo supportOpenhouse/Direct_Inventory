@@ -1,44 +1,40 @@
 /**
  * Openhouse Direct Inventory — daily sheet → backend sync.
  *
+ * Names are prefixed with DI_ so this can coexist with other Apps Scripts in
+ * the same Sheet (Apps Script puts every .gs file in one shared global scope).
+ *
  * Setup (one time):
  *   1. Open the data sheet (id 1cTKri04m4HEj_JhTxH9FE9h70RL5gRMv4yGtv9g1BQM).
- *   2. Extensions → Apps Script. Paste this file as Code.gs.
+ *   2. Extensions → Apps Script. Paste this file as a new .gs file.
  *   3. Project Settings → Script Properties → add:
  *        BACKEND_URL  = https://direct-inventory.onrender.com
  *        SYNC_TOKEN   = <same value as the backend env var SYNC_TOKEN>
- *   4. Run installTrigger() once. Approve the OAuth prompt.
- *
- * After install, runSync() fires automatically every day at 11:30 IST.
- * To trigger manually, hit the "Run" button on runSync().
- *
- * Pattern follows acq_sync.gs from CP Inventory Portal.
+ *   4. Run DI_runSync once to seed; then DI_installTrigger to schedule daily.
  */
 
-const SHEET_NAME = 'Sheet1';
+const DI_SHEET_NAME = 'Sheet1';
+const DI_BATCH_SIZE = 200;   // Per-POST. Keeps each request under Render's 60s gunicorn timeout.
 
-function _props() {
+function DI_props_() {
   return PropertiesService.getScriptProperties();
 }
 
-function installTrigger() {
-  // Remove any existing triggers for runSync
+function DI_installTrigger() {
   ScriptApp.getProjectTriggers().forEach(t => {
-    if (t.getHandlerFunction() === 'runSync') ScriptApp.deleteTrigger(t);
+    if (t.getHandlerFunction() === 'DI_runSync') ScriptApp.deleteTrigger(t);
   });
-  // Daily at 11:30 IST. Apps Script runs in the script's timezone — set the
-  // script TZ to Asia/Kolkata in Project Settings if not already.
-  ScriptApp.newTrigger('runSync')
+  ScriptApp.newTrigger('DI_runSync')
     .timeBased()
     .everyDays(1)
     .atHour(11)
     .nearMinute(30)
     .create();
-  Logger.log('Trigger installed: runSync daily at ~11:30 IST.');
+  Logger.log('Trigger installed: DI_runSync daily at ~11:30 IST.');
 }
 
-function runSync() {
-  const props = _props();
+function DI_runSync() {
+  const props = DI_props_();
   const backendUrl = props.getProperty('BACKEND_URL');
   const syncToken  = props.getProperty('SYNC_TOKEN');
   if (!backendUrl || !syncToken) {
@@ -46,18 +42,17 @@ function runSync() {
   }
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) throw new Error(`Sheet "${SHEET_NAME}" not found`);
+  const sheet = ss.getSheetByName(DI_SHEET_NAME);
+  if (!sheet) throw new Error(`Sheet "${DI_SHEET_NAME}" not found`);
 
-  const range = sheet.getDataRange();
-  const values = range.getValues();
+  const values = sheet.getDataRange().getValues();
   if (values.length < 2) {
     Logger.log('Sheet has no data rows.');
     return;
   }
 
   const headers = values[0].map(h => String(h).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''));
-  const rows = [];
+  const allRows = [];
   for (let i = 1; i < values.length; i++) {
     const row = values[i];
     const obj = {};
@@ -70,21 +65,38 @@ function runSync() {
       obj[key] = v;
       if (key === 'listing_link' && v) hasLink = true;
     }
-    if (hasLink) rows.push(obj);
+    if (hasLink) allRows.push(obj);
   }
 
-  Logger.log(`Posting ${rows.length} rows to ${backendUrl}/api/sync/sheet`);
+  const totalBatches = Math.ceil(allRows.length / DI_BATCH_SIZE);
+  Logger.log(`Sheet has ${allRows.length} rows with listing_link. Posting in ${totalBatches} batch(es) of up to ${DI_BATCH_SIZE}.`);
 
-  const resp = UrlFetchApp.fetch(`${backendUrl}/api/sync/sheet`, {
-    method: 'post',
-    contentType: 'application/json',
-    headers: { 'X-Sync-Token': syncToken },
-    payload: JSON.stringify({ rows: rows, actor: 'apps-script:direct-inventory' }),
-    muteHttpExceptions: true,
-  });
+  const totals = { fetched: 0, inserted: 0, updated: 0, skipped: 0, errors: 0 };
 
-  const code = resp.getResponseCode();
-  const body = resp.getContentText();
-  Logger.log(`HTTP ${code}: ${body}`);
-  if (code >= 300) throw new Error(`Sync failed (${code}): ${body}`);
+  for (let b = 0; b < totalBatches; b++) {
+    const batch = allRows.slice(b * DI_BATCH_SIZE, (b + 1) * DI_BATCH_SIZE);
+    const resp = UrlFetchApp.fetch(`${backendUrl}/api/sync/sheet`, {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { 'X-Sync-Token': syncToken },
+      payload: JSON.stringify({ rows: batch, actor: `apps-script:direct-inventory:batch-${b + 1}/${totalBatches}` }),
+      muteHttpExceptions: true,
+    });
+    const code = resp.getResponseCode();
+    const body = resp.getContentText();
+    Logger.log(`Batch ${b + 1}/${totalBatches} (${batch.length} rows) → HTTP ${code}: ${body}`);
+    if (code >= 300) {
+      throw new Error(`Sync failed at batch ${b + 1} (${code}): ${body}`);
+    }
+    try {
+      const r = JSON.parse(body);
+      totals.fetched  += r.fetched  || 0;
+      totals.inserted += r.inserted || 0;
+      totals.updated  += r.updated  || 0;
+      totals.skipped  += r.skipped  || 0;
+      totals.errors   += r.errors   || 0;
+    } catch (e) {}
+  }
+
+  Logger.log(`SYNC DONE — total fetched=${totals.fetched}, inserted=${totals.inserted}, updated=${totals.updated}, skipped=${totals.skipped}, errors=${totals.errors}`);
 }
