@@ -10,6 +10,12 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- Add Inventory modal: Source defaults to "Website"; City → Society (datalist sourced from `properties.master_societies` for the selected city) → Locality (datalist of distinct localities, auto-filled when a known society is picked); "Price" relabelled to "Asking Price"; Listing link is now optional. Backend POST /api/inventory accepts no listing_link and auto-generates an `internal://manual/<uuid>` placeholder so dedup still works.
+- New backend endpoint `GET /api/inventory/societies?city=X` — distinct society + locality pairs for the city, honoring the Noida = Noida + Greater Noida merge.
+- Inventory cards added through the UI (source = "Website" or "manual") get an orange left border + warm-tan background so they're visually distinct from crawled rows.
+- Admin Users page: switching the role to "admin" auto-selects all cities (admin needs cross-city visibility by default).
+- OH-IDs for manually added rows continue from the same per-city counter — no separate pool.
+
 - Visit Schedule modal: separate Date and Time fields, Field Exec dropdown sourced from `properties.users WHERE can_visit=TRUE`, "Assigned by: <current user>" line. Replaces the single datetime-local input + free-text phone.
 - New backend endpoint `GET /api/visits/field-execs` that surfaces the filtered properties.users list (read-only).
 - Stage-chip counts at the top of the board now refresh automatically after a card's stage changes (was stale after edits).

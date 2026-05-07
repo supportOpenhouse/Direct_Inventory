@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api/client.js';
-import { displayCity, formatPrice, formatDateRel, REJECT_REASONS, STAGE_DOT_COLOR, STAGES, stageLabel } from '../utils/format.js';
+import { displayCity, formatPrice, formatDateRel, isManualSource, REJECT_REASONS, STAGE_DOT_COLOR, STAGES, stageLabel } from '../utils/format.js';
 import VisitScheduleModal from './VisitScheduleModal.jsx';
 import RejectReasonModal from './RejectReasonModal.jsx';
 
@@ -49,7 +49,7 @@ export default function InventoryCard({ item, onUpdated, role }) {
 
   return (
     <>
-      <div className="card" onClick={() => setOpen(true)}>
+      <div className={isManualSource(item.source) ? 'card card-manual' : 'card'} onClick={() => setOpen(true)}>
         <div className="card-head">
           <div className="card-society">{item.society || '—'}</div>
           <div className="card-meta">

@@ -8,6 +8,15 @@ export default function AdminUsers() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState({ email: '', name: '', phone: '', role: 'rm', cities: [] });
+
+  // When role flips to admin, default-select all cities. Admin needs cross-city visibility.
+  function setRole(role) {
+    setDraft((p) => ({
+      ...p,
+      role,
+      cities: role === 'admin' ? [...CITIES] : p.cities,
+    }));
+  }
   const [error, setError] = useState(null);
 
   async function refresh() {
@@ -51,7 +60,7 @@ export default function AdminUsers() {
           <div><label>Name</label><input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></div>
           <div><label>Phone</label><input value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} /></div>
           <div><label>Role</label>
-            <select value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value })}>
+            <select value={draft.role} onChange={(e) => setRole(e.target.value)}>
               {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>

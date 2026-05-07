@@ -116,6 +116,38 @@ def list_inventory():
         conn.close()
 
 
+@bp.get("/societies")
+@require_auth()
+def list_societies():
+    """Society + locality master list for a given city.
+
+    Used to populate the Add Inventory modal's Society dropdown.
+    Pulls from the read-only properties.master_societies table.
+    The logical city 'Noida' includes 'Greater Noida'.
+    """
+    city = (request.args.get("city") or "").strip()
+    if not city:
+        return jsonify({"items": []})
+
+    cities = ["Noida", "Greater Noida"] if city == "Noida" else [city]
+
+    from ..db import get_props_conn
+    conn = get_props_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                """SELECT DISTINCT society_name AS society, locality
+                   FROM master_societies
+                   WHERE city = ANY(%s) AND society_name IS NOT NULL AND society_name <> ''
+                   ORDER BY society_name""",
+                (cities,),
+            )
+            rows = cur.fetchall()
+        return jsonify({"items": rows})
+    finally:
+        conn.close()
+
+
 @bp.get("/counts")
 @require_auth()
 def inventory_counts():
@@ -196,19 +228,25 @@ def get_one(oh_id: str):
 def create_one():
     user = g.user
     body = request.get_json(silent=True) or {}
-    required = ["city", "society", "listing_link"]
+    # listing_link is no longer required for manual entries — auto-generate if missing.
+    required = ["city", "society"]
     for k in required:
         if not body.get(k):
             return jsonify({"error": f"missing field: {k}"}), 400
 
     fields = {k: body.get(k) for k in EDITABLE_RAW_FIELDS}
     if not fields.get("source"):
-        fields["source"] = "manual"
+        fields["source"] = "Website"
+
+    if not (fields.get("listing_link") or "").strip():
+        import uuid as _uuid
+        fields["listing_link"] = f"internal://manual/{_uuid.uuid4()}"
 
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
-            # dedup on listing_link
+            # dedup on listing_link (auto-generated UUIDs are unique by construction;
+            # this still catches user-provided duplicates).
             cur.execute("SELECT oh_id FROM inventory WHERE listing_link = %s", (fields["listing_link"],))
             existing = cur.fetchone()
             if existing:

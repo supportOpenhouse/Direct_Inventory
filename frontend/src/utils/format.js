@@ -66,3 +66,11 @@ export function displayCity(city) {
   if (city === 'Greater Noida') return 'Noida';
   return city;
 }
+
+// Sources that mean "added through our UI" rather than crawled from a listing site.
+// Cards with these sources get an orange visual treatment.
+export const MANUAL_SOURCES = new Set(['Website', 'manual']);
+export function isManualSource(src) {
+  if (!src) return false;
+  return MANUAL_SOURCES.has(src);
+}
