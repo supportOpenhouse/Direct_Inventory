@@ -63,10 +63,30 @@ a { color: inherit; }
   gap: 10px; margin: 14px 0;
 }
 .count-pill {
-  background: #fff; border-radius: 14px; padding: 14px 16px; text-align: left;
+  background: #fff; border: 2px solid transparent; border-radius: 14px;
+  padding: 14px 16px; text-align: left; font: inherit; cursor: pointer; transition: border-color 0.12s;
 }
+.count-pill:hover { border-color: #e5e7eb; }
+.count-pill-active { border-color: #0f1115 !important; }
 .count-pill .num { font-size: 28px; font-weight: 800; }
 .count-pill .lbl { font-size: 11px; letter-spacing: 1px; color: #64748b; margin-top: 2px; }
+
+.view-all-link {
+  margin-top: 6px; padding: 8px 10px; border: 1px dashed #cbd5e1; border-radius: 10px;
+  background: transparent; color: #475569; font-weight: 600; cursor: pointer; text-align: center;
+}
+.view-all-link:hover { background: #f1f5f9; color: #0f1115; }
+
+.filtered-list { display: flex; flex-direction: column; gap: 12px; }
+.filtered-header {
+  display: flex; align-items: center; gap: 10px;
+  background: #fff; padding: 10px 14px; border-radius: 12px; font-size: 14px;
+}
+.filtered-header .muted { color: #94a3b8; font-size: 12px; }
+.filtered-header .page-num { color: #64748b; font-size: 12px; padding: 0 6px; }
+.filtered-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px;
+}
 
 .kanban {
   display: grid; grid-auto-flow: column; grid-auto-columns: 320px;

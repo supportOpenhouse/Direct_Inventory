@@ -57,4 +57,12 @@ export const REJECT_REASONS = [
   { value: 'broker_listing',   label: 'Broker Listing' },
 ];
 
-export const CITIES = ['Noida', 'Gurgaon', 'Ghaziabad', 'Greater Noida'];
+// Greater Noida is rolled up into Noida everywhere in the UI.
+// Order matters: this is the order shown in city tabs and dropdowns.
+export const CITIES = ['Gurgaon', 'Noida', 'Ghaziabad'];
+
+export function displayCity(city) {
+  if (!city) return '';
+  if (city === 'Greater Noida') return 'Noida';
+  return city;
+}

@@ -10,6 +10,12 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- Board: stage chips at the top are now clickable filters. Selecting one switches to a paginated single-column view (100 per page) for that stage; "All" returns to the kanban.
+- Board: kanban view now does one parallel API call per stage (top 50 each), with a "View all N →" link in each column when there's more.
+- Board: counts shown on the chips come from a new `/api/inventory/counts` endpoint and are DB-wide, not just the current page's items.
+- City: Greater Noida is rolled up under Noida everywhere — city tabs are `Gurgaon, Noida, Ghaziabad` (in that order); inventory cards display the chip as `NOIDA` even for `Greater Noida` rows; backend `?city=Noida` matches both `Noida` and `Greater Noida`.
+- backend/scripts/bulk_seed.py — one-shot bulk seed from a CSV export (used to seed the initial 15k+ rows directly to Neon, bypassing Render).
+
 - Sheet sync: wrap each row in a `SAVEPOINT` so a single bad row no longer cascades-aborts the rest of the batch. Surface up to 5 error samples in the response body so sync failures are diagnosable from the Apps Script log.
 - Render: bump gunicorn `--timeout` from 60s to 180s in render.yaml (must also be updated in dashboard, since service was set up manually).
 - Apps Script: chunked sync — splits the sheet into 200-row batches per POST, prefixed all symbols with `DI_` so it can coexist with other Apps Scripts in the same project.

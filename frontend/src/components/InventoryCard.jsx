@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api/client.js';
-import { formatPrice, formatDateRel, REJECT_REASONS, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
+import { displayCity, formatPrice, formatDateRel, REJECT_REASONS, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
 import VisitScheduleModal from './VisitScheduleModal.jsx';
 
 export default function InventoryCard({ item, onUpdated, role }) {
@@ -53,7 +53,7 @@ export default function InventoryCard({ item, onUpdated, role }) {
         <div className="card-head">
           <div className="card-society">{item.society || '—'}</div>
           <div className="card-meta">
-            <span className="city-chip">{item.city?.toUpperCase()}</span>
+            <span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span>
             <span className="oh-id">{item.oh_id}</span>
             <span className="stage-dot" style={{ background: STAGE_DOT_COLOR[item.stage] }} />
           </div>

@@ -76,8 +76,12 @@ def list_inventory():
         sql_filters.append("AND stage = %s")
         params.append(stage)
     if city:
-        sql_filters.append("AND city = %s")
-        params.append(city)
+        # 'Noida' is a logical city that includes the underlying 'Greater Noida'.
+        if city == "Noida":
+            sql_filters.append("AND city IN ('Noida', 'Greater Noida')")
+        else:
+            sql_filters.append("AND city = %s")
+            params.append(city)
     if rm_id:
         sql_filters.append("AND assigned_rm_id = %s")
         params.append(rm_id)
@@ -101,12 +105,62 @@ def list_inventory():
         with conn, conn.cursor() as cur:
             cur.execute(sql, final_params)
             rows = cur.fetchall()
+            # Total within the SAME filters (so pagination shows the right count)
             cur.execute(
-                f"SELECT COUNT(*) AS n FROM inventory WHERE TRUE {scope_sql}",
-                scope_params,
+                f"SELECT COUNT(*) AS n FROM inventory WHERE TRUE {scope_sql} {' '.join(sql_filters)}",
+                [*scope_params, *params],
             )
             total = cur.fetchone()["n"]
         return jsonify({"items": rows, "total": total, "limit": limit, "offset": offset})
+    finally:
+        conn.close()
+
+
+@bp.get("/counts")
+@require_auth()
+def inventory_counts():
+    """Per-stage counts (and grand total) honoring city/q filters and role visibility.
+
+    Used by the Board top-of-page chips so they show real DB-wide counts, not
+    just whatever the current page loaded.
+    """
+    user = g.user
+    args = request.args
+    q    = (args.get("q") or "").strip()
+    city = args.get("city")
+
+    scope_sql, scope_params = _scope_clause(user)
+
+    sql_filters = []
+    params: list = []
+    if city:
+        if city == "Noida":
+            sql_filters.append("AND city IN ('Noida', 'Greater Noida')")
+        else:
+            sql_filters.append("AND city = %s")
+            params.append(city)
+    if q:
+        sql_filters.append("AND search_tsv @@ plainto_tsquery('simple', %s)")
+        params.append(q)
+
+    where_extra = " ".join(sql_filters)
+
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                f"""SELECT stage, COUNT(*) AS n FROM inventory
+                    WHERE TRUE {scope_sql} {where_extra}
+                    GROUP BY stage""",
+                [*scope_params, *params],
+            )
+            by_stage = {r["stage"]: r["n"] for r in cur.fetchall()}
+            cur.execute(
+                f"SELECT COUNT(*) AS n FROM inventory WHERE TRUE {scope_sql} {where_extra}",
+                [*scope_params, *params],
+            )
+            total = cur.fetchone()["n"]
+        return jsonify({"total": total, "by_stage": by_stage})
     finally:
         conn.close()
 

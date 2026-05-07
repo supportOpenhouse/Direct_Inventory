@@ -13,3 +13,6 @@ dist/
 
 backend/service_account.json
 backend/.pytest_cache/
+
+# Local CSV exports for bulk seed — contain raw lead data, never commit.
+*.csv
