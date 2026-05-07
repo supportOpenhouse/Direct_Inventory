@@ -127,23 +127,40 @@ a { color: inherit; }
   padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-block;
 }
 
-.card-expand {
-  background: #fafaf7; border-radius: 12px; padding: 12px 14px; margin-top: -8px;
-  border: 1px dashed #e5e7eb;
+/* Card detail modal — replaces the inline expand panel. */
+.modal-card-detail { width: 540px; max-width: 92vw; }
+.card-detail-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+  margin-bottom: 4px;
 }
+.card-detail-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 17px; }
+.card-detail-title .city-chip { color: #94a3b8; font-size: 11px; letter-spacing: 1px; font-weight: 700; }
+.card-detail-title .oh-id { color: #94a3b8; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+.card-detail-sub { color: #64748b; font-size: 13px; margin-bottom: 14px; }
+.modal-close {
+  background: transparent; border: 0; font-size: 24px; line-height: 1; color: #94a3b8;
+  cursor: pointer; padding: 0 4px;
+}
+.modal-close:hover { color: #0f1115; }
 .exp-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin-bottom: 10px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin: 8px 0 16px;
   font-size: 13px;
+  background: #f8fafc; padding: 12px; border-radius: 10px;
 }
-.exp-lbl { display: block; color: #94a3b8; font-size: 11px; letter-spacing: 1px; }
+.exp-lbl { display: block; color: #94a3b8; font-size: 11px; letter-spacing: 1px; margin-bottom: 2px; }
 .exp-link { color: #2563eb; word-break: break-all; }
-.exp-actions { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
-.exp-actions select, .exp-notes textarea {
-  width: 100%; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fff;
-  font-family: inherit; font-size: 13px;
+.exp-actions { display: flex; align-items: center; gap: 10px; margin: 8px 0 12px; }
+.exp-actions label { font-size: 11px; color: #94a3b8; letter-spacing: 1px; min-width: 50px; }
+.exp-actions select { flex: 1; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; font-family: inherit; font-size: 14px; }
+.exp-reject-line {
+  display: flex; gap: 12px; align-items: center; padding: 8px 12px; margin-bottom: 12px;
+  background: #fef2f2; color: #991b1b; border-radius: 8px; font-size: 13px;
 }
-.exp-notes { margin-top: 10px; }
-.exp-notes label { display: block; font-size: 11px; color: #94a3b8; letter-spacing: 1px; }
+.exp-notes label { display: block; font-size: 11px; color: #94a3b8; letter-spacing: 1px; margin-bottom: 4px; }
+.exp-notes textarea {
+  width: 100%; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff;
+  font-family: inherit; font-size: 14px; resize: vertical;
+}
 .exp-saving { font-size: 11px; color: #64748b; margin-top: 4px; }
 
 /* login */

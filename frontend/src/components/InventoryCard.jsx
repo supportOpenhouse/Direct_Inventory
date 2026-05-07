@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { api } from '../api/client.js';
-import { displayCity, formatPrice, formatDateRel, REJECT_REASONS, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
+import { displayCity, formatPrice, formatDateRel, REJECT_REASONS, STAGE_DOT_COLOR, STAGES, stageLabel } from '../utils/format.js';
 import VisitScheduleModal from './VisitScheduleModal.jsx';
+import RejectReasonModal from './RejectReasonModal.jsx';
 
 export default function InventoryCard({ item, onUpdated, role }) {
   const [open, setOpen] = useState(false);
@@ -9,31 +10,30 @@ export default function InventoryCard({ item, onUpdated, role }) {
   const [savingNotes, setSavingNotes] = useState(false);
   const [savingStage, setSavingStage] = useState(false);
   const [showVisit, setShowVisit] = useState(false);
-  const [pendingStage, setPendingStage] = useState(null);
+  const [showReject, setShowReject] = useState(false);
   const canEdit = ['admin', 'manager', 'rm'].includes(role);
+
+  async function applyStage(newStage, extraBody = {}) {
+    try {
+      setSavingStage(true);
+      const r = await api.patch(`/api/inventory/${item.oh_id}`, { stage: newStage, ...extraBody });
+      onUpdated(r.item || { ...item, stage: newStage, ...extraBody });
+    } finally {
+      setSavingStage(false);
+    }
+  }
 
   async function changeStage(newStage) {
     if (newStage === item.stage) return;
     if (newStage === 'visit_scheduled') {
-      setPendingStage(newStage);
       setShowVisit(true);
       return;
     }
-    let body = { stage: newStage };
     if (newStage === 'rejected') {
-      const reason = window.prompt(
-        `Reject reason — one of:\n${REJECT_REASONS.map((r) => `• ${r.value} (${r.label})`).join('\n')}`,
-      );
-      if (!reason) return;
-      body.reject_reason = reason;
+      setShowReject(true);
+      return;
     }
-    try {
-      setSavingStage(true);
-      const r = await api.patch(`/api/inventory/${item.oh_id}`, body);
-      onUpdated(r.item || { ...item, ...body });
-    } finally {
-      setSavingStage(false);
-    }
+    await applyStage(newStage);
   }
 
   async function saveNotes() {
@@ -49,7 +49,7 @@ export default function InventoryCard({ item, onUpdated, role }) {
 
   return (
     <>
-      <div className="card" onClick={() => setOpen((v) => !v)}>
+      <div className="card" onClick={() => setOpen(true)}>
         <div className="card-head">
           <div className="card-society">{item.society || '—'}</div>
           <div className="card-meta">
@@ -81,40 +81,69 @@ export default function InventoryCard({ item, onUpdated, role }) {
       </div>
 
       {open && (
-        <div className="card-expand" onClick={(e) => e.stopPropagation()}>
-          <div className="exp-grid">
-            <div><span className="exp-lbl">Listing</span>
-              <a href={item.listing_link} target="_blank" rel="noreferrer" className="exp-link">{item.listing_link}</a>
+        <div className="modal-backdrop" onClick={() => setOpen(false)}>
+          <div className="modal modal-card-detail" onClick={(e) => e.stopPropagation()}>
+            <div className="card-detail-head">
+              <div className="card-detail-title">
+                <strong>{item.society || '—'}</strong>
+                <span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span>
+                <span className="oh-id">{item.oh_id}</span>
+                <span className="stage-dot" style={{ background: STAGE_DOT_COLOR[item.stage] }} />
+              </div>
+              <button className="modal-close" onClick={() => setOpen(false)} aria-label="Close">×</button>
             </div>
-            <div><span className="exp-lbl">Posted</span><span>{item.posting_date || '—'}</span></div>
-            <div><span className="exp-lbl">Seller</span><span>{item.seller_name || '—'}</span></div>
-            <div><span className="exp-lbl">Source</span><span>{item.source || '—'}</span></div>
-          </div>
-          {canEdit && (
-            <div className="exp-actions">
-              <label>Stage</label>
-              <select
-                value={item.stage}
-                onChange={(e) => changeStage(e.target.value)}
-                disabled={savingStage}
-              >
-                {['qualified','follow_up_cnr','visit_scheduled','visit_completed','offer_given','unreachable','rejected'].map((s) => (
-                  <option key={s} value={s}>{stageLabel(s)}</option>
-                ))}
-              </select>
+            <div className="card-detail-sub">
+              {item.locality ? <span>{item.locality}</span> : null}
+              {item.floor ? <span>· F{item.floor}</span> : null}
+              {item.bedrooms != null && <span>· {item.bedrooms} BHK</span>}
+              {item.area_sqft != null && <span>· {item.area_sqft} sqft</span>}
+              <span>· <strong className="val-orange">{formatPrice(item.price)}</strong></span>
             </div>
-          )}
-          <div className="exp-notes">
-            <label>Notes</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              onBlur={saveNotes}
-              placeholder="Add a note…"
-              rows={3}
-              disabled={!canEdit}
-            />
-            {savingNotes && <div className="exp-saving">saving…</div>}
+
+            <div className="exp-grid">
+              <div>
+                <span className="exp-lbl">Listing</span>
+                <a href={item.listing_link} target="_blank" rel="noreferrer" className="exp-link">{item.listing_link}</a>
+              </div>
+              <div><span className="exp-lbl">Posted</span><span>{item.posting_date || '—'}</span></div>
+              <div><span className="exp-lbl">Seller</span><span>{item.seller_name || '—'}</span></div>
+              <div><span className="exp-lbl">Source</span><span>{item.source || '—'}</span></div>
+            </div>
+
+            {canEdit && (
+              <div className="exp-actions">
+                <label>Stage</label>
+                <select
+                  value={item.stage}
+                  onChange={(e) => changeStage(e.target.value)}
+                  disabled={savingStage}
+                >
+                  {STAGES.map((s) => (
+                    <option key={s} value={s}>{stageLabel(s)}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {item.stage === 'rejected' && item.reject_reason && (
+              <div className="exp-reject-line">
+                <span className="exp-lbl">Reject reason</span>
+                <span>{REJECT_REASONS.find((r) => r.value === item.reject_reason)?.label || item.reject_reason}</span>
+              </div>
+            )}
+
+            <div className="exp-notes">
+              <label>Notes</label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                onBlur={saveNotes}
+                placeholder="Add a note…"
+                rows={4}
+                disabled={!canEdit}
+              />
+              {savingNotes && <div className="exp-saving">saving…</div>}
+            </div>
           </div>
         </div>
       )}
@@ -122,8 +151,19 @@ export default function InventoryCard({ item, onUpdated, role }) {
       {showVisit && (
         <VisitScheduleModal
           item={item}
-          onClose={() => { setShowVisit(false); setPendingStage(null); }}
+          onClose={() => setShowVisit(false)}
           onScheduled={(updated) => { setShowVisit(false); onUpdated(updated); }}
+        />
+      )}
+
+      {showReject && (
+        <RejectReasonModal
+          ohId={item.oh_id}
+          onClose={() => setShowReject(false)}
+          onSelect={async (reason) => {
+            await applyStage('rejected', { reject_reason: reason });
+            setShowReject(false);
+          }}
         />
       )}
     </>

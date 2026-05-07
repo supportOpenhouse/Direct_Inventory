@@ -10,6 +10,9 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- Card detail is now a centered popup modal instead of an inline panel below the card. Same fields (listing, posted, seller, source, stage, notes) plus a header strip with society/OH-ID/city/stage-dot.
+- Reject reason is a proper dropdown modal with the 6 labels (no more `window.prompt` asking for slugs). Selecting Rejected opens the modal; the row only flips after the user picks a reason.
+
 - Board: stage chips at the top are now clickable filters. Selecting one switches to a paginated single-column view (100 per page) for that stage; "All" returns to the kanban.
 - Board: kanban view now does one parallel API call per stage (top 50 each), with a "View all N →" link in each column when there's more.
 - Board: counts shown on the chips come from a new `/api/inventory/counts` endpoint and are DB-wide, not just the current page's items.
