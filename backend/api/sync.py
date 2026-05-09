@@ -20,6 +20,7 @@ from flask import Blueprint, jsonify, request
 from .. import config
 from ..db import get_conn
 from ..services.sheet_sync import run_push_sync
+from ..services.oh_pricing_sync import run_pricing_sync
 from .auth import require_auth
 
 bp = Blueprint("sync", __name__, url_prefix="/api/sync")
@@ -41,6 +42,35 @@ def push_sync():
     conn = get_conn()
     try:
         summary = run_push_sync(conn, rows, actor_email=actor)
+        return jsonify(summary)
+    finally:
+        conn.close()
+
+
+@bp.post("/oh-pricing")
+def push_pricing_sync():
+    """OH Pricing push — replaces all rows for the given source_sheet.
+
+    Body: { "source_sheet": "Gurgaon" | "Noida + GZB", "rows": [...] }
+    """
+    token = request.headers.get("X-Sync-Token", "")
+    if not config.SYNC_TOKEN or token != config.SYNC_TOKEN:
+        return jsonify({"error": "unauthorized"}), 401
+
+    body = request.get_json(silent=True) or {}
+    rows = body.get("rows")
+    source_sheet = (body.get("source_sheet") or "").strip()
+
+    if not isinstance(rows, list):
+        return jsonify({"error": "body must include rows: [...]"}), 400
+    if source_sheet not in {"Gurgaon", "Noida + GZB"}:
+        return jsonify({"error": "source_sheet must be 'Gurgaon' or 'Noida + GZB'"}), 400
+
+    actor = body.get("actor") or "system:apps-script"
+
+    conn = get_conn()
+    try:
+        summary = run_pricing_sync(conn, source_sheet, rows, actor_email=actor)
         return jsonify(summary)
     finally:
         conn.close()

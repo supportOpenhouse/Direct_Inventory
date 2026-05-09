@@ -68,6 +68,12 @@ export default function InventoryCard({ item, onUpdated, role }) {
         </div>
         <div className="card-prices">
           <div><div className="lbl">ASKING</div><div className="val val-orange">{formatPrice(item.price)}</div></div>
+          <div>
+            <div className="lbl">OH PRICING</div>
+            <div className={item.oh_price ? 'val val-green' : 'val val-muted'}>
+              {item.oh_price ? formatPrice(item.oh_price) : '—'}
+            </div>
+          </div>
         </div>
         <div className="card-foot">
           <span>{formatDateRel(item.created_at)}</span>
@@ -97,7 +103,8 @@ export default function InventoryCard({ item, onUpdated, role }) {
               {item.floor ? <span>· F{item.floor}</span> : null}
               {item.bedrooms != null && <span>· {item.bedrooms} BHK</span>}
               {item.area_sqft != null && <span>· {item.area_sqft} sqft</span>}
-              <span>· <strong className="val-orange">{formatPrice(item.price)}</strong></span>
+              <span>· asking <strong className="val-orange">{formatPrice(item.price)}</strong></span>
+              {item.oh_price && <span>· OH <strong className="val-green">{formatPrice(item.oh_price)}</strong></span>}
             </div>
 
             <div className="exp-grid">
@@ -108,6 +115,17 @@ export default function InventoryCard({ item, onUpdated, role }) {
               <div><span className="exp-lbl">Posted</span><span>{item.posting_date || '—'}</span></div>
               <div><span className="exp-lbl">Seller</span><span>{item.seller_name || '—'}</span></div>
               <div><span className="exp-lbl">Source</span><span>{item.source || '—'}</span></div>
+              <div>
+                <span className="exp-lbl">Asking Price</span>
+                <span className="val-orange">{formatPrice(item.price)}</span>
+              </div>
+              <div>
+                <span className="exp-lbl">OH Pricing</span>
+                <span className={item.oh_price ? 'val-green' : 'muted'}>
+                  {item.oh_price ? formatPrice(item.oh_price) : 'no match'}
+                  {item.oh_price && item.oh_price_area ? ` (matched ${item.oh_price_bhk}BHK, ${item.oh_price_area}sqft)` : ''}
+                </span>
+              </div>
             </div>
 
             {canEdit && (

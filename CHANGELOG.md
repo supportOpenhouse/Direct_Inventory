@@ -10,6 +10,13 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- OH Pricing: new `oh_pricing` table (migration 004) populated from the OH Pricing Google Sheet. Two source sheets: "Gurgaon" and "Noida + GZB". Lookup key is society + BHK + closest area (±150 sqft).
+- New backend endpoint `POST /api/sync/oh-pricing` — per-source-sheet replace (DELETE then bulk INSERT). Auth via the existing `X-Sync-Token`.
+- `GET /api/inventory` now LEFT JOIN LATERAL with `oh_pricing` to attach the best-matching `oh_price` (plus the matched `oh_price_bhk` and `oh_price_area`) to every row returned.
+- Frontend: inventory cards show OH Pricing alongside Asking Price (green when matched, em-dash when no match). The detail modal shows a richer line including matched BHK / area.
+- New Apps Script `apps_script/sync_oh_pricing.gs` — weekly Friday trigger that pushes both sheet tabs to the backend; chunked at 500 rows per POST.
+- Refactored `_scope_clause` and inventory list filters to support optional table aliases (the LATERAL join needs `i.` prefixes; the COUNT query stays unaliased).
+
 - Add Inventory modal: Source defaults to "Website"; City → Society (datalist sourced from `properties.master_societies` for the selected city) → Locality (datalist of distinct localities, auto-filled when a known society is picked); "Price" relabelled to "Asking Price"; Listing link is now optional. Backend POST /api/inventory accepts no listing_link and auto-generates an `internal://manual/<uuid>` placeholder so dedup still works.
 - New backend endpoint `GET /api/inventory/societies?city=X` — distinct society + locality pairs for the city, honoring the Noida = Noida + Greater Noida merge.
 - Inventory cards added through the UI (source = "Website" or "manual") get an orange left border + warm-tan background so they're visually distinct from crawled rows.

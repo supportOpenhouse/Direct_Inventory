@@ -124,6 +124,9 @@ a { color: inherit; }
 .card-prices .lbl { font-size: 10px; color: #94a3b8; letter-spacing: 1px; }
 .card-prices .val { font-weight: 800; font-size: 16px; }
 .val-orange { color: #ea580c; }
+.val-green { color: #16a34a; }
+.val-muted { color: #cbd5e1; font-weight: 600; }
+.muted { color: #94a3b8; }
 .card-foot { color: #94a3b8; font-size: 12px; margin-top: 8px; display: flex; gap: 6px; }
 .src { color: #475569; font-weight: 600; }
 .reject-reason {

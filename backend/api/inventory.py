@@ -42,17 +42,21 @@ EDITABLE_RAW_FIELDS = {
 }
 
 
-def _scope_clause(user: dict) -> tuple[str, list]:
-    """Return (sql_where_fragment, params) for visibility filtering."""
+def _scope_clause(user: dict, alias: str = "") -> tuple[str, list]:
+    """Return (sql_where_fragment, params) for visibility filtering.
+
+    `alias` is the optional table alias prefix (e.g. 'i' if the query uses `inventory i`).
+    """
+    p = f"{alias}." if alias else ""
     if user["role"] == "admin":
         return ("", [])
     if user["role"] == "manager":
         cities = user.get("cities") or []
         if not cities:
             return ("AND FALSE", [])
-        return ("AND city = ANY(%s)", [cities])
+        return (f"AND {p}city = ANY(%s)", [cities])
     # rm
-    return ("AND assigned_rm_id = %s", [user["id"]])
+    return (f"AND {p}assigned_rm_id = %s", [user["id"]])
 
 
 @bp.get("")
@@ -67,48 +71,69 @@ def list_inventory():
     limit   = min(args.get("limit", 200, type=int), 1000)
     offset  = args.get("offset", 0, type=int)
 
-    sql_filters = []
-    params: list = []
+    # Build scope + filter clauses TWICE — once aliased for the JOINed list query,
+    # once unaliased for the COUNT query (which has no JOIN).
+    def build_filters(alias: str = ""):
+        p = f"{alias}." if alias else ""
+        scope, scope_params_local = _scope_clause(user, alias=alias)
+        filters = []
+        local_params: list = []
+        if stage:
+            filters.append(f"AND {p}stage = %s")
+            local_params.append(stage)
+        if city:
+            if city == "Noida":
+                filters.append(f"AND {p}city IN ('Noida', 'Greater Noida')")
+            else:
+                filters.append(f"AND {p}city = %s")
+                local_params.append(city)
+        if rm_id:
+            filters.append(f"AND {p}assigned_rm_id = %s")
+            local_params.append(rm_id)
+        if q:
+            filters.append(f"AND {p}search_tsv @@ plainto_tsquery('simple', %s)")
+            local_params.append(q)
+        return scope, scope_params_local, filters, local_params
 
-    scope_sql, scope_params = _scope_clause(user)
+    list_scope, list_scope_params, list_filters, list_filter_params = build_filters("i")
+    count_scope, count_scope_params, count_filters, count_filter_params = build_filters("")
 
-    if stage:
-        sql_filters.append("AND stage = %s")
-        params.append(stage)
-    if city:
-        # 'Noida' is a logical city that includes the underlying 'Greater Noida'.
-        if city == "Noida":
-            sql_filters.append("AND city IN ('Noida', 'Greater Noida')")
-        else:
-            sql_filters.append("AND city = %s")
-            params.append(city)
-    if rm_id:
-        sql_filters.append("AND assigned_rm_id = %s")
-        params.append(rm_id)
-    if q:
-        sql_filters.append("AND search_tsv @@ plainto_tsquery('simple', %s)")
-        params.append(q)
-
+    # LATERAL join brings the best-matching OH Pricing row alongside each inventory row.
+    # Match priority: society + bhk + closest area_sqft (within ±150 sqft); fall back to
+    # society + bhk with NULL area.
     sql = f"""
-        SELECT *
-        FROM inventory
+        SELECT i.*, p.price AS oh_price, p.area_sqft AS oh_price_area, p.bhk AS oh_price_bhk
+        FROM inventory i
+        LEFT JOIN LATERAL (
+            SELECT op.price, op.area_sqft, op.bhk
+            FROM oh_pricing op
+            WHERE op.society_norm = LOWER(TRIM(i.society))
+              AND (op.bhk IS NULL OR i.bedrooms IS NULL OR op.bhk = i.bedrooms)
+              AND (
+                op.area_sqft IS NULL OR i.area_sqft IS NULL
+                OR ABS(op.area_sqft - i.area_sqft) <= 150
+              )
+            ORDER BY
+              (CASE WHEN op.bhk = i.bedrooms THEN 0 ELSE 1 END),
+              (CASE WHEN op.area_sqft IS NULL THEN 9999 ELSE ABS(COALESCE(op.area_sqft, 0) - COALESCE(i.area_sqft, 0)) END)
+            LIMIT 1
+        ) p ON TRUE
         WHERE TRUE
-          {scope_sql}
-          {' '.join(sql_filters)}
-        ORDER BY updated_at DESC
+          {list_scope}
+          {' '.join(list_filters)}
+        ORDER BY i.updated_at DESC
         LIMIT %s OFFSET %s
     """
-    final_params = [*scope_params, *params, limit, offset]
+    final_params = [*list_scope_params, *list_filter_params, limit, offset]
 
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
             cur.execute(sql, final_params)
             rows = cur.fetchall()
-            # Total within the SAME filters (so pagination shows the right count)
             cur.execute(
-                f"SELECT COUNT(*) AS n FROM inventory WHERE TRUE {scope_sql} {' '.join(sql_filters)}",
-                [*scope_params, *params],
+                f"SELECT COUNT(*) AS n FROM inventory WHERE TRUE {count_scope} {' '.join(count_filters)}",
+                [*count_scope_params, *count_filter_params],
             )
             total = cur.fetchone()["n"]
         return jsonify({"items": rows, "total": total, "limit": limit, "offset": offset})
