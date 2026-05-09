@@ -10,6 +10,11 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- OH Pricing now also captures Acq Price: from "★ Acq Price (₹L)" on the Gurgaon tab and "L2 Acq (₹L)" on the Noida + GZB tab (both auto-converted from lakhs). Migration 005 adds `acq_price BIGINT` to `oh_pricing`.
+- LATERAL match relaxed: society + BHK now always returns the row with the closest area (no hard ±150 sqft cap). The query also returns a new `oh_price_match` column ('exact' | 'nearest' | 'no_area'). The UI prefixes nearest matches with `~` and renders them in amber instead of green; tooltip shows the matched BHK / area.
+- Card adds an ACQ PRICE pill alongside ASKING / OH PRICE / VARIATION; detail modal grid adds an Acq Price row and labels the OH Price match as `nearest` vs `matched`.
+- DB diagnostic on the live data: 89.9% of inventory rows reference societies that are not in the OH Pricing sheet at all; relaxing the area cap recovers ~120 rows but the dominant gap is sheet coverage.
+
 - Inventory cards (and detail modal) now show a Variation column = (asking − OH Price) / OH Price × 100. Color-coded: red when asking is above OH (less attractive), green when below (more attractive), gray within ±0.5%. Em-dash when OH Price is missing.
 
 - OH Pricing source sheet moved to `1LC82Cg1OlOAL6cqpEJRl1Xrzwso5d1D8ApK-koFR2bY`. Apps Script body is unchanged (it reads from `getActiveSpreadsheet()`); only the doc-comment header is updated. The Apps Script must now be re-installed inside the *new* sheet, and the *old* sheet's trigger must be deleted to avoid dueling syncs.

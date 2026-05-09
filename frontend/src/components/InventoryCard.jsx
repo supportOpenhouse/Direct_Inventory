@@ -13,6 +13,8 @@ export default function InventoryCard({ item, onUpdated, role }) {
   const [showReject, setShowReject] = useState(false);
   const canEdit = ['admin', 'manager', 'rm'].includes(role);
   const v = variation(item.price, item.oh_price);
+  const isNearest = item.oh_price_match === 'nearest';
+  const matchTag = isNearest ? '~' : '';
 
   async function applyStage(newStage, extraBody = {}) {
     try {
@@ -71,8 +73,17 @@ export default function InventoryCard({ item, onUpdated, role }) {
           <div><div className="lbl">ASKING</div><div className="val val-orange">{formatPrice(item.price)}</div></div>
           <div>
             <div className="lbl">OH PRICE</div>
-            <div className={item.oh_price ? 'val val-green' : 'val val-muted'}>
-              {item.oh_price ? formatPrice(item.oh_price) : '—'}
+            <div
+              className={item.oh_price ? (isNearest ? 'val val-amber' : 'val val-green') : 'val val-muted'}
+              title={isNearest && item.oh_price_area ? `Nearest match: ${item.oh_price_bhk}BHK, ${item.oh_price_area}sqft` : ''}
+            >
+              {item.oh_price ? `${matchTag}${formatPrice(item.oh_price)}` : '—'}
+            </div>
+          </div>
+          <div>
+            <div className="lbl">ACQ PRICE</div>
+            <div className={item.oh_acq_price ? (isNearest ? 'val val-amber' : 'val val-green') : 'val val-muted'}>
+              {item.oh_acq_price ? `${matchTag}${formatPrice(item.oh_acq_price)}` : '—'}
             </div>
           </div>
           <div>
@@ -128,9 +139,17 @@ export default function InventoryCard({ item, onUpdated, role }) {
               </div>
               <div>
                 <span className="exp-lbl">OH Price</span>
-                <span className={item.oh_price ? 'val-green' : 'muted'}>
-                  {item.oh_price ? formatPrice(item.oh_price) : 'no match'}
-                  {item.oh_price && item.oh_price_area ? ` (matched ${item.oh_price_bhk}BHK, ${item.oh_price_area}sqft)` : ''}
+                <span className={item.oh_price ? (isNearest ? 'val-amber' : 'val-green') : 'muted'}>
+                  {item.oh_price ? `${matchTag}${formatPrice(item.oh_price)}` : 'no match'}
+                  {item.oh_price && item.oh_price_area
+                    ? ` (${isNearest ? 'nearest' : 'matched'} ${item.oh_price_bhk}BHK, ${item.oh_price_area}sqft)`
+                    : ''}
+                </span>
+              </div>
+              <div>
+                <span className="exp-lbl">Acq Price</span>
+                <span className={item.oh_acq_price ? (isNearest ? 'val-amber' : 'val-green') : 'muted'}>
+                  {item.oh_acq_price ? `${matchTag}${formatPrice(item.oh_acq_price)}` : 'no match'}
                 </span>
               </div>
               <div>

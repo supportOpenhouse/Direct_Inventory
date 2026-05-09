@@ -30,7 +30,7 @@ def _parse_int(v) -> int | None:
         return None
 
 
-# Columns that hold the OH price, in priority order. The 'multiplier' converts
+# Columns that hold the OH selling price, in priority order. The 'multiplier' converts
 # the raw value to integer rupees: 100_000 for "₹L" (lakhs) columns, 1 for raw ₹.
 # Names already pass through _norm_key, so 'Selling Price (₹L)' → 'selling_price_l'.
 _PRICE_KEYS_AND_MULTIPLIER = [
@@ -43,8 +43,32 @@ _PRICE_KEYS_AND_MULTIPLIER = [
     ("sell_price_l",    100_000),    # Noida + GZB tab: "Sell Price (₹L)"
 ]
 
+# Acquisition price columns. Same multiplier convention.
+# Per business decision: Gurgaon uses the headline "★ Acq Price (₹L)" (col J);
+# Noida + GZB uses the L2 (7% margin) tier from "L2 Acq (₹L)" (col K).
+_ACQ_PRICE_KEYS_AND_MULTIPLIER = [
+    ("acq_price",      1),
+    ("acquisition",    1),
+    ("acq_price_l",    100_000),     # Gurgaon tab: "★ Acq Price (₹L)"
+    ("l2_acq_l",       100_000),     # Noida + GZB tab: "L2 Acq (₹L)"
+]
+
 # Area column candidates in priority order.
 _AREA_KEYS = ["area_sqft", "size_sqft", "sqft", "area", "size"]
+
+
+def _pick_money(rec: dict, candidates) -> int | None:
+    """Return the first non-empty money value from `candidates`, ×multiplier."""
+    for key, multiplier in candidates:
+        v = rec.get(key)
+        if v in (None, ""):
+            continue
+        try:
+            f = float(str(v).replace(",", "").strip())
+        except (ValueError, TypeError):
+            continue
+        return int(round(f * multiplier))
+    return None
 
 
 def _normalize_city(raw_city: str | None, default_from_sheet: str | None) -> str | None:
@@ -81,19 +105,13 @@ def _normalize_row(raw: dict, *, default_city: str | None) -> dict | None:
             if area_sqft is not None:
                 break
 
-    price = None
-    for key, multiplier in _PRICE_KEYS_AND_MULTIPLIER:
-        v = rec.get(key)
-        if v in (None, ""):
-            continue
-        try:
-            f = float(str(v).replace(",", "").strip())
-        except (ValueError, TypeError):
-            continue
-        price = int(round(f * multiplier))
-        break
+    price = _pick_money(rec, _PRICE_KEYS_AND_MULTIPLIER)
     if price is None or price <= 0:
         return None
+
+    acq_price = _pick_money(rec, _ACQ_PRICE_KEYS_AND_MULTIPLIER)
+    if acq_price is not None and acq_price <= 0:
+        acq_price = None
 
     city = _normalize_city(rec.get("city"), default_city)
     if not city:
@@ -106,6 +124,7 @@ def _normalize_row(raw: dict, *, default_city: str | None) -> dict | None:
         "bhk": bhk,
         "area_sqft": area_sqft,
         "price": price,
+        "acq_price": acq_price,
     }
 
 
@@ -136,14 +155,14 @@ def run_pricing_sync(conn, source_sheet: str, rows: list[dict], *, actor_email: 
         if normalized:
             tuples = [
                 (source_sheet, r["city"], r["society"], r["society_norm"],
-                 r["bhk"], r["area_sqft"], r["price"])
+                 r["bhk"], r["area_sqft"], r["price"], r["acq_price"])
                 for r in normalized
             ]
             from psycopg2.extras import execute_values
             execute_values(
                 cur,
                 """INSERT INTO oh_pricing
-                   (source_sheet, city, society, society_norm, bhk, area_sqft, price)
+                   (source_sheet, city, society, society_norm, bhk, area_sqft, price, acq_price)
                    VALUES %s""",
                 tuples, page_size=500,
             )

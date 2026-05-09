@@ -99,23 +99,32 @@ def list_inventory():
     count_scope, count_scope_params, count_filters, count_filter_params = build_filters("")
 
     # LATERAL join brings the best-matching OH Pricing row alongside each inventory row.
-    # Match priority: society + bhk + closest area_sqft (within ±150 sqft); fall back to
-    # society + bhk with NULL area.
+    # Match rule: society MUST match. BHK should match (NULL on either side counted
+    # as match). Area is the tiebreaker — closest first. We no longer hard-cap area
+    # distance; instead we surface a `match_kind` so the UI can label exact vs nearest.
     sql = f"""
-        SELECT i.*, p.price AS oh_price, p.area_sqft AS oh_price_area, p.bhk AS oh_price_bhk
+        SELECT i.*,
+               p.price        AS oh_price,
+               p.acq_price    AS oh_acq_price,
+               p.area_sqft    AS oh_price_area,
+               p.bhk          AS oh_price_bhk,
+               p.match_kind   AS oh_price_match
         FROM inventory i
         LEFT JOIN LATERAL (
-            SELECT op.price, op.area_sqft, op.bhk
+            SELECT op.price, op.acq_price, op.area_sqft, op.bhk,
+                   CASE
+                     WHEN i.area_sqft IS NULL OR op.area_sqft IS NULL THEN 'no_area'
+                     WHEN ABS(op.area_sqft - i.area_sqft) <= 150       THEN 'exact'
+                     ELSE 'nearest'
+                   END AS match_kind
             FROM oh_pricing op
             WHERE op.society_norm = LOWER(TRIM(i.society))
               AND (op.bhk IS NULL OR i.bedrooms IS NULL OR op.bhk = i.bedrooms)
-              AND (
-                op.area_sqft IS NULL OR i.area_sqft IS NULL
-                OR ABS(op.area_sqft - i.area_sqft) <= 150
-              )
             ORDER BY
               (CASE WHEN op.bhk = i.bedrooms THEN 0 ELSE 1 END),
-              (CASE WHEN op.area_sqft IS NULL THEN 9999 ELSE ABS(COALESCE(op.area_sqft, 0) - COALESCE(i.area_sqft, 0)) END)
+              (CASE WHEN op.area_sqft IS NULL OR i.area_sqft IS NULL
+                    THEN 9999
+                    ELSE ABS(op.area_sqft - i.area_sqft) END)
             LIMIT 1
         ) p ON TRUE
         WHERE TRUE

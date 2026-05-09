@@ -125,6 +125,7 @@ a { color: inherit; }
 .card-prices .val { font-weight: 800; font-size: 15px; }
 .val-orange { color: #ea580c; }
 .val-green { color: #16a34a; }
+.val-amber { color: #b45309; }   /* used for "nearest" (not exact) OH price match */
 .val-muted { color: #cbd5e1; font-weight: 600; }
 .muted { color: #94a3b8; }
 /* Variation: positive = asking above OH (less attractive) → red.
