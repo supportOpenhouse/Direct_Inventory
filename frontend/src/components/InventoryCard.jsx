@@ -69,7 +69,7 @@ export default function InventoryCard({ item, onUpdated, role }) {
         <div className="card-prices">
           <div><div className="lbl">ASKING</div><div className="val val-orange">{formatPrice(item.price)}</div></div>
           <div>
-            <div className="lbl">OH PRICING</div>
+            <div className="lbl">OH PRICE</div>
             <div className={item.oh_price ? 'val val-green' : 'val val-muted'}>
               {item.oh_price ? formatPrice(item.oh_price) : '—'}
             </div>
@@ -120,7 +120,7 @@ export default function InventoryCard({ item, onUpdated, role }) {
                 <span className="val-orange">{formatPrice(item.price)}</span>
               </div>
               <div>
-                <span className="exp-lbl">OH Pricing</span>
+                <span className="exp-lbl">OH Price</span>
                 <span className={item.oh_price ? 'val-green' : 'muted'}>
                   {item.oh_price ? formatPrice(item.oh_price) : 'no match'}
                   {item.oh_price && item.oh_price_area ? ` (matched ${item.oh_price_bhk}BHK, ${item.oh_price_area}sqft)` : ''}

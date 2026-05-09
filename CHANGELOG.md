@@ -10,10 +10,10 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
-- OH Pricing: new `oh_pricing` table (migration 004) populated from the OH Pricing Google Sheet. Two source sheets: "Gurgaon" and "Noida + GZB". Lookup key is society + BHK + closest area (±150 sqft).
+- OH Price: new `oh_pricing` table (migration 004) populated from the OH Price Google Sheet. Two source sheets: "Gurgaon" and "Noida + GZB". Lookup key is society + BHK + closest area (±150 sqft).
 - New backend endpoint `POST /api/sync/oh-pricing` — per-source-sheet replace (DELETE then bulk INSERT). Auth via the existing `X-Sync-Token`.
 - `GET /api/inventory` now LEFT JOIN LATERAL with `oh_pricing` to attach the best-matching `oh_price` (plus the matched `oh_price_bhk` and `oh_price_area`) to every row returned.
-- Frontend: inventory cards show OH Pricing alongside Asking Price (green when matched, em-dash when no match). The detail modal shows a richer line including matched BHK / area.
+- Frontend: inventory cards show OH Price alongside Asking Price (green when matched, em-dash when no match). The detail modal shows a richer line including matched BHK / area.
 - New Apps Script `apps_script/sync_oh_pricing.gs` — weekly Friday trigger that pushes both sheet tabs to the backend; chunked at 500 rows per POST.
 - Refactored `_scope_clause` and inventory list filters to support optional table aliases (the LATERAL join needs `i.` prefixes; the COUNT query stays unaliased).
 
