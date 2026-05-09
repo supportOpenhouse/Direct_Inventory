@@ -10,7 +10,12 @@ const PAGE_SIZE = 100;         // page size when a stage filter is active
 
 export default function Board() {
   const { user } = useAuth();
-  const [q, setQ] = useState('');
+  // qInput = what's in the input box right now (changes on every keystroke).
+  // qApplied = the value the API is currently filtered by (changes only on submit).
+  // Splitting these prevents a race where rapid typing fires N in-flight
+  // requests and the older one resolves last, overwriting the newer result.
+  const [qInput, setQInput] = useState('');
+  const [qApplied, setQApplied] = useState('');
   const [city, setCity] = useState('');
   const [stageFilter, setStageFilter] = useState(null);   // null = "All" (kanban)
   const [page, setPage] = useState(0);
@@ -28,7 +33,7 @@ export default function Board() {
 
   function makeFilterParams() {
     const p = new URLSearchParams();
-    if (q) p.set('q', q);
+    if (qApplied) p.set('q', qApplied);
     if (city) p.set('city', city);
     return p;
   }
@@ -83,13 +88,15 @@ export default function Board() {
     } catch { /* ignore */ }
   }
 
-  // Re-load counts whenever city/q changes; reload board view on stage/city/q/page change.
-  useEffect(() => { refreshCounts(); /* eslint-disable-next-line */ }, [city, q]);
+  // Re-load counts and the active board view when filters change. Critically,
+  // qApplied (not qInput) is the dep — search only takes effect on submit, so
+  // typing 'a','am','amr',... doesn't fire 8 in-flight requests racing each other.
+  useEffect(() => { refreshCounts(); /* eslint-disable-next-line */ }, [city, qApplied]);
   useEffect(() => {
     setPage(0);
     if (stageFilter) refreshFiltered(0); else refreshKanban();
     /* eslint-disable-next-line */
-  }, [city, q, stageFilter]);
+  }, [city, qApplied, stageFilter]);
   useEffect(() => {
     if (stageFilter) refreshFiltered(page);
     /* eslint-disable-next-line */
@@ -98,8 +105,7 @@ export default function Board() {
 
   function onSearch(e) {
     e?.preventDefault();
-    refreshCounts();
-    if (stageFilter) refreshFiltered(0); else refreshKanban();
+    setQApplied(qInput.trim());   // useEffects above will pick this up
   }
 
   function patchItemInState(updated) {
@@ -136,11 +142,16 @@ export default function Board() {
         </div>
         <form className="search-form" onSubmit={onSearch}>
           <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search society, OH-ID, seller, locality, source…"
+            value={qInput}
+            onChange={(e) => setQInput(e.target.value)}
+            placeholder="Search society, OH-ID, seller, locality, source… (press Enter)"
           />
           <button type="submit" className="btn-primary">Search</button>
+          {qApplied && (
+            <button type="button" className="btn-ghost" onClick={() => { setQInput(''); setQApplied(''); }}>
+              Clear
+            </button>
+          )}
         </form>
         <div className="toolbar-spacer" />
         {lastSync && (
@@ -201,7 +212,10 @@ export default function Board() {
         <div className="kanban">
           {STAGES.map((s) => {
             const list = grouped[s] || [];
-            const totalForStage = counts.by_stage?.[s] ?? list.length;
+            // Backend now zero-fills missing stages, so use 0 as the fallback
+            // (avoids the bug where col-count showed list.length while the chip
+            // showed 0, when counts had loaded but the stage truly was empty).
+            const totalForStage = counts.by_stage?.[s] ?? 0;
             const more = Math.max(0, totalForStage - list.length);
             return (
               <div key={s} className="kanban-col">

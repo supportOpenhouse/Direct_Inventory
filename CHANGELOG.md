@@ -10,6 +10,9 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- BUGFIX: Board search was racy. Every keystroke fired a re-fetch via useEffect, and an older request (e.g. for `q="a"`) sometimes resolved AFTER the newer `q="amrapali"` request and overwrote the state with non-matching rows. Split into qInput (typed text) and qApplied (committed search) — search only takes effect on submit/Enter, plus a Clear button when a search is active.
+- BUGFIX: Kanban column header showed `list.length` when counts.by_stage was missing the stage key, while the chip showed 0 — visibly inconsistent. Backend `/api/inventory/counts` now zero-fills every stage in the response, and the frontend uses 0 as the fallback.
+
 - OH Price displayed on cards is now the Acq Price column (★ Acq Price (₹L) on Gurgaon, L2 Acq (₹L) on Noida + GZB) instead of the Selling Price column. The redundant separate "ACQ PRICE" pill is removed from the card and the detail modal — there's just one OH PRICE pill, and Variation is computed against it. Backend LATERAL JOIN now reads `acq_price` and only matches rows where acq_price is non-null. The selling-price column is still captured in `oh_pricing.price` but isn't surfaced to the UI.
 
 - BUGFIX: OH Pricing batched sync was wiping the table on every batch's POST. Each call to `run_pricing_sync` started with `DELETE FROM oh_pricing WHERE source_sheet=X`, so when Apps Script sent N batches, only the last batch's rows survived (Gurgaon ended up with 451 rows instead of 2,451; Noida + GZB with 336 instead of 4,336). Backend now respects an `is_first_batch` flag — only the first batch deletes; subsequent batches append. Apps Script updated to set `is_first_batch: b === 0`.

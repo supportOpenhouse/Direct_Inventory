@@ -214,6 +214,13 @@ def inventory_counts():
 
     where_extra = " ".join(sql_filters)
 
+    # Always present every stage in the response (zero-fill missing ones) so the
+    # frontend doesn't have to fall back when GROUP BY omits a stage with 0 rows.
+    all_stages = [
+        "qualified", "follow_up_cnr", "visit_scheduled", "visit_completed",
+        "offer_given", "unreachable", "rejected",
+    ]
+
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
@@ -223,7 +230,9 @@ def inventory_counts():
                     GROUP BY stage""",
                 [*scope_params, *params],
             )
-            by_stage = {r["stage"]: r["n"] for r in cur.fetchall()}
+            by_stage = {s: 0 for s in all_stages}
+            for r in cur.fetchall():
+                by_stage[r["stage"]] = r["n"]
             cur.execute(
                 f"SELECT COUNT(*) AS n FROM inventory WHERE TRUE {scope_sql} {where_extra}",
                 [*scope_params, *params],
