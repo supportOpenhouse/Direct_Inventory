@@ -30,6 +30,23 @@ def _parse_int(v) -> int | None:
         return None
 
 
+# Columns that hold the OH price, in priority order. The 'multiplier' converts
+# the raw value to integer rupees: 100_000 for "₹L" (lakhs) columns, 1 for raw ₹.
+# Names already pass through _norm_key, so 'Selling Price (₹L)' → 'selling_price_l'.
+_PRICE_KEYS_AND_MULTIPLIER = [
+    ("oh_price",        1),
+    ("oh_pricing",      1),
+    ("price",           1),
+    ("amount",          1),
+    # Lakhs-denominated columns from the actual OH pricing sheets:
+    ("selling_price_l", 100_000),    # Gurgaon tab: "★ Selling Price (₹L)"
+    ("sell_price_l",    100_000),    # Noida + GZB tab: "Sell Price (₹L)"
+]
+
+# Area column candidates in priority order.
+_AREA_KEYS = ["area_sqft", "size_sqft", "sqft", "area", "size"]
+
+
 def _normalize_city(raw_city: str | None, default_from_sheet: str | None) -> str | None:
     """Map sheet city values to our canonical cities."""
     s = (raw_city or "").strip().lower()
@@ -51,14 +68,31 @@ def _normalize_row(raw: dict, *, default_city: str | None) -> dict | None:
     """Map a sheet row to a pricing record. Returns None if essentials are missing."""
     rec = {_norm_key(k): v for k, v in raw.items()}
 
-    society = (rec.get("society") or rec.get("society_name") or rec.get("project") or "").strip()
+    society = str(rec.get("society") or rec.get("society_name") or rec.get("project") or "").strip()
     if not society:
         return None
 
     bhk = _parse_int(rec.get("bhk") or rec.get("bedrooms") or rec.get("bedroom"))
-    area_sqft = _parse_int(rec.get("area") or rec.get("area_sqft") or rec.get("size"))
-    price = _parse_int(rec.get("price") or rec.get("oh_price") or rec.get("oh_pricing") or rec.get("amount"))
-    if price is None:
+
+    area_sqft = None
+    for k in _AREA_KEYS:
+        if rec.get(k) not in (None, ""):
+            area_sqft = _parse_int(rec.get(k))
+            if area_sqft is not None:
+                break
+
+    price = None
+    for key, multiplier in _PRICE_KEYS_AND_MULTIPLIER:
+        v = rec.get(key)
+        if v in (None, ""):
+            continue
+        try:
+            f = float(str(v).replace(",", "").strip())
+        except (ValueError, TypeError):
+            continue
+        price = int(round(f * multiplier))
+        break
+    if price is None or price <= 0:
         return None
 
     city = _normalize_city(rec.get("city"), default_city)

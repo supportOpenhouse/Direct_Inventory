@@ -1,24 +1,22 @@
 /**
- * Openhouse Direct Inventory — OH Pricing weekly sync.
+ * Openhouse Direct Inventory — OH Pricing weekly sync (with diagnostics).
  *
- * Source sheet (separate from the inventory sheet): two tabs we care about:
+ * Source sheet: 19lHea4MAz71etXjxeili6-dwbSU9QWzulLoZl1li7HI
+ * Two tabs we read:
  *   - "Gurgaon"     → Gurgaon societies
  *   - "Noida + GZB" → Noida + Ghaziabad societies
  *
- * Each tab is expected to have headers (case/space/punct insensitive) including
- * at minimum: Society, BHK, Area (or Area sqft / Size), Price (or OH Price).
- * The "Noida + GZB" tab should also have a City column ("Noida" or "Ghaziabad")
- * so we know which city each row belongs to. The "Gurgaon" tab can omit it.
- *
  * Setup (one time):
- *   1. Open the OH Pricing sheet (id 19lHea4MAz71etXjxeili6-dwbSU9QWzulLoZl1li7HI).
- *   2. Extensions → Apps Script. Paste this file as a new .gs file.
+ *   1. Open the OH Pricing sheet → Extensions → Apps Script.
+ *   2. Paste this file. Save.
  *   3. Project Settings → Time zone: Asia/Kolkata.
  *   4. Project Settings → Script Properties → add:
  *        BACKEND_URL = https://direct-inventory.onrender.com
  *        SYNC_TOKEN  = (same value as the backend's SYNC_TOKEN env var)
- *   5. Run OHP_runPricingSync once to seed; then OHP_installTrigger to schedule
- *      a weekly Friday push.
+ *   5. Run OHP_runPricingSync once. The diagnostic block prints
+ *      RAW headers / NORMALIZED / SAMPLE row 2 — paste those back to
+ *      chat so the backend matchers can be tuned to your sheet.
+ *   6. Once that succeeds, run OHP_installTrigger for the weekly schedule.
  */
 
 const OHP_TABS = [
@@ -31,21 +29,20 @@ function OHP_props_() {
   return PropertiesService.getScriptProperties();
 }
 
+function OHP_normHeader_(h) {
+  return String(h || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+}
+
 function OHP_installTrigger() {
   ScriptApp.getProjectTriggers().forEach(t => {
     if (t.getHandlerFunction() === 'OHP_runPricingSync') ScriptApp.deleteTrigger(t);
   });
-  // Weekly Friday at ~10:00 IST.
   ScriptApp.newTrigger('OHP_runPricingSync')
     .timeBased()
     .onWeekDay(ScriptApp.WeekDay.FRIDAY)
     .atHour(10)
     .create();
   Logger.log('Trigger installed: OHP_runPricingSync every Friday at ~10:00 IST.');
-}
-
-function OHP_normHeader_(h) {
-  return String(h || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 }
 
 function OHP_collectRows_(sheet) {
@@ -106,10 +103,29 @@ function OHP_runPricingSync() {
       Logger.log(`Sheet "${sheetName}" not found — skipping.`);
       continue;
     }
+
+    // --- diagnostics: log headers + a sample row so column-matching can be tuned ---
+    const values = sheet.getDataRange().getValues();
+    if (values.length === 0) {
+      Logger.log(`[${sourceSheet}] empty sheet`);
+      continue;
+    }
+    const rawHeaders = values[0];
+    const normHeaders = rawHeaders.map(OHP_normHeader_);
+    Logger.log(`[${sourceSheet}] RAW headers:  ${JSON.stringify(rawHeaders)}`);
+    Logger.log(`[${sourceSheet}] NORMALIZED:   ${JSON.stringify(normHeaders)}`);
+    if (values.length >= 2) {
+      const sampleObj = {};
+      for (let j = 0; j < normHeaders.length; j++) {
+        if (normHeaders[j]) sampleObj[normHeaders[j]] = values[1][j];
+      }
+      Logger.log(`[${sourceSheet}] SAMPLE row 2: ${JSON.stringify(sampleObj)}`);
+    }
+    // --- end diagnostics ---
+
     const allRows = OHP_collectRows_(sheet);
     Logger.log(`[${sourceSheet}] ${allRows.length} non-empty rows`);
     if (allRows.length === 0) {
-      // Still send an empty batch so the backend wipes the table for this source.
       OHP_postBatch_(backendUrl, syncToken, sourceSheet, [], 0, 1);
       continue;
     }

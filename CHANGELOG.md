@@ -10,6 +10,11 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- OH Pricing normalizer now matches the actual sheet headers:
+  - Area: `sqft` (Gurgaon tab) and `size_sqft` (Noida + GZB tab) added.
+  - Price: `selling_price_l` and `sell_price_l` added; both are auto-converted from ₹L (lakhs) to ₹ (×100,000) before being stored.
+  - 7 new pytest cases pin both column conventions so any future sheet-header rename will fail tests before deploy.
+
 - OH Price: new `oh_pricing` table (migration 004) populated from the OH Price Google Sheet. Two source sheets: "Gurgaon" and "Noida + GZB". Lookup key is society + BHK + closest area (±150 sqft).
 - New backend endpoint `POST /api/sync/oh-pricing` — per-source-sheet replace (DELETE then bulk INSERT). Auth via the existing `X-Sync-Token`.
 - `GET /api/inventory` now LEFT JOIN LATERAL with `oh_pricing` to attach the best-matching `oh_price` (plus the matched `oh_price_bhk` and `oh_price_area`) to every row returned.
