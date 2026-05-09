@@ -81,12 +81,6 @@ export default function InventoryCard({ item, onUpdated, role }) {
             </div>
           </div>
           <div>
-            <div className="lbl">ACQ PRICE</div>
-            <div className={item.oh_acq_price ? (isNearest ? 'val val-amber' : 'val val-green') : 'val val-muted'}>
-              {item.oh_acq_price ? `${matchTag}${formatPrice(item.oh_acq_price)}` : '—'}
-            </div>
-          </div>
-          <div>
             <div className="lbl">VARIATION</div>
             <div className={v ? `val val-var-${v.sign}` : 'val val-muted'}>
               {v ? v.label : '—'}
@@ -144,12 +138,6 @@ export default function InventoryCard({ item, onUpdated, role }) {
                   {item.oh_price && item.oh_price_area
                     ? ` (${isNearest ? 'nearest' : 'matched'} ${item.oh_price_bhk}BHK, ${item.oh_price_area}sqft)`
                     : ''}
-                </span>
-              </div>
-              <div>
-                <span className="exp-lbl">Acq Price</span>
-                <span className={item.oh_acq_price ? (isNearest ? 'val-amber' : 'val-green') : 'muted'}>
-                  {item.oh_acq_price ? `${matchTag}${formatPrice(item.oh_acq_price)}` : 'no match'}
                 </span>
               </div>
               <div>

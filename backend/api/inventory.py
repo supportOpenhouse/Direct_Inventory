@@ -102,16 +102,18 @@ def list_inventory():
     # Match rule: society MUST match. BHK should match (NULL on either side counted
     # as match). Area is the tiebreaker — closest first. We no longer hard-cap area
     # distance; instead we surface a `match_kind` so the UI can label exact vs nearest.
+    # `oh_price` returned to the UI is the Acq Price (★ Acq Price (₹L) on Gurgaon
+    # tab; L2 Acq (₹L) on Noida + GZB tab). The sheet's "Selling Price" column is
+    # captured in oh_pricing.price but not surfaced to the UI per product decision.
     sql = f"""
         SELECT i.*,
-               p.price        AS oh_price,
-               p.acq_price    AS oh_acq_price,
+               p.acq_price    AS oh_price,
                p.area_sqft    AS oh_price_area,
                p.bhk          AS oh_price_bhk,
                p.match_kind   AS oh_price_match
         FROM inventory i
         LEFT JOIN LATERAL (
-            SELECT op.price, op.acq_price, op.area_sqft, op.bhk,
+            SELECT op.acq_price, op.area_sqft, op.bhk,
                    CASE
                      WHEN i.area_sqft IS NULL OR op.area_sqft IS NULL THEN 'no_area'
                      WHEN ABS(op.area_sqft - i.area_sqft) <= 150       THEN 'exact'
@@ -119,6 +121,7 @@ def list_inventory():
                    END AS match_kind
             FROM oh_pricing op
             WHERE op.society_norm = LOWER(TRIM(i.society))
+              AND op.acq_price IS NOT NULL                -- only consider rows with an acq price
               AND (op.bhk IS NULL OR i.bedrooms IS NULL OR op.bhk = i.bedrooms)
             ORDER BY
               (CASE WHEN op.bhk = i.bedrooms THEN 0 ELSE 1 END),
