@@ -10,6 +10,8 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- Inventory cards (and detail modal) now show a Variation column = (asking − OH Price) / OH Price × 100. Color-coded: red when asking is above OH (less attractive), green when below (more attractive), gray within ±0.5%. Em-dash when OH Price is missing.
+
 - OH Pricing source sheet moved to `1LC82Cg1OlOAL6cqpEJRl1Xrzwso5d1D8ApK-koFR2bY`. Apps Script body is unchanged (it reads from `getActiveSpreadsheet()`); only the doc-comment header is updated. The Apps Script must now be re-installed inside the *new* sheet, and the *old* sheet's trigger must be deleted to avoid dueling syncs.
 
 - OH Pricing normalizer now matches the actual sheet headers:

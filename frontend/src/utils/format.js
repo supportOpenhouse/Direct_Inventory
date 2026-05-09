@@ -74,3 +74,18 @@ export function isManualSource(src) {
   if (!src) return false;
   return MANUAL_SOURCES.has(src);
 }
+
+// Variation = (asking - oh_price) / oh_price * 100, signed.
+// Returns { pct, label, sign } or null if either side is missing/zero.
+//   sign === 'pos' means asking is OVER OH (typically less attractive)
+//   sign === 'neg' means asking is UNDER OH (typically more attractive)
+//   sign === 'flat' for |pct| < 0.5
+export function variation(asking, oh) {
+  const a = Number(asking);
+  const o = Number(oh);
+  if (!Number.isFinite(a) || !Number.isFinite(o) || o === 0) return null;
+  const pct = ((a - o) / o) * 100;
+  const sign = Math.abs(pct) < 0.5 ? 'flat' : (pct > 0 ? 'pos' : 'neg');
+  const label = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+  return { pct, label, sign };
+}

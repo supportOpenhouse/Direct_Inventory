@@ -120,13 +120,18 @@ a { color: inherit; }
 .tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 600; }
 .tag-bhk { background: #fff7ed; color: #9a3412; }
 .tag-area { background: #f1f5f9; color: #334155; }
-.card-prices { display: flex; gap: 24px; padding-top: 8px; border-top: 1px solid #f1f5f9; }
+.card-prices { display: flex; gap: 18px; padding-top: 8px; border-top: 1px solid #f1f5f9; flex-wrap: wrap; }
 .card-prices .lbl { font-size: 10px; color: #94a3b8; letter-spacing: 1px; }
-.card-prices .val { font-weight: 800; font-size: 16px; }
+.card-prices .val { font-weight: 800; font-size: 15px; }
 .val-orange { color: #ea580c; }
 .val-green { color: #16a34a; }
 .val-muted { color: #cbd5e1; font-weight: 600; }
 .muted { color: #94a3b8; }
+/* Variation: positive = asking above OH (less attractive) → red.
+   Negative = asking below OH (more attractive) → green. Flat = neutral. */
+.val-var-pos  { color: #dc2626; }
+.val-var-neg  { color: #16a34a; }
+.val-var-flat { color: #64748b; }
 .card-foot { color: #94a3b8; font-size: 12px; margin-top: 8px; display: flex; gap: 6px; }
 .src { color: #475569; font-weight: 600; }
 .reject-reason {

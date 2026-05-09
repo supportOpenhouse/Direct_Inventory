@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api/client.js';
-import { displayCity, formatPrice, formatDateRel, isManualSource, REJECT_REASONS, STAGE_DOT_COLOR, STAGES, stageLabel } from '../utils/format.js';
+import { displayCity, formatPrice, formatDateRel, isManualSource, REJECT_REASONS, STAGE_DOT_COLOR, STAGES, stageLabel, variation } from '../utils/format.js';
 import VisitScheduleModal from './VisitScheduleModal.jsx';
 import RejectReasonModal from './RejectReasonModal.jsx';
 
@@ -12,6 +12,7 @@ export default function InventoryCard({ item, onUpdated, role }) {
   const [showVisit, setShowVisit] = useState(false);
   const [showReject, setShowReject] = useState(false);
   const canEdit = ['admin', 'manager', 'rm'].includes(role);
+  const v = variation(item.price, item.oh_price);
 
   async function applyStage(newStage, extraBody = {}) {
     try {
@@ -74,6 +75,12 @@ export default function InventoryCard({ item, onUpdated, role }) {
               {item.oh_price ? formatPrice(item.oh_price) : '—'}
             </div>
           </div>
+          <div>
+            <div className="lbl">VARIATION</div>
+            <div className={v ? `val val-var-${v.sign}` : 'val val-muted'}>
+              {v ? v.label : '—'}
+            </div>
+          </div>
         </div>
         <div className="card-foot">
           <span>{formatDateRel(item.created_at)}</span>
@@ -124,6 +131,12 @@ export default function InventoryCard({ item, onUpdated, role }) {
                 <span className={item.oh_price ? 'val-green' : 'muted'}>
                   {item.oh_price ? formatPrice(item.oh_price) : 'no match'}
                   {item.oh_price && item.oh_price_area ? ` (matched ${item.oh_price_bhk}BHK, ${item.oh_price_area}sqft)` : ''}
+                </span>
+              </div>
+              <div>
+                <span className="exp-lbl">Variation</span>
+                <span className={v ? `val-var-${v.sign}` : 'muted'}>
+                  {v ? v.label : 'no match'}
                 </span>
               </div>
             </div>
