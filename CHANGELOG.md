@@ -10,6 +10,8 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- OH Pricing source sheet moved to `1LC82Cg1OlOAL6cqpEJRl1Xrzwso5d1D8ApK-koFR2bY`. Apps Script body is unchanged (it reads from `getActiveSpreadsheet()`); only the doc-comment header is updated. The Apps Script must now be re-installed inside the *new* sheet, and the *old* sheet's trigger must be deleted to avoid dueling syncs.
+
 - OH Pricing normalizer now matches the actual sheet headers:
   - Area: `sqft` (Gurgaon tab) and `size_sqft` (Noida + GZB tab) added.
   - Price: `selling_price_l` and `sell_price_l` added; both are auto-converted from ₹L (lakhs) to ₹ (×100,000) before being stored.

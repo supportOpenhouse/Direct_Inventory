@@ -1,22 +1,25 @@
 /**
- * Openhouse Direct Inventory — OH Pricing weekly sync (with diagnostics).
+ * Openhouse Direct Inventory — OH Pricing weekly sync.
  *
- * Source sheet: 19lHea4MAz71etXjxeili6-dwbSU9QWzulLoZl1li7HI
+ * Source sheet: 1LC82Cg1OlOAL6cqpEJRl1Xrzwso5d1D8ApK-koFR2bY
  * Two tabs we read:
  *   - "Gurgaon"     → Gurgaon societies
  *   - "Noida + GZB" → Noida + Ghaziabad societies
  *
- * Setup (one time):
- *   1. Open the OH Pricing sheet → Extensions → Apps Script.
- *   2. Paste this file. Save.
+ * Setup (one time, in the NEW sheet):
+ *   1. Open the new OH Pricing sheet → Extensions → Apps Script.
+ *      A new Apps Script project bound to this sheet will be created.
+ *   2. Paste this file. Save (⌘S).
  *   3. Project Settings → Time zone: Asia/Kolkata.
  *   4. Project Settings → Script Properties → add:
  *        BACKEND_URL = https://direct-inventory.onrender.com
  *        SYNC_TOKEN  = (same value as the backend's SYNC_TOKEN env var)
- *   5. Run OHP_runPricingSync once. The diagnostic block prints
- *      RAW headers / NORMALIZED / SAMPLE row 2 — paste those back to
- *      chat so the backend matchers can be tuned to your sheet.
- *   6. Once that succeeds, run OHP_installTrigger for the weekly schedule.
+ *   5. Run OHP_runPricingSync once. Confirm `inserted` ≈ `fetched`.
+ *   6. Run OHP_installTrigger for the weekly Friday auto-sync.
+ *
+ * IMPORTANT: in the OLD sheet's Apps Script, also delete the existing
+ * OHP_runPricingSync trigger (Triggers tab in the editor) so it stops
+ * firing — otherwise both scripts will race-overwrite the oh_pricing table.
  */
 
 const OHP_TABS = [
