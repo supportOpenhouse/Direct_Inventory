@@ -60,6 +60,9 @@ def push_pricing_sync():
     body = request.get_json(silent=True) or {}
     rows = body.get("rows")
     source_sheet = (body.get("source_sheet") or "").strip()
+    # Default True so a one-shot caller (e.g. curl) still gets a clean replace.
+    # Multi-batch callers must set is_first_batch=False on batches 2..N.
+    replace_existing = bool(body.get("is_first_batch", True))
 
     if not isinstance(rows, list):
         return jsonify({"error": "body must include rows: [...]"}), 400
@@ -70,7 +73,11 @@ def push_pricing_sync():
 
     conn = get_conn()
     try:
-        summary = run_pricing_sync(conn, source_sheet, rows, actor_email=actor)
+        summary = run_pricing_sync(
+            conn, source_sheet, rows,
+            replace_existing=replace_existing,
+            actor_email=actor,
+        )
         return jsonify(summary)
     finally:
         conn.close()

@@ -78,6 +78,10 @@ function OHP_postBatch_(backendUrl, syncToken, sourceSheet, batch, b, totalBatch
     payload: JSON.stringify({
       source_sheet: sourceSheet,
       rows: batch,
+      // Critical: only batch 0 wipes existing rows for this source_sheet.
+      // Subsequent batches APPEND. Without this flag the table is wiped per batch
+      // and only the last batch's rows survive.
+      is_first_batch: b === 0,
       actor: `apps-script:oh-pricing:${sourceSheet}:batch-${b + 1}/${totalBatches}`,
     }),
     muteHttpExceptions: true,

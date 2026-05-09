@@ -10,6 +10,8 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- BUGFIX: OH Pricing batched sync was wiping the table on every batch's POST. Each call to `run_pricing_sync` started with `DELETE FROM oh_pricing WHERE source_sheet=X`, so when Apps Script sent N batches, only the last batch's rows survived (Gurgaon ended up with 451 rows instead of 2,451; Noida + GZB with 336 instead of 4,336). Backend now respects an `is_first_batch` flag — only the first batch deletes; subsequent batches append. Apps Script updated to set `is_first_batch: b === 0`.
+
 - OH Pricing now also captures Acq Price: from "★ Acq Price (₹L)" on the Gurgaon tab and "L2 Acq (₹L)" on the Noida + GZB tab (both auto-converted from lakhs). Migration 005 adds `acq_price BIGINT` to `oh_pricing`.
 - LATERAL match relaxed: society + BHK now always returns the row with the closest area (no hard ±150 sqft cap). The query also returns a new `oh_price_match` column ('exact' | 'nearest' | 'no_area'). The UI prefixes nearest matches with `~` and renders them in amber instead of green; tooltip shows the matched BHK / area.
 - Card adds an ACQ PRICE pill alongside ASKING / OH PRICE / VARIATION; detail modal grid adds an Acq Price row and labels the OH Price match as `nearest` vs `matched`.

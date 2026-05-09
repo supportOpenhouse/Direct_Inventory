@@ -128,11 +128,18 @@ def _normalize_row(raw: dict, *, default_city: str | None) -> dict | None:
     }
 
 
-def run_pricing_sync(conn, source_sheet: str, rows: list[dict], *, actor_email: str = "system:apps-script") -> dict:
-    """Replace all rows for `source_sheet` with the pushed payload.
+def run_pricing_sync(
+    conn, source_sheet: str, rows: list[dict], *,
+    replace_existing: bool = True,
+    actor_email: str = "system:apps-script",
+) -> dict:
+    """Append `rows` to `oh_pricing` for the given `source_sheet`.
 
     Args:
         source_sheet: 'Gurgaon' or 'Noida + GZB' — used as the per-sheet replace key.
+        replace_existing: when True, DELETE rows for this source_sheet before inserting.
+            When the Apps Script batches a sync into N POSTs, only the first batch
+            should set replace_existing=True; subsequent batches append.
     """
     started = datetime.now(tz=timezone.utc)
     fetched = len(rows)
@@ -149,8 +156,9 @@ def run_pricing_sync(conn, source_sheet: str, rows: list[dict], *, actor_email: 
         normalized.append(rec)
 
     with conn, conn.cursor() as cur:
-        # Replace strategy: drop everything from this source_sheet, re-insert.
-        cur.execute("DELETE FROM oh_pricing WHERE source_sheet = %s", (source_sheet,))
+        if replace_existing:
+            # First batch of a fresh sync: drop everything from this source_sheet.
+            cur.execute("DELETE FROM oh_pricing WHERE source_sheet = %s", (source_sheet,))
 
         if normalized:
             tuples = [
