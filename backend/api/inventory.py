@@ -12,6 +12,7 @@ from flask import Blueprint, g, jsonify, request
 from ..db import get_conn
 from ..services.activity import log as log_activity
 from ..services.assignment import resolve_assignment
+from ..services.cp_match import annotate_cp_match
 from ..services.oh_id import next_oh_id
 from .auth import require_auth
 
@@ -55,7 +56,8 @@ VALID_REJECT_REASONS = {
 
 EDITABLE_RAW_FIELDS = {
     "source", "city", "locality", "society", "bedrooms", "area_sqft",
-    "floor", "price", "seller_name", "seller_phone", "posting_date", "listing_link",
+    "floor", "tower", "unit_no",
+    "price", "seller_name", "seller_phone", "posting_date", "listing_link",
 }
 
 # Fields that bulk-update may set. Single-row PATCH allows more (notes, raw fields).
@@ -263,6 +265,9 @@ def list_inventory():
             rows = cur.fetchall()
             cur.execute(count_sql, count_params)
             total = cur.fetchone()["n"]
+        # Annotate each row with cp_match ('perfect' | 'partial' | None).
+        # Failure here is non-fatal — rows already have cp_match=None.
+        annotate_cp_match(rows)
         return jsonify({"items": rows, "total": total, "limit": limit, "offset": offset})
     finally:
         conn.close()
@@ -424,16 +429,20 @@ def create_one():
                 """
                 INSERT INTO inventory (
                     oh_id, source, city, locality, society, bedrooms, area_sqft,
-                    floor, price, seller_name, seller_phone, posting_date, listing_link,
+                    floor, tower, unit_no,
+                    price, seller_name, seller_phone, posting_date, listing_link,
                     stage, assigned_rm_id, assigned_mgr_id, last_synced_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s,
+                          %s, %s, %s,
+                          %s, %s, %s, %s, %s,
                           'qualified', %s, %s, NULL)
                 RETURNING *
                 """,
                 (
                     oh_id, fields["source"], fields["city"], fields.get("locality"),
                     fields.get("society"), fields.get("bedrooms"), fields.get("area_sqft"),
-                    fields.get("floor"), fields.get("price"), fields.get("seller_name"),
+                    fields.get("floor"), fields.get("tower"), fields.get("unit_no"),
+                    fields.get("price"), fields.get("seller_name"),
                     fields.get("seller_phone"), fields.get("posting_date"), fields["listing_link"],
                     rm_id, mgr_id,
                 ),

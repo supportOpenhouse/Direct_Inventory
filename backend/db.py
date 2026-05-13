@@ -21,3 +21,13 @@ def get_props_conn():
     conn = psycopg2.connect(config.PROPERTIES_DB_URL, cursor_factory=RealDictCursor)
     conn.set_session(readonly=True)
     return conn
+
+
+def get_cp_conn():
+    """READ-ONLY CP Inventory Portal DB. Returns None if CP_DB_URL is not set
+    (e.g. local dev) so callers can degrade gracefully."""
+    if not config.CP_DB_URL:
+        return None
+    conn = psycopg2.connect(config.CP_DB_URL, cursor_factory=RealDictCursor)
+    conn.set_session(readonly=True)
+    return conn

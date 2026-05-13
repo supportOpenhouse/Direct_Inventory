@@ -10,6 +10,10 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- Table: new Floor column (F{n}) between BHK and Area.
+- CP Inventory match annotation. Each row in the table is matched against the CP Inventory Portal DB (new env var `CP_DB_URL`, optional `CP_INVENTORY_TABLE` defaulting to `inventory`). Match key normalizes society + BHK + floor (and tower + unit when checking for a perfect hit). A 🟢 green ★ next to the society name = perfect match (society + BHK + floor + tower + unit_no all match). A 🔴 red ★ = partial match (society + BHK + floor only). No star = no match, or `CP_DB_URL` not configured / unreachable. CP DB failure is non-fatal — the rows just show without stars.
+- Migration 009 adds `tower TEXT, unit_no TEXT` to `inventory`. Sheet sync fills them in when the daily sheet has columns named tower / tower_no / tower_name / block and unit_no / unit / flat_no / flat_number — and uses `COALESCE` on update so manual entries aren't clobbered by syncs of sheets that don't have those fields. AddInventoryModal and the card detail modal expose both fields for manual entry/edit.
+
 - Board: dropped the kanban + card view, replaced with a single dense table. Columns (left to right): ☐ ★ OH-ID City Society BHK Area Asking OH-Price Variation Stage Seller Phone Posted Follow-up. Locality and Source moved to the detail modal only. Row click opens the existing detail modal. Manual rows keep their orange left rail; priority rows keep the gold rail (gold wins when both apply); selected rows get a warm fill. Sortable headers on Asking / OH Price / Variation / Posted / Follow-up. Priority always floats to the top regardless of the active sort.
 - Stage chips on top are now multi-select — clicking several combines with OR; "All" clears them.
 - Backend list endpoint accepts CSV `?stage=a,b,c` and a whitelisted `?sort=<field>&dir=asc|desc` (price, oh_price, variation, posting_date, follow_up_at, updated_at). Variation sort is computed in-SQL.

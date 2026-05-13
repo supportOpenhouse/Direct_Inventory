@@ -30,8 +30,8 @@ export default function InventoryTable({
   showStageColumn = true,
 }) {
   const canSetPriority = ['admin', 'manager'].includes(role);
-  // 14 base columns; +1 if selectMode, -1 if Stage hidden.
-  const colCount = 14 + (selectMode ? 1 : 0) - (showStageColumn ? 0 : 1);
+  // 15 base columns; +1 if selectMode, -1 if Stage hidden.
+  const colCount = 15 + (selectMode ? 1 : 0) - (showStageColumn ? 0 : 1);
 
   async function togglePriority(e, item) {
     e.stopPropagation();
@@ -58,6 +58,7 @@ export default function InventoryTable({
             <th className="inv-th">City</th>
             <th className="inv-th">Society</th>
             <th className="inv-th">BHK</th>
+            <th className="inv-th">Floor</th>
             <th className="inv-th">Area</th>
             <SortableTh field="price" label="Asking" sort={sort} onSort={onSort} align="right" />
             <SortableTh field="oh_price" label="OH Price" sort={sort} onSort={onSort} align="right" />
@@ -111,8 +112,23 @@ export default function InventoryTable({
                 </td>
                 <td className="inv-td-id">{item.oh_id}</td>
                 <td><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></td>
-                <td className="inv-td-society">{item.society || '—'}</td>
+                <td className="inv-td-society">
+                  {item.cp_match === 'perfect' && (
+                    <span
+                      className="cp-match cp-match-perfect"
+                      title="Perfect match in CP Inventory — society + BHK + floor + tower + unit"
+                    >★</span>
+                  )}
+                  {item.cp_match === 'partial' && (
+                    <span
+                      className="cp-match cp-match-partial"
+                      title="Partial match in CP Inventory — society + BHK + floor"
+                    >★</span>
+                  )}
+                  {item.society || '—'}
+                </td>
                 <td>{item.bedrooms != null ? `${item.bedrooms} BHK` : '—'}</td>
+                <td>{item.floor != null && item.floor !== '' ? `F${item.floor}` : '—'}</td>
                 <td>{item.area_sqft != null ? `${item.area_sqft} sqft` : '—'}</td>
                 <td className="inv-td-num val-orange">{formatPrice(item.price)}</td>
                 <td className={`inv-td-num ${item.oh_price ? (isNearest ? 'val-amber' : 'val-green') : 'muted'}`}>

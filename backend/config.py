@@ -18,6 +18,10 @@ def _required(key: str) -> str:
 # DB
 DATABASE_URL          = os.environ.get("DATABASE_URL", "")
 PROPERTIES_DB_URL     = os.environ.get("PROPERTIES_DB_URL", "")
+# Read-only handle for CP Inventory Portal data. Optional — if unset, the
+# /api/inventory list endpoint silently skips the CP match annotation.
+CP_DB_URL             = os.environ.get("CP_DB_URL", "")
+CP_INVENTORY_TABLE    = os.environ.get("CP_INVENTORY_TABLE", "inventory")
 
 # Auth
 JWT_SECRET            = os.environ.get("JWT_SECRET", "dev-secret-do-not-use-in-prod")

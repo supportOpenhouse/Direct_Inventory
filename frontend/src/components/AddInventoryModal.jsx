@@ -10,6 +10,8 @@ const initial = {
   bedrooms: '',
   area_sqft: '',
   floor: '',
+  tower: '',
+  unit_no: '',
   price: '',
   seller_name: '',
   posting_date: '',
@@ -129,6 +131,14 @@ export default function AddInventoryModal({ onClose, onAdded }) {
           <div>
             <label>Floor</label>
             <input value={f.floor} onChange={(e) => set('floor', e.target.value)} />
+          </div>
+          <div>
+            <label>Tower</label>
+            <input value={f.tower} onChange={(e) => set('tower', e.target.value)} placeholder="e.g. T3" />
+          </div>
+          <div>
+            <label>Unit No.</label>
+            <input value={f.unit_no} onChange={(e) => set('unit_no', e.target.value)} placeholder="e.g. 1502" />
           </div>
           <div>
             <label>Asking Price (₹)</label>

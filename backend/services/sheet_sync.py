@@ -55,6 +55,13 @@ def _normalize_row(raw: dict) -> dict | None:
     if not listing:
         return None
 
+    def _txt(key_or_keys):
+        if isinstance(key_or_keys, str):
+            v = rec.get(key_or_keys)
+        else:
+            v = next((rec[k] for k in key_or_keys if rec.get(k) not in (None, "")), None)
+        return (str(v).strip() if v not in (None, "") else None)
+
     return {
         "source":       (rec.get("source") or "").strip() or None,
         "city":         (rec.get("city") or "").strip() or None,
@@ -62,7 +69,9 @@ def _normalize_row(raw: dict) -> dict | None:
         "society":      (rec.get("society") or "").strip() or None,
         "bedrooms":     _parse_int(rec.get("bedrooms")),
         "area_sqft":    _parse_int(rec.get("area_sqft") or rec.get("area")),
-        "floor":        (str(rec.get("floor")).strip() if rec.get("floor") not in (None, "") else None),
+        "floor":        _txt("floor"),
+        "tower":        _txt(["tower", "tower_no", "tower_name", "block"]),
+        "unit_no":      _txt(["unit_no", "unit", "flat_no", "flat_number"]),
         "price":        _parse_int(rec.get("price")),
         "seller_name":  (rec.get("seller_name") or "").strip() or None,
         "posting_date": _parse_date(rec.get("posting_date")),
@@ -105,15 +114,19 @@ def run_push_sync(conn, rows: list[dict], *, actor_email: str = "system:apps-scr
                         """
                         UPDATE inventory SET
                             source = %s, city = %s, locality = %s, society = %s,
-                            bedrooms = %s, area_sqft = %s, floor = %s, price = %s,
-                            seller_name = %s, posting_date = %s,
+                            bedrooms = %s, area_sqft = %s, floor = %s,
+                            tower = COALESCE(%s, tower),
+                            unit_no = COALESCE(%s, unit_no),
+                            price = %s, seller_name = %s, posting_date = %s,
                             last_synced_at = NOW()
                         WHERE listing_link = %s
                         """,
                         (
                             rec["source"], rec["city"], rec["locality"], rec["society"],
-                            rec["bedrooms"], rec["area_sqft"], rec["floor"], rec["price"],
-                            rec["seller_name"], rec["posting_date"], rec["listing_link"],
+                            rec["bedrooms"], rec["area_sqft"], rec["floor"],
+                            rec.get("tower"), rec.get("unit_no"),
+                            rec["price"], rec["seller_name"], rec["posting_date"],
+                            rec["listing_link"],
                         ),
                     )
                     cur.execute("RELEASE SAVEPOINT row_save")
@@ -128,15 +141,19 @@ def run_push_sync(conn, rows: list[dict], *, actor_email: str = "system:apps-scr
                     """
                     INSERT INTO inventory (
                         oh_id, source, city, locality, society, bedrooms, area_sqft,
-                        floor, price, seller_name, posting_date, listing_link,
+                        floor, tower, unit_no,
+                        price, seller_name, posting_date, listing_link,
                         stage, assigned_rm_id, assigned_mgr_id, last_synced_at
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s,
+                              %s, %s, %s,
+                              %s, %s, %s, %s,
                               'qualified', %s, %s, NOW())
                     """,
                     (
                         oh_id, rec["source"], rec["city"], rec["locality"], rec["society"],
-                        rec["bedrooms"], rec["area_sqft"], rec["floor"], rec["price"],
-                        rec["seller_name"], rec["posting_date"], rec["listing_link"],
+                        rec["bedrooms"], rec["area_sqft"], rec["floor"],
+                        rec.get("tower"), rec.get("unit_no"),
+                        rec["price"], rec["seller_name"], rec["posting_date"], rec["listing_link"],
                         rm_id, mgr_id,
                     ),
                 )

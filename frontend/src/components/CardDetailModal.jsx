@@ -19,6 +19,8 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
   const [sellerName, setSellerName] = useState(item.seller_name || '');
   const [sellerPhone, setSellerPhone] = useState(item.seller_phone || '');
   const [followUp, setFollowUp] = useState(item.follow_up_at ? item.follow_up_at.slice(0, 10) : '');
+  const [tower, setTower] = useState(item.tower || '');
+  const [unitNo, setUnitNo] = useState(item.unit_no || '');
   const [savingField, setSavingField] = useState(null);
   const [savingStage, setSavingStage] = useState(false);
   const [showVisit, setShowVisit] = useState(false);
@@ -143,6 +145,30 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
                 disabled={!canEdit}
               />
               {savingField === 'seller_phone' && <span className="exp-saving"> saving…</span>}
+            </div>
+            <div>
+              <span className="exp-lbl">Tower</span>
+              <input
+                className="exp-input"
+                value={tower}
+                onChange={(e) => setTower(e.target.value)}
+                onBlur={() => saveField('tower', tower, item.tower)}
+                placeholder="e.g. T3"
+                disabled={!canEdit}
+              />
+              {savingField === 'tower' && <span className="exp-saving"> saving…</span>}
+            </div>
+            <div>
+              <span className="exp-lbl">Unit No.</span>
+              <input
+                className="exp-input"
+                value={unitNo}
+                onChange={(e) => setUnitNo(e.target.value)}
+                onBlur={() => saveField('unit_no', unitNo, item.unit_no)}
+                placeholder="e.g. 1502"
+                disabled={!canEdit}
+              />
+              {savingField === 'unit_no' && <span className="exp-saving"> saving…</span>}
             </div>
             <div><span className="exp-lbl">Source</span><span>{item.source || '—'}</span></div>
             <div>
