@@ -16,13 +16,22 @@ a { color: inherit; }
   display: flex; align-items: center; gap: 24px;
   background: #0f1115; color: #f8fafc; padding: 10px 20px;
 }
-.brand { display: flex; align-items: center; gap: 10px; }
+.brand { display: flex; align-items: center; gap: 12px; }
 /* Logo ships as a dark mark on transparent; topbar is dark, so invert it. */
-.brand-logo { height: 28px; width: 28px; display: block; filter: invert(1); }
-.brand-sub { color: #94a3b8; font-size: 13px; }
-.topnav { display: flex; gap: 18px; flex: 1; }
-.topnav a { color: #cbd5e1; text-decoration: none; padding: 6px 8px; border-radius: 6px; }
-.topnav a.active { color: #fff; background: #1f2937; }
+.brand-logo { height: 32px; width: 32px; display: block; filter: invert(1); }
+.brand-sub { color: #f8fafc; font-size: 20px; font-weight: 600; letter-spacing: -0.2px; line-height: 1; }
+.topnav { display: flex; gap: 4px; flex: 1; margin-left: 12px; }
+.topnav a {
+  color: #94a3b8; text-decoration: none;
+  padding: 8px 14px; border-radius: 8px;
+  font-size: 14px; font-weight: 500;
+  transition: background-color 120ms, color 120ms;
+}
+.topnav a:hover { color: #f8fafc; background: #1f2937; }
+.topnav a.active {
+  color: #0f1115; background: #f8fafc;
+  font-weight: 600;
+}
 .user-pill { display: flex; align-items: center; gap: 10px; }
 .role-chip {
   background: #fb923c; color: #0f1115; font-weight: 700; font-size: 11px;
