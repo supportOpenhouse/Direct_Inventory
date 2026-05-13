@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api/client.js';
-import { displayCity, formatPrice, formatDateRel, isManualSource, REJECT_REASONS, STAGE_DOT_COLOR, STAGES, stageLabel, variation } from '../utils/format.js';
+import { displayCity, formatPrice, formatDateRel, isManualSource, REJECT_REASONS, STAGE_DOT_COLOR, STAGES, stageLabel, todayISO, variation } from '../utils/format.js';
 import VisitScheduleModal from './VisitScheduleModal.jsx';
 import RejectReasonModal from './RejectReasonModal.jsx';
 
@@ -18,9 +18,24 @@ export default function InventoryCard({
   const [showVisit, setShowVisit] = useState(false);
   const [showReject, setShowReject] = useState(false);
   const canEdit = ['admin', 'manager', 'rm'].includes(role);
+  const canSetPriority = ['admin', 'manager'].includes(role);
   const v = variation(item.price, item.oh_price);
   const isNearest = item.oh_price_match === 'nearest';
   const matchTag = isNearest ? '~' : '';
+  const isPriority = !!item.priority;
+
+  async function togglePriority(e) {
+    e?.stopPropagation();
+    if (!canSetPriority) return;
+    const next = !isPriority;
+    try {
+      setSavingField('priority');
+      const r = await api.patch(`/api/inventory/${item.oh_id}`, { priority: next });
+      onUpdated(r.item || { ...item, priority: next });
+    } finally {
+      setSavingField(null);
+    }
+  }
 
   async function applyStage(newStage, extraBody = {}) {
     try {
@@ -65,6 +80,7 @@ export default function InventoryCard({
         className={[
           'card',
           isManualSource(item.source) ? 'card-manual' : '',
+          isPriority ? 'card-priority' : '',
           selectMode ? 'card-selectable' : '',
           selected ? 'card-selected' : '',
         ].filter(Boolean).join(' ')}
@@ -76,7 +92,21 @@ export default function InventoryCard({
           </div>
         )}
         <div className="card-head">
-          <div className="card-society">{item.society || '—'}</div>
+          <div className="card-society">
+            {(isPriority || canSetPriority) && (
+              <button
+                type="button"
+                className={`prio-star ${isPriority ? 'prio-on' : 'prio-off'}`}
+                onClick={togglePriority}
+                disabled={!canSetPriority || savingField === 'priority'}
+                title={canSetPriority
+                  ? (isPriority ? 'Unmark Priority' : 'Mark Priority')
+                  : 'Priority'}
+                aria-label={isPriority ? 'Priority lead' : 'Mark as Priority'}
+              >★</button>
+            )}
+            {item.society || '—'}
+          </div>
           <div className="card-meta">
             <span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span>
             <span className="oh-id">{item.oh_id}</span>
@@ -128,6 +158,18 @@ export default function InventoryCard({
           <div className="modal modal-card-detail" onClick={(e) => e.stopPropagation()}>
             <div className="card-detail-head">
               <div className="card-detail-title">
+                {(isPriority || canSetPriority) && (
+                  <button
+                    type="button"
+                    className={`prio-star prio-star-lg ${isPriority ? 'prio-on' : 'prio-off'}`}
+                    onClick={togglePriority}
+                    disabled={!canSetPriority || savingField === 'priority'}
+                    title={canSetPriority
+                      ? (isPriority ? 'Unmark Priority' : 'Mark Priority')
+                      : 'Priority'}
+                    aria-label={isPriority ? 'Priority lead' : 'Mark as Priority'}
+                  >★</button>
+                )}
                 <strong>{item.society || '—'}</strong>
                 <span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span>
                 <span className="oh-id">{item.oh_id}</span>
@@ -198,6 +240,7 @@ export default function InventoryCard({
                   type="date"
                   className="exp-input"
                   value={followUp}
+                  min={todayISO()}
                   onChange={(e) => setFollowUp(e.target.value)}
                   onBlur={() => saveField('follow_up_at', followUp, item.follow_up_at?.slice?.(0, 10))}
                   disabled={!canEdit}

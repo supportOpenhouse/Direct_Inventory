@@ -10,6 +10,9 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- Priority leads: admin/manager can flag any inventory row as Priority via a ★ button in the card header (and the detail-modal header). Priority rows float to the top of every kanban column (`ORDER BY priority DESC, updated_at DESC`), render with a gold left-rail, and can be isolated via a new "Priority only" checkbox in the FilterPanel. Bulk action bar gets two new actions: Mark Priority and Unmark Priority. RMs see the gold star on flagged rows but can't toggle it. Migration 007 adds `priority BOOLEAN NOT NULL DEFAULT FALSE` + a partial index. Sheet sync explicitly does not touch the column, so daily upserts preserve any flags set by managers.
+- Follow-up date inputs (card detail + bulk action bar) now reject past dates via `min={today}`. `todayISO()` helper added in `utils/format.js` — uses local-date components, not UTC, so IST users don't see the wrong floor in the early-morning hours.
+
 - Card select-mode checkbox moved from the top-left (where it was overlapping the society name) to the bottom-right. Reserved space with `padding-bottom: 36px` so it doesn't overlap the card foot, and gave it a white background + faint border so it stays readable over both crawled (white) and manual (warm-tan) cards.
 - Contact No. field on the card detail modal is now strictly 10 digits, digits-only. `type="tel"` + `inputMode="numeric"` + `maxLength={10}`, and onChange strips non-digits before setting state. Existing legacy values (e.g. `vayby45556666665`) stay visible until edited, at which point they're cleaned to digits-only.
 

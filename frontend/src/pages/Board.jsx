@@ -219,6 +219,7 @@ export default function Board() {
       {selectMode && selected.size > 0 && (
         <BulkActionBar
           selected={selected}
+          role={user?.role}
           onCleared={exitSelectMode}
           onDone={onBulkDone}
         />

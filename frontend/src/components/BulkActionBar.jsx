@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
-import { REJECT_REASONS, STAGES, stageLabel } from '../utils/format.js';
+import { REJECT_REASONS, STAGES, stageLabel, todayISO } from '../utils/format.js';
 
 /**
  * Floating bar shown when the user is in select-mode and has ≥1 cards selected.
  * Supports: change stage (with reject_reason picker), assign RM, set follow-up date.
  */
-export default function BulkActionBar({ selected, onCleared, onDone }) {
-  const [action, setAction] = useState('');     // 'stage' | 'assign_rm' | 'follow_up'
+export default function BulkActionBar({ selected, role, onCleared, onDone }) {
+  const [action, setAction] = useState('');     // 'stage' | 'assign_rm' | 'follow_up' | 'priority_on' | 'priority_off'
   const [stage, setStage] = useState('');
   const [rejectReason, setRejectReason] = useState('');
   const [rms, setRms] = useState([]);
@@ -15,6 +15,7 @@ export default function BulkActionBar({ selected, onCleared, onDone }) {
   const [followUp, setFollowUp] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const canSetPriority = ['admin', 'manager'].includes(role);
 
   useEffect(() => {
     api.get('/api/users?role=rm').then((r) => setRms(r.items || [])).catch(() => setRms([]));
@@ -39,6 +40,10 @@ export default function BulkActionBar({ selected, onCleared, onDone }) {
     } else if (action === 'follow_up') {
       if (!followUp) { setError('Pick a follow-up date'); return; }
       updates.follow_up_at = followUp;
+    } else if (action === 'priority_on') {
+      updates.priority = true;
+    } else if (action === 'priority_off') {
+      updates.priority = false;
     } else {
       setError('Pick an action'); return;
     }
@@ -62,6 +67,8 @@ export default function BulkActionBar({ selected, onCleared, onDone }) {
         <option value="stage">Change Stage</option>
         <option value="assign_rm">Assign RM</option>
         <option value="follow_up">Set Follow-Up Date</option>
+        {canSetPriority && <option value="priority_on">Mark Priority</option>}
+        {canSetPriority && <option value="priority_off">Unmark Priority</option>}
       </select>
 
       {action === 'stage' && (
@@ -93,7 +100,7 @@ export default function BulkActionBar({ selected, onCleared, onDone }) {
       )}
 
       {action === 'follow_up' && (
-        <input type="date" value={followUp} onChange={(e) => setFollowUp(e.target.value)} />
+        <input type="date" value={followUp} min={todayISO()} onChange={(e) => setFollowUp(e.target.value)} />
       )}
 
       <button className="btn-primary" disabled={submitting || !action} onClick={submit}>

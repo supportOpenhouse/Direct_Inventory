@@ -44,7 +44,11 @@ EDITABLE_RAW_FIELDS = {
 # Fields that bulk-update may set. Single-row PATCH allows more (notes, raw fields).
 BULK_ALLOWED_FIELDS = {
     "stage", "reject_reason", "assigned_rm_id", "assigned_mgr_id", "follow_up_at",
+    "priority",
 }
+
+# Only admin/manager can flag a lead as Priority.
+PRIORITY_ROLES = {"admin", "manager"}
 
 
 def _scope_clause(user: dict, alias: str = "") -> tuple[str, list]:
@@ -134,6 +138,13 @@ def _build_filters(user: dict, args, alias: str = ""):
         base_filters.append(f"AND {p}source = %s")
         base_params.append(source)
 
+    priority_raw = args.get("priority")
+    if priority_raw not in (None, ""):
+        # Accept 1/0, true/false, yes/no. Default to TRUE when the param is just `?priority`.
+        truthy = str(priority_raw).strip().lower() in ("1", "true", "yes", "")
+        if truthy:
+            base_filters.append(f"AND {p}priority = TRUE")
+
     # Variation = (asking - oh) / oh * 100. Requires oh_price from the LATERAL.
     post_filters: list[str] = []
     post_params: list = []
@@ -199,7 +210,7 @@ def list_inventory():
     list_sql = f"""
         SELECT * FROM ({_INVENTORY_WITH_PRICING_SQL} {inner_where}) j
         {outer_where}
-        ORDER BY updated_at DESC
+        ORDER BY priority DESC, updated_at DESC
         LIMIT %s OFFSET %s
     """
     count_sql = f"""
@@ -432,13 +443,17 @@ def update_one(oh_id: str):
 
             allowed = EDITABLE_RAW_FIELDS | {
                 "stage", "reject_reason", "notes", "assigned_rm_id", "assigned_mgr_id",
-                "follow_up_at",
+                "follow_up_at", "priority",
             }
             for k, v in body.items():
                 if k not in allowed:
                     continue
                 if existing.get(k) == v:
                     continue
+                if k == "priority" and user["role"] not in PRIORITY_ROLES:
+                    return jsonify({"error": "only admin/manager can change priority"}), 403
+                if k == "priority":
+                    v = bool(v)
                 if k == "stage":
                     if v not in VALID_STAGES:
                         return jsonify({"error": f"invalid stage: {v}"}), 400
@@ -503,6 +518,11 @@ def bulk_update():
     if bad:
         return jsonify({"error": f"fields not allowed in bulk update: {bad}"}), 400
 
+    if "priority" in updates:
+        if user["role"] not in PRIORITY_ROLES:
+            return jsonify({"error": "only admin/manager can change priority"}), 403
+        updates["priority"] = bool(updates["priority"])
+
     stage = updates.get("stage")
     if stage is not None and stage not in VALID_STAGES:
         return jsonify({"error": f"invalid stage: {stage}"}), 400
@@ -518,7 +538,8 @@ def bulk_update():
     try:
         with conn, conn.cursor() as cur:
             cur.execute(
-                "SELECT oh_id, city, stage, assigned_rm_id, follow_up_at, reject_reason, assigned_mgr_id "
+                "SELECT oh_id, city, stage, assigned_rm_id, follow_up_at, reject_reason, "
+                "assigned_mgr_id, priority "
                 "FROM inventory WHERE oh_id = ANY(%s) FOR UPDATE",
                 (oh_ids,),
             )

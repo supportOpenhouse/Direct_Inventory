@@ -53,6 +53,7 @@ const EMPTY = {
   source: '',
   date_preset: '',
   posting_from: '', posting_to: '',
+  priority: false,
 };
 
 export default function FilterPanel({ initial, defaultCity = '', onApply, onClose }) {
@@ -101,6 +102,7 @@ export default function FilterPanel({ initial, defaultCity = '', onApply, onClos
     if (f.source) out.source = f.source;
     if (f.posting_from) out.posting_from = f.posting_from;
     if (f.posting_to)   out.posting_to   = f.posting_to;
+    if (f.priority) out.priority = 1;
     onApply(out, f);  // raw form state preserved so panel reopens with same selection
   }
 
@@ -222,6 +224,21 @@ export default function FilterPanel({ initial, defaultCity = '', onApply, onClos
           <label>Source</label>
           <input value={f.source} onChange={(e) => set('source', e.target.value)}
                  placeholder="e.g. 99acres, Website" />
+        </div>
+
+        <div className="filter-block">
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={!!f.priority}
+              onChange={(e) => set('priority', e.target.checked)}
+              style={{ width: 'auto' }}
+            />
+            <span style={{ letterSpacing: 0, fontSize: 14, color: '#0f172a' }}>
+              <span style={{ color: '#eab308', marginRight: 6 }}>★</span>
+              Priority only
+            </span>
+          </label>
         </div>
 
         <div className="modal-actions">

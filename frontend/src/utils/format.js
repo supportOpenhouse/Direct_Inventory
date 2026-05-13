@@ -1,3 +1,11 @@
+// Local "today" as YYYY-MM-DD (good for <input type="date" min={...}>).
+// Using local date (not UTC) so users in IST don't see the wrong floor
+// in the early-morning hours.
+export function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export function formatPrice(p) {
   if (p == null) return '—';
   const n = Number(p);
