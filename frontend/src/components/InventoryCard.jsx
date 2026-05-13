@@ -26,12 +26,19 @@ export default function InventoryCard({
 
   async function togglePriority(e) {
     e?.stopPropagation();
-    if (!canSetPriority) return;
+    if (!canSetPriority || savingField === 'priority') return;
     const next = !isPriority;
+    // Optimistic flip — the API call is slow on Render free tier (often
+    // several seconds), and there's no reason the user should wait to see
+    // the star change. We revert if the server rejects it.
+    onUpdated({ ...item, priority: next });
+    setSavingField('priority');
     try {
-      setSavingField('priority');
       const r = await api.patch(`/api/inventory/${item.oh_id}`, { priority: next });
-      onUpdated(r.item || { ...item, priority: next });
+      if (r?.item) onUpdated(r.item);
+    } catch (err) {
+      onUpdated({ ...item, priority: !next });
+      console.error('priority toggle failed', err);
     } finally {
       setSavingField(null);
     }
