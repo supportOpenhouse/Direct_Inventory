@@ -164,8 +164,12 @@ export default function InventoryCard({
                 <span className="exp-lbl">Contact No.</span>
                 <input
                   className="exp-input"
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]{10}"
+                  maxLength={10}
                   value={sellerPhone}
-                  onChange={(e) => setSellerPhone(e.target.value)}
+                  onChange={(e) => setSellerPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                   onBlur={() => saveField('seller_phone', sellerPhone, item.seller_phone)}
                   placeholder="10-digit phone"
                   disabled={!canEdit}

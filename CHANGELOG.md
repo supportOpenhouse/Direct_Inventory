@@ -10,6 +10,9 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- Card select-mode checkbox moved from the top-left (where it was overlapping the society name) to the bottom-right. Reserved space with `padding-bottom: 36px` so it doesn't overlap the card foot, and gave it a white background + faint border so it stays readable over both crawled (white) and manual (warm-tan) cards.
+- Contact No. field on the card detail modal is now strictly 10 digits, digits-only. `type="tel"` + `inputMode="numeric"` + `maxLength={10}`, and onChange strips non-digits before setting state. Existing legacy values (e.g. `vayby45556666665`) stay visible until edited, at which point they're cleaned to digits-only.
+
 - Filter panel: Society field becomes an autocomplete (datalist) sourced from `/api/inventory/societies`. A city dropdown sits on its left to scope the suggestions — without a city, no suggestions show (1138 societies across all 3 cities is too noisy). When the panel opens, it pre-fills the city from the currently active top-tab city. The scope city is purely a UX helper for autocomplete and does NOT add a separate board-level city filter (top tabs remain the source of truth for that).
 
 - Migration 006 adds `seller_phone TEXT` and `follow_up_at DATE` (+index) to `inventory`.

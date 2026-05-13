@@ -16,3 +16,6 @@ backend/.pytest_cache/
 
 # Local CSV exports for bulk seed — contain raw lead data, never commit.
 *.csv
+
+# Local-only screenshots scratch dir for pasting images during Claude Code sessions.
+/screenshots/

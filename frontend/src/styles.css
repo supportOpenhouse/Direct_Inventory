@@ -74,11 +74,13 @@ a { color: inherit; }
 .bulk-error { color: #fda4af; font-size: 13px; }
 
 /* Card select mode */
-.card-selectable { padding-left: 36px; position: relative; }
+.card-selectable { position: relative; padding-bottom: 36px; }
 .card-selectable .card-checkbox {
-  position: absolute; left: 10px; top: 14px;
-  width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+  position: absolute; right: 10px; bottom: 10px;
+  width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+  background: #fff; border-radius: 4px; box-shadow: 0 0 0 1px #e2e8f0;
 }
+.card-selectable .card-checkbox input { width: 16px; height: 16px; margin: 0; cursor: pointer; }
 .card-selected { outline: 2px solid #fb923c; }
 
 /* Filter panel extras */
