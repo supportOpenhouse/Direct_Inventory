@@ -1,5 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import NotificationBell from './NotificationBell.jsx';
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -24,6 +25,7 @@ export default function Layout() {
           {user?.role === 'admin' && <NavLink to="/admin/activity">Activity</NavLink>}
         </nav>
         <div className="user-pill">
+          <NotificationBell role={user?.role} />
           <span className="role-chip">{user?.role}</span>
           <span className="user-name">{user?.name || user?.email}</span>
           <button className="btn-link" onClick={handleLogout}>Logout</button>

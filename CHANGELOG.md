@@ -10,6 +10,11 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- Table: new Notes column at the far right (truncated with hover-tooltip for the full text).
+- Table: sortable headers extended to City / BHK / Floor (on top of the existing Asking / OH Price / Variation / Posted / Follow-up). Idle sort hint `↕` rendered in a very light grey on every sortable header; the active column flips to a dark `▲ / ▼`.
+- FilterPanel: new "Follow-up date" section with the same Today / Yesterday / This Week / This Month / Custom presets as Date posted. Clicking the active preset (in either section) now deselects it. Backend honors `?follow_up_from` / `?follow_up_to`.
+- Notification bell in the topbar — two buckets, both visibility-scoped: (1) inventory rows created in the last 24 hours, (2) rows with `follow_up_at = CURRENT_DATE`. Badge count is the sum of both. Clicking a row in the dropdown opens the existing detail modal. Backed by new endpoint `GET /api/inventory/notifications`. No polling — refreshes on mount and on bell open.
+
 - Table: new Floor column (F{n}) between BHK and Area.
 - CP Inventory match annotation. Each row in the table is matched against the CP Inventory Portal DB (new env var `CP_DB_URL`, optional `CP_INVENTORY_TABLE` defaulting to `inventory`). Match key normalizes society + BHK + floor (and tower + unit when checking for a perfect hit). A 🟢 green ★ next to the society name = perfect match (society + BHK + floor + tower + unit_no all match). A 🔴 red ★ = partial match (society + BHK + floor only). No star = no match, or `CP_DB_URL` not configured / unreachable. CP DB failure is non-fatal — the rows just show without stars.
 - Migration 009 adds `tower TEXT, unit_no TEXT` to `inventory`. Sheet sync fills them in when the daily sheet has columns named tower / tower_no / tower_name / block and unit_no / unit / flat_no / flat_number — and uses `COALESCE` on update so manual entries aren't clobbered by syncs of sheets that don't have those fields. AddInventoryModal and the card detail modal expose both fields for manual entry/edit.

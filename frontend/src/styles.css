@@ -175,6 +175,8 @@ a { color: inherit; }
 .inv-th-sortable { cursor: pointer; user-select: none; }
 .inv-th-sortable:hover { color: #0f1115; background: #f1f5f9; }
 .inv-th-active { color: #0f1115; }
+.inv-th-arrow         { color: #e2e8f0; font-size: 10px; font-weight: 400; }   /* idle hint */
+.inv-th-arrow-active  { color: #0f1115; font-size: 10px; }
 .inv-th-sel { width: 36px; padding-right: 0; }
 .inv-th-star { width: 30px; padding-left: 8px; padding-right: 0; }
 
@@ -200,7 +202,49 @@ a { color: inherit; }
 .inv-td-seller { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
 .inv-td-phone { font-variant-numeric: tabular-nums; color: #475569; }
 .inv-td-muted { color: #64748b; }
+.inv-td-notes {
+  color: #475569; max-width: 260px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .inv-empty { padding: 28px; text-align: center; color: #94a3b8; }
+
+/* Notification bell */
+.bell-wrap { position: relative; }
+.bell-btn {
+  background: transparent; border: 0; padding: 4px 6px; cursor: pointer;
+  font-size: 18px; line-height: 1; position: relative;
+}
+.bell-btn:hover { background: #1f2937; border-radius: 8px; }
+.bell-icon { filter: grayscale(1); }
+.bell-badge {
+  position: absolute; top: 0; right: 0;
+  background: #ef4444; color: #fff; font-size: 10px; font-weight: 700;
+  border-radius: 999px; padding: 1px 5px; line-height: 14px; min-width: 16px; text-align: center;
+}
+.bell-dropdown {
+  position: absolute; right: 0; top: 36px; z-index: 50;
+  background: #fff; color: #0f1115;
+  width: 380px; max-height: 70vh; overflow-y: auto;
+  border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+.bell-section { padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+.bell-section:last-child { border-bottom: 0; }
+.bell-section-head {
+  padding: 8px 14px; font-weight: 700; font-size: 12px;
+  color: #475569; letter-spacing: 0.3px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.bell-section-hint { font-weight: 400; color: #94a3b8; font-size: 11px; }
+.bell-empty { padding: 8px 14px 12px; color: #94a3b8; font-size: 12px; }
+.bell-row {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 14px; border: 0; background: transparent; width: 100%; text-align: left;
+  cursor: pointer; font: inherit;
+}
+.bell-row:hover { background: #f8fafc; }
+.bell-oh-id { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: #94a3b8; }
+.bell-soc { font-weight: 600; font-size: 13px; color: #0f1115; }
+.bell-meta { color: #64748b; font-size: 12px; }
 
 /* Card detail modal — replaces the inline expand panel. */
 .modal-card-detail { width: 540px; max-width: 92vw; }

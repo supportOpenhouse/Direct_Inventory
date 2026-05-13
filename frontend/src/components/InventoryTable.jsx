@@ -4,11 +4,14 @@ import {
   STAGE_DOT_COLOR, stageLabel, variation,
 } from '../utils/format.js';
 
-const SORTABLE = new Set(['price', 'oh_price', 'variation', 'posting_date', 'follow_up_at']);
+const SORTABLE = new Set([
+  'city', 'bedrooms', 'floor',
+  'price', 'oh_price', 'variation', 'posting_date', 'follow_up_at',
+]);
 
 function SortableTh({ field, label, sort, onSort, align = 'left' }) {
   const active = sort?.field === field;
-  const arrow = !active ? '' : (sort.dir === 'asc' ? ' ▲' : ' ▼');
+  const arrow = active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕';
   function click() {
     if (!SORTABLE.has(field)) return;
     const nextDir = active ? (sort.dir === 'asc' ? 'desc' : 'asc') : 'desc';
@@ -19,7 +22,8 @@ function SortableTh({ field, label, sort, onSort, align = 'left' }) {
       className={`inv-th inv-th-${align} ${SORTABLE.has(field) ? 'inv-th-sortable' : ''} ${active ? 'inv-th-active' : ''}`}
       onClick={click}
     >
-      {label}{arrow}
+      {label}
+      <span className={active ? 'inv-th-arrow-active' : 'inv-th-arrow'}>{' '}{arrow}</span>
     </th>
   );
 }
@@ -30,8 +34,8 @@ export default function InventoryTable({
   showStageColumn = true,
 }) {
   const canSetPriority = ['admin', 'manager'].includes(role);
-  // 15 base columns; +1 if selectMode, -1 if Stage hidden.
-  const colCount = 15 + (selectMode ? 1 : 0) - (showStageColumn ? 0 : 1);
+  // 16 base columns; +1 if selectMode, -1 if Stage hidden.
+  const colCount = 16 + (selectMode ? 1 : 0) - (showStageColumn ? 0 : 1);
 
   async function togglePriority(e, item) {
     e.stopPropagation();
@@ -55,10 +59,10 @@ export default function InventoryTable({
             {selectMode && <th className="inv-th inv-th-sel"></th>}
             <th className="inv-th inv-th-star"></th>
             <th className="inv-th">OH-ID</th>
-            <th className="inv-th">City</th>
+            <SortableTh field="city" label="City" sort={sort} onSort={onSort} />
             <th className="inv-th">Society</th>
-            <th className="inv-th">BHK</th>
-            <th className="inv-th">Floor</th>
+            <SortableTh field="bedrooms" label="BHK" sort={sort} onSort={onSort} />
+            <SortableTh field="floor" label="Floor" sort={sort} onSort={onSort} />
             <th className="inv-th">Area</th>
             <SortableTh field="price" label="Asking" sort={sort} onSort={onSort} align="right" />
             <SortableTh field="oh_price" label="OH Price" sort={sort} onSort={onSort} align="right" />
@@ -68,6 +72,7 @@ export default function InventoryTable({
             <th className="inv-th">Phone</th>
             <SortableTh field="posting_date" label="Posted" sort={sort} onSort={onSort} />
             <SortableTh field="follow_up_at" label="Follow-up" sort={sort} onSort={onSort} />
+            <th className="inv-th">Notes</th>
           </tr>
         </thead>
         <tbody>
@@ -150,6 +155,7 @@ export default function InventoryTable({
                 <td className="inv-td-phone">{item.seller_phone || '—'}</td>
                 <td className="inv-td-muted">{item.created_at ? formatDateRel(item.created_at) : '—'}</td>
                 <td className="inv-td-muted">{item.follow_up_at ? item.follow_up_at.slice(0, 10) : '—'}</td>
+                <td className="inv-td-notes" title={item.notes || ''}>{item.notes || '—'}</td>
               </tr>
             );
           })}

@@ -36,6 +36,9 @@ VALID_STAGES = {
 # Whitelist of fields the client can sort by. Maps the API name → SQL fragment.
 # Variation is computed (asking - oh_price) / oh_price; everything else is a column.
 SORTABLE_FIELDS = {
+    "city":          "city",
+    "bedrooms":      "bedrooms",
+    "floor":         "floor",
     "price":         "price",
     "oh_price":      "oh_price",
     "variation":     "CASE WHEN oh_price IS NULL OR oh_price = 0 THEN NULL "
@@ -160,6 +163,14 @@ def _build_filters(user: dict, args, alias: str = ""):
     if posting_to:
         base_filters.append(f"AND {p}posting_date <= %s")
         base_params.append(posting_to)
+    follow_up_from = (args.get("follow_up_from") or "").strip()
+    follow_up_to   = (args.get("follow_up_to") or "").strip()
+    if follow_up_from:
+        base_filters.append(f"AND {p}follow_up_at >= %s")
+        base_params.append(follow_up_from)
+    if follow_up_to:
+        base_filters.append(f"AND {p}follow_up_at <= %s")
+        base_params.append(follow_up_to)
     if source:
         base_filters.append(f"AND {p}source = %s")
         base_params.append(source)
@@ -361,6 +372,50 @@ def inventory_counts():
             )
             total = cur.fetchone()["n"]
         return jsonify({"total": total, "by_stage": by_stage})
+    finally:
+        conn.close()
+
+
+@bp.get("/notifications")
+@require_auth()
+def notifications():
+    """Bell-icon payload: rows the user should look at today.
+
+    Two buckets, both visibility-scoped:
+      - new_items: created in the last 24 hours.
+      - today_follow_ups: rows with follow_up_at = CURRENT_DATE (IST).
+    """
+    user = g.user
+    scope, scope_params = _scope_clause(user)
+
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                f"""SELECT oh_id, society, city, bedrooms, floor, source, created_at
+                    FROM inventory
+                    WHERE created_at >= NOW() - INTERVAL '24 hours' {scope}
+                    ORDER BY created_at DESC
+                    LIMIT 50""",
+                scope_params,
+            )
+            new_items = cur.fetchall()
+
+            cur.execute(
+                f"""SELECT oh_id, society, city, bedrooms, floor,
+                           seller_name, seller_phone, follow_up_at, stage
+                    FROM inventory
+                    WHERE follow_up_at = CURRENT_DATE {scope}
+                    ORDER BY society
+                    LIMIT 100""",
+                scope_params,
+            )
+            today_follow_ups = cur.fetchall()
+        return jsonify({
+            "new_items": new_items,
+            "today_follow_ups": today_follow_ups,
+            "total": len(new_items) + len(today_follow_ups),
+        })
     finally:
         conn.close()
 

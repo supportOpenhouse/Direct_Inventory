@@ -53,6 +53,8 @@ const EMPTY = {
   source: '',
   date_preset: '',
   posting_from: '', posting_to: '',
+  follow_up_preset: '',
+  follow_up_from: '', follow_up_to: '',
   priority: false,
 };
 
@@ -84,8 +86,24 @@ export default function FilterPanel({ initial, defaultCity = '', onApply, onClos
   }
 
   function applyPreset(name) {
-    const { from, to } = preset(name);
-    setF((p) => ({ ...p, date_preset: name, posting_from: from, posting_to: to }));
+    // Click the active preset again to clear it.
+    setF((p) => {
+      if (p.date_preset === name) {
+        return { ...p, date_preset: '', posting_from: '', posting_to: '' };
+      }
+      const { from, to } = preset(name);
+      return { ...p, date_preset: name, posting_from: from, posting_to: to };
+    });
+  }
+
+  function applyFollowUpPreset(name) {
+    setF((p) => {
+      if (p.follow_up_preset === name) {
+        return { ...p, follow_up_preset: '', follow_up_from: '', follow_up_to: '' };
+      }
+      const { from, to } = preset(name);
+      return { ...p, follow_up_preset: name, follow_up_from: from, follow_up_to: to };
+    });
   }
 
   function reset() { setF(EMPTY); }
@@ -102,6 +120,8 @@ export default function FilterPanel({ initial, defaultCity = '', onApply, onClos
     if (f.source) out.source = f.source;
     if (f.posting_from) out.posting_from = f.posting_from;
     if (f.posting_to)   out.posting_to   = f.posting_to;
+    if (f.follow_up_from) out.follow_up_from = f.follow_up_from;
+    if (f.follow_up_to)   out.follow_up_to   = f.follow_up_to;
     if (f.priority) out.priority = 1;
     onApply(out, f);  // raw form state preserved so panel reopens with same selection
   }
@@ -201,7 +221,7 @@ export default function FilterPanel({ initial, defaultCity = '', onApply, onClos
             <button
               type="button"
               className={f.date_preset === 'custom' ? 'pill pill-on' : 'pill'}
-              onClick={() => set('date_preset', 'custom')}
+              onClick={() => set('date_preset', f.date_preset === 'custom' ? '' : 'custom')}
             >Custom</button>
           </div>
           {f.date_preset === 'custom' && (
@@ -216,6 +236,44 @@ export default function FilterPanel({ initial, defaultCity = '', onApply, onClos
           {(f.posting_from || f.posting_to) && f.date_preset !== 'custom' && (
             <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>
               {f.posting_from || '…'} → {f.posting_to || '…'}
+            </div>
+          )}
+        </div>
+
+        <div className="filter-block">
+          <label>Follow-up date</label>
+          <div className="bhk-pills">
+            {[
+              ['today', 'Today'],
+              ['yesterday', 'Yesterday'],
+              ['this_week', 'This Week'],
+              ['this_month', 'This Month'],
+            ].map(([k, lbl]) => (
+              <button
+                key={k}
+                type="button"
+                className={f.follow_up_preset === k ? 'pill pill-on' : 'pill'}
+                onClick={() => applyFollowUpPreset(k)}
+              >{lbl}</button>
+            ))}
+            <button
+              type="button"
+              className={f.follow_up_preset === 'custom' ? 'pill pill-on' : 'pill'}
+              onClick={() => set('follow_up_preset', f.follow_up_preset === 'custom' ? '' : 'custom')}
+            >Custom</button>
+          </div>
+          {f.follow_up_preset === 'custom' && (
+            <div className="range-row" style={{ marginTop: 8 }}>
+              <input type="date" value={f.follow_up_from}
+                     onChange={(e) => set('follow_up_from', e.target.value)} />
+              <span className="muted">to</span>
+              <input type="date" value={f.follow_up_to}
+                     onChange={(e) => set('follow_up_to', e.target.value)} />
+            </div>
+          )}
+          {(f.follow_up_from || f.follow_up_to) && f.follow_up_preset !== 'custom' && (
+            <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>
+              {f.follow_up_from || '…'} → {f.follow_up_to || '…'}
             </div>
           )}
         </div>
