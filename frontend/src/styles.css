@@ -175,7 +175,7 @@ a { color: inherit; }
 .inv-th-sortable { cursor: pointer; user-select: none; }
 .inv-th-sortable:hover { color: #0f1115; background: #f1f5f9; }
 .inv-th-active { color: #0f1115; }
-.inv-th-arrow         { color: #94a3b8; font-size: 10px; font-weight: 400; }   /* idle hint */
+.inv-th-arrow         { color: #64748b; font-size: 10px; font-weight: 400; }   /* idle hint */
 .inv-th-arrow-active  { color: #0f1115; font-size: 10px; }
 .inv-th-sel { width: 36px; padding-right: 0; }
 .inv-th-star { width: 30px; padding-left: 8px; padding-right: 0; }
