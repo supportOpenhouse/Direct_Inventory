@@ -94,6 +94,16 @@ a { color: inherit; }
 .range-row input { width: auto; flex: 1; }
 .bhk-pills { display: flex; gap: 6px; flex-wrap: wrap; }
 
+.society-row { display: flex; gap: 10px; align-items: flex-start; }
+.society-city { width: 180px; }
+.society-input { flex: 1; min-width: 0; }
+.society-city select,
+.society-input input {
+  width: 100%; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;
+}
+.society-city label .muted,
+.filter-block .muted { color: #94a3b8; font-weight: normal; text-transform: none; letter-spacing: 0; font-size: 11px; }
+
 /* Card detail extras */
 .exp-input {
   width: 100%; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 6px;

@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api } from '../api/client.js';
+import { CITIES } from '../utils/format.js';
 
 /**
  * Filter panel modal. Holds its own draft state until the user clicks Apply.
@@ -42,6 +44,9 @@ function preset(name) {
 }
 
 const EMPTY = {
+  // suggest_city scopes the Society autocomplete suggestions only.
+  // It does NOT become a board-level city filter (top tabs do that).
+  suggest_city: '',
   society: '', bhk: [],
   price_min: '', price_max: '',
   variation_min: '', variation_max: '',
@@ -50,8 +55,23 @@ const EMPTY = {
   posting_from: '', posting_to: '',
 };
 
-export default function FilterPanel({ initial, onApply, onClose }) {
-  const [f, setF] = useState({ ...EMPTY, ...initial });
+export default function FilterPanel({ initial, defaultCity = '', onApply, onClose }) {
+  const [f, setF] = useState({ ...EMPTY, suggest_city: defaultCity, ...initial });
+  const [societies, setSocieties] = useState([]);
+  const [loadingSocs, setLoadingSocs] = useState(false);
+
+  // Fetch society suggestions for the selected scope city. Empty city → no suggestions
+  // (1138 societies across all cities is too noisy to show without a scope).
+  useEffect(() => {
+    if (!f.suggest_city) { setSocieties([]); return; }
+    let alive = true;
+    setLoadingSocs(true);
+    api.get(`/api/inventory/societies?city=${encodeURIComponent(f.suggest_city)}`)
+      .then((r) => { if (alive) setSocieties(r.items || []); })
+      .catch(() => { if (alive) setSocieties([]); })
+      .finally(() => { if (alive) setLoadingSocs(false); });
+    return () => { alive = false; };
+  }, [f.suggest_city]);
 
   function set(k, v) { setF((p) => ({ ...p, [k]: v })); }
 
@@ -90,12 +110,35 @@ export default function FilterPanel({ initial, onApply, onClose }) {
         <h3>Filters</h3>
 
         <div className="filter-block">
-          <label>Society</label>
-          <input
-            value={f.society}
-            onChange={(e) => set('society', e.target.value)}
-            placeholder="contains…"
-          />
+          <div className="society-row">
+            <div className="society-city">
+              <label>City <span className="muted">(scopes suggestions)</span></label>
+              <select value={f.suggest_city} onChange={(e) => set('suggest_city', e.target.value)}>
+                <option value="">— pick city —</option>
+                {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="society-input">
+              <label>Society</label>
+              <input
+                list="filter-society-options"
+                value={f.society}
+                onChange={(e) => set('society', e.target.value)}
+                placeholder={
+                  !f.suggest_city ? 'Pick a city to see suggestions…'
+                  : loadingSocs ? 'Loading societies…'
+                  : 'Type or pick a society…'
+                }
+              />
+              <datalist id="filter-society-options">
+                {societies.map((s) => (
+                  <option key={`${s.society}|${s.locality || ''}`} value={s.society}>
+                    {s.locality ? `(${s.locality})` : ''}
+                  </option>
+                ))}
+              </datalist>
+            </div>
+          </div>
         </div>
 
         <div className="filter-block">

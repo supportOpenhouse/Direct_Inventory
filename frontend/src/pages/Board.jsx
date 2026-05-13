@@ -326,6 +326,7 @@ export default function Board() {
       {showFilters && (
         <FilterPanel
           initial={filterFormState}
+          defaultCity={city}
           onClose={() => setShowFilters(false)}
           onApply={(applied, formState) => {
             setFiltersApplied(applied);

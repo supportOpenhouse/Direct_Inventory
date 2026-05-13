@@ -10,6 +10,8 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- Filter panel: Society field becomes an autocomplete (datalist) sourced from `/api/inventory/societies`. A city dropdown sits on its left to scope the suggestions — without a city, no suggestions show (1138 societies across all 3 cities is too noisy). When the panel opens, it pre-fills the city from the currently active top-tab city. The scope city is purely a UX helper for autocomplete and does NOT add a separate board-level city filter (top tabs remain the source of truth for that).
+
 - Migration 006 adds `seller_phone TEXT` and `follow_up_at DATE` (+index) to `inventory`.
 - Card detail modal: "Seller" relabelled to "Seller Name"; new editable Contact No. and Follow-up date fields right next to it. Card foot shows a follow-up chip when set. Each field saves on blur (PATCH /api/inventory/<oh_id>).
 - New Filter panel (button next to Search). Filters: Society contains, BHK multi-select, Asking-price min/max (₹), Variation % min/max, Date-posted with presets (Today / Yesterday / This Week / This Month / Custom), Source. Active filters show on the button as a count and reset with one click. Backend endpoints accept the corresponding query params; `/api/inventory/counts` now honors them too so chips stay accurate.
