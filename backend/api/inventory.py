@@ -18,13 +18,18 @@ from .auth import require_auth
 bp = Blueprint("inventory", __name__, url_prefix="/api/inventory")
 
 VALID_STAGES = {
+    # Active stages shown on the board.
     "qualified",
-    "follow_up_cnr",         # Follow Up — Call Not Received
+    "call_not_received",     # split from the old follow_up_cnr
+    "follow_up",             # new — ongoing conversation
     "visit_scheduled",
+    "rejected",
+    # Legacy stages — no longer shown on the kanban, but still accepted so the
+    # Forms webhook (visit completed/cancelled/rescheduled flow) keeps working
+    # and historical rows in these stages can be moved out manually if needed.
     "visit_completed",
     "offer_given",
     "unreachable",
-    "rejected",
 }
 
 VALID_REJECT_REASONS = {
@@ -293,9 +298,10 @@ def inventory_counts():
     inner_where = f"WHERE TRUE {scope} {' '.join(base_filters)}"
     outer_where = f"WHERE TRUE {' '.join(post_filters)}"
 
+    # Board-visible stages only. Counts for legacy stages are intentionally
+    # omitted from the response (the chips for them no longer exist).
     all_stages = [
-        "qualified", "follow_up_cnr", "visit_scheduled", "visit_completed",
-        "offer_given", "unreachable", "rejected",
+        "qualified", "call_not_received", "follow_up", "visit_scheduled", "rejected",
     ]
 
     conn = get_conn()

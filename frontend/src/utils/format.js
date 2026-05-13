@@ -27,33 +27,40 @@ export function formatDateRel(iso) {
 export function stageLabel(s) {
   return ({
     qualified: 'Qualified',
-    follow_up_cnr: 'Follow Up (CNR)',
+    call_not_received: 'Call Not Received',
+    follow_up: 'Follow Up',
     visit_scheduled: 'Visit Scheduled',
+    rejected: 'Rejected',
+    // Legacy stage labels — kept so historical activity-log entries and any
+    // rows still sitting in these stages render with the right name.
+    follow_up_cnr: 'Follow Up (CNR)',
     visit_completed: 'Visit Completed',
     offer_given: 'Offer Given',
     unreachable: 'Unreachable',
-    rejected: 'Rejected',
   })[s] || s;
 }
 
+// Board-visible stages, in display order. Drives kanban columns, count pills,
+// and the stage dropdown on the card detail modal.
 export const STAGES = [
   'qualified',
-  'follow_up_cnr',
+  'call_not_received',
+  'follow_up',
   'visit_scheduled',
-  'visit_completed',
-  'offer_given',
-  'unreachable',
   'rejected',
 ];
 
 export const STAGE_DOT_COLOR = {
   qualified: '#a78bfa',
-  follow_up_cnr: '#facc15',
+  call_not_received: '#facc15',
+  follow_up: '#f97316',
   visit_scheduled: '#a855f7',
+  rejected: '#ef4444',
+  // Legacy stages — used by stage-dot rendering on any stray rows.
+  follow_up_cnr: '#facc15',
   visit_completed: '#22c55e',
   offer_given: '#fb923c',
   unreachable: '#94a3b8',
-  rejected: '#ef4444',
 };
 
 export const REJECT_REASONS = [

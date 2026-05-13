@@ -10,6 +10,9 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- Stages refactor. Board now shows 5 stages instead of 7: `Qualified → Call Not Received → Follow Up → Visit Scheduled → Rejected`. The old `Follow Up (CNR)` stage is split into `Call Not Received` (first-attempt failed) and `Follow Up` (ongoing conversation). Migration 008 rewrites every `follow_up_cnr` row to `call_not_received`. `Visit Completed`, `Offer Given`, and `Unreachable` are dropped from the board; legacy rows in those stages stay in the DB but stop appearing in the kanban. Backend `VALID_STAGES` still accepts the legacy values so the Forms webhook can keep flipping completed visits to `visit_completed` (those rows will now silently leave the board).
+- Logo: real Openhouse "H" mark in the topbar (dark mark, inverted for the dark header) and on the login card. Favicons swapped to the matching .ico + 16/32 px PNGs. Dropped the placeholder "OH" text mark and the duplicated "Openhouse" wordmark.
+
 - Priority leads: admin/manager can flag any inventory row as Priority via a ★ button in the card header (and the detail-modal header). Priority rows float to the top of every kanban column (`ORDER BY priority DESC, updated_at DESC`), render with a gold left-rail, and can be isolated via a new "Priority only" checkbox in the FilterPanel. Bulk action bar gets two new actions: Mark Priority and Unmark Priority. RMs see the gold star on flagged rows but can't toggle it. Migration 007 adds `priority BOOLEAN NOT NULL DEFAULT FALSE` + a partial index. Sheet sync explicitly does not touch the column, so daily upserts preserve any flags set by managers.
 - Follow-up date inputs (card detail + bulk action bar) now reject past dates via `min={today}`. `todayISO()` helper added in `utils/format.js` — uses local-date components, not UTC, so IST users don't see the wrong floor in the early-morning hours.
 
