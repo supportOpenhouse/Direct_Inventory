@@ -97,36 +97,39 @@ export default function InventoryTable({
                   </td>
                 )}
                 <td className="inv-td-star">
-                  {(item.priority || canSetPriority) && (
+                  {(item.priority || canSetPriority || item.cp_match) && (
                     <button
                       type="button"
-                      className={`prio-star ${item.priority ? 'prio-on' : 'prio-off'}`}
+                      className={`prio-star ${
+                        item.priority ? 'prio-on'
+                          : item.cp_match === 'perfect' ? 'cp-perfect'
+                          : item.cp_match === 'partial' ? 'cp-partial'
+                          : 'prio-off'
+                      }`}
                       onClick={(e) => togglePriority(e, item)}
                       disabled={!canSetPriority}
-                      title={canSetPriority
-                        ? (item.priority ? 'Unmark Priority' : 'Mark Priority')
-                        : 'Priority'}
-                      aria-label={item.priority ? 'Priority lead' : 'Mark as Priority'}
+                      title={
+                        item.priority
+                          ? (item.cp_match
+                              ? `Priority lead (also a ${item.cp_match} CP Inventory match)`
+                              : 'Priority lead — click to unmark')
+                          : item.cp_match === 'perfect'
+                            ? 'Perfect CP Inventory match — society + BHK + floor + tower + unit_no'
+                            : item.cp_match === 'partial'
+                              ? 'Partial CP Inventory match — society + BHK + floor'
+                              : (canSetPriority ? 'Mark Priority' : 'Priority')
+                      }
+                      aria-label={
+                        item.priority ? 'Priority lead'
+                          : item.cp_match ? `${item.cp_match} CP match`
+                          : 'Mark as Priority'
+                      }
                     >★</button>
                   )}
                 </td>
                 <td className="inv-td-id">{item.oh_id}</td>
                 <td><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></td>
-                <td className="inv-td-society">
-                  {item.cp_match === 'perfect' && (
-                    <span
-                      className="cp-match cp-match-perfect"
-                      title="Perfect match in CP Inventory — society + BHK + floor + tower + unit"
-                    >★</span>
-                  )}
-                  {item.cp_match === 'partial' && (
-                    <span
-                      className="cp-match cp-match-partial"
-                      title="Partial match in CP Inventory — society + BHK + floor"
-                    >★</span>
-                  )}
-                  {item.society || '—'}
-                </td>
+                <td className="inv-td-society">{item.society || '—'}</td>
                 <td>{item.bedrooms != null ? `${item.bedrooms} BHK` : '—'}</td>
                 <td>{item.floor != null && item.floor !== '' ? `F${item.floor}` : '—'}</td>
                 <td>{item.area_sqft != null ? `${item.area_sqft} sqft` : '—'}</td>

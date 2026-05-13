@@ -152,7 +152,9 @@ a { color: inherit; }
   background: none; border: none; padding: 0; cursor: pointer;
   font-size: 16px; line-height: 1; color: #cbd5e1;
 }
-.prio-star.prio-on { color: #eab308; }
+.prio-star.prio-on    { color: #eab308; }   /* gold — priority lead */
+.prio-star.cp-perfect { color: #16a34a; }   /* green — perfect CP match */
+.prio-star.cp-partial { color: #dc2626; }   /* red — partial CP match */
 .prio-star:disabled { cursor: default; }
 .prio-star:hover:not(:disabled) { transform: scale(1.15); }
 .prio-star-lg { font-size: 22px; margin-right: 8px; vertical-align: -3px; }
@@ -193,9 +195,6 @@ a { color: inherit; }
 .inv-td-star { width: 30px; padding-left: 8px !important; padding-right: 0 !important; text-align: center; }
 .inv-td-id { font-family: ui-monospace, Menlo, monospace; color: #475569; font-size: 12px; }
 .inv-td-society { font-weight: 600; color: #0f1115; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
-.cp-match { font-size: 13px; line-height: 1; margin-right: 6px; vertical-align: -1px; cursor: help; }
-.cp-match-perfect { color: #16a34a; }
-.cp-match-partial { color: #dc2626; }
 .inv-td-num { text-align: right; font-variant-numeric: tabular-nums; }
 .inv-td-stage-lbl { margin-left: 6px; }
 .inv-td-seller { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
