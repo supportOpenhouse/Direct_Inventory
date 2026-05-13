@@ -27,8 +27,11 @@ function SortableTh({ field, label, sort, onSort, align = 'left' }) {
 export default function InventoryTable({
   items, role, sort, onSort, onRowClick, onUpdated,
   selectMode = false, selected, onToggleSelect,
+  showStageColumn = true,
 }) {
   const canSetPriority = ['admin', 'manager'].includes(role);
+  // 14 base columns; +1 if selectMode, -1 if Stage hidden.
+  const colCount = 14 + (selectMode ? 1 : 0) - (showStageColumn ? 0 : 1);
 
   async function togglePriority(e, item) {
     e.stopPropagation();
@@ -59,7 +62,7 @@ export default function InventoryTable({
             <SortableTh field="price" label="Asking" sort={sort} onSort={onSort} align="right" />
             <SortableTh field="oh_price" label="OH Price" sort={sort} onSort={onSort} align="right" />
             <SortableTh field="variation" label="Variation" sort={sort} onSort={onSort} align="right" />
-            <th className="inv-th">Stage</th>
+            {showStageColumn && <th className="inv-th">Stage</th>}
             <th className="inv-th">Seller</th>
             <th className="inv-th">Phone</th>
             <SortableTh field="posting_date" label="Posted" sort={sort} onSort={onSort} />
@@ -68,7 +71,7 @@ export default function InventoryTable({
         </thead>
         <tbody>
           {items.length === 0 && (
-            <tr><td className="inv-empty" colSpan={selectMode ? 15 : 14}>No matching rows.</td></tr>
+            <tr><td className="inv-empty" colSpan={colCount}>No matching rows.</td></tr>
           )}
           {items.map((item) => {
             const v = variation(item.price, item.oh_price);
@@ -118,10 +121,12 @@ export default function InventoryTable({
                 <td className={`inv-td-num ${v ? `val-var-${v.sign}` : 'muted'}`}>
                   {v ? v.label : '—'}
                 </td>
-                <td>
-                  <span className="stage-dot" style={{ background: STAGE_DOT_COLOR[item.stage] }} />
-                  <span className="inv-td-stage-lbl">{stageLabel(item.stage)}</span>
-                </td>
+                {showStageColumn && (
+                  <td>
+                    <span className="stage-dot" style={{ background: STAGE_DOT_COLOR[item.stage] }} />
+                    <span className="inv-td-stage-lbl">{stageLabel(item.stage)}</span>
+                  </td>
+                )}
                 <td className="inv-td-seller">{item.seller_name || '—'}</td>
                 <td className="inv-td-phone">{item.seller_phone || '—'}</td>
                 <td className="inv-td-muted">{item.created_at ? formatDateRel(item.created_at) : '—'}</td>

@@ -225,7 +225,7 @@ export default function Board() {
 
       <div className="filtered-header">
         <span className="muted">
-          showing {items.length === 0 ? 0 : page * PAGE_SIZE + 1}
+          Showing {items.length === 0 ? 0 : page * PAGE_SIZE + 1}
           –{page * PAGE_SIZE + items.length} of {total}
         </span>
         <span className="toolbar-spacer" />
@@ -247,6 +247,7 @@ export default function Board() {
           selectMode={selectMode}
           selected={selected}
           onToggleSelect={toggleSelect}
+          showStageColumn={stageSel.size === 0}
         />
       )}
 
