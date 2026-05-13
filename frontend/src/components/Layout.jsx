@@ -14,8 +14,7 @@ export default function Layout() {
     <div className="app-shell">
       <header className="topbar">
         <div className="brand">
-          <span className="brand-mark">OH</span>
-          <span className="brand-name">Openhouse</span>
+          <img src="/openhouse-logo.png" alt="Openhouse" className="brand-logo" />
           <span className="brand-sub">Direct Inventory</span>
         </div>
         <nav className="topnav">

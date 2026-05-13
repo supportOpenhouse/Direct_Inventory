@@ -16,13 +16,10 @@ a { color: inherit; }
   display: flex; align-items: center; gap: 24px;
   background: #0f1115; color: #f8fafc; padding: 10px 20px;
 }
-.brand { display: flex; align-items: center; gap: 8px; }
-.brand-mark {
-  background: #fb923c; color: #0f1115; font-weight: 800;
-  border-radius: 6px; padding: 2px 7px; font-size: 13px;
-}
-.brand-name { font-weight: 700; }
-.brand-sub { color: #94a3b8; font-size: 13px; margin-left: 4px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+/* Logo ships as a dark mark on transparent; topbar is dark, so invert it. */
+.brand-logo { height: 28px; width: 28px; display: block; filter: invert(1); }
+.brand-sub { color: #94a3b8; font-size: 13px; }
 .topnav { display: flex; gap: 18px; flex: 1; }
 .topnav a { color: #cbd5e1; text-decoration: none; padding: 6px 8px; border-radius: 6px; }
 .topnav a.active { color: #fff; background: #1f2937; }
@@ -252,7 +249,9 @@ a { color: inherit; }
   background: #fff; padding: 36px; border-radius: 20px; min-width: 360px;
   box-shadow: 0 12px 36px rgba(15,17,21,0.08);
 }
-.login-brand { display: flex; align-items: center; gap: 10px; }
+.login-brand { display: flex; align-items: center; gap: 12px; }
+/* Login page is on a cream background — the logo's dark ink works as-is. */
+.login-logo { height: 36px; width: 36px; display: block; }
 .login-card h1 { font-size: 18px; margin: 0; }
 .login-hint { color: #64748b; margin: 14px 0 18px; }
 .login-google { display: flex; justify-content: center; }

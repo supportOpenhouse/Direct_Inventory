@@ -24,7 +24,7 @@ export default function Login() {
     <div className="login-page">
       <div className="login-card">
         <div className="login-brand">
-          <span className="brand-mark">OH</span>
+          <img src="/openhouse-logo.png" alt="Openhouse" className="login-logo" />
           <h1>Openhouse Direct Inventory</h1>
         </div>
         <p className="login-hint">Sign in with your <strong>@openhouse.in</strong> Google account.</p>
