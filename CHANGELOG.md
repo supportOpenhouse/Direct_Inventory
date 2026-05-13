@@ -10,6 +10,11 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- Board: dropped the kanban + card view, replaced with a single dense table. Columns (left to right): ☐ ★ OH-ID City Society BHK Area Asking OH-Price Variation Stage Seller Phone Posted Follow-up. Locality and Source moved to the detail modal only. Row click opens the existing detail modal. Manual rows keep their orange left rail; priority rows keep the gold rail (gold wins when both apply); selected rows get a warm fill. Sortable headers on Asking / OH Price / Variation / Posted / Follow-up. Priority always floats to the top regardless of the active sort.
+- Stage chips on top are now multi-select — clicking several combines with OR; "All" clears them.
+- Backend list endpoint accepts CSV `?stage=a,b,c` and a whitelisted `?sort=<field>&dir=asc|desc` (price, oh_price, variation, posting_date, follow_up_at, updated_at). Variation sort is computed in-SQL.
+- Removed `InventoryCard.jsx`; extracted its detail-modal half into a new `CardDetailModal.jsx` (no behaviour change — same edit flows: notes, seller name/phone, follow-up, stage, priority, with the same visit-schedule and reject-reason sub-modals).
+
 - Stages refactor. Board now shows 5 stages instead of 7: `Qualified → Call Not Received → Follow Up → Visit Scheduled → Rejected`. The old `Follow Up (CNR)` stage is split into `Call Not Received` (first-attempt failed) and `Follow Up` (ongoing conversation). Migration 008 rewrites every `follow_up_cnr` row to `call_not_received`. `Visit Completed`, `Offer Given`, and `Unreachable` are dropped from the board; legacy rows in those stages stay in the DB but stop appearing in the kanban. Backend `VALID_STAGES` still accepts the legacy values so the Forms webhook can keep flipping completed visits to `visit_completed` (those rows will now silently leave the board).
 - Logo: real Openhouse "H" mark in the topbar (dark mark, inverted for the dark header) and on the login card. Favicons swapped to the matching .ico + 16/32 px PNGs. Dropped the placeholder "OH" text mark and the duplicated "Openhouse" wordmark.
 

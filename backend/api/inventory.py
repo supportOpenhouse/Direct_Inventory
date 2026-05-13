@@ -32,6 +32,18 @@ VALID_STAGES = {
     "unreachable",
 }
 
+# Whitelist of fields the client can sort by. Maps the API name → SQL fragment.
+# Variation is computed (asking - oh_price) / oh_price; everything else is a column.
+SORTABLE_FIELDS = {
+    "price":         "price",
+    "oh_price":      "oh_price",
+    "variation":     "CASE WHEN oh_price IS NULL OR oh_price = 0 THEN NULL "
+                     "ELSE (price::FLOAT - oh_price) / oh_price * 100 END",
+    "posting_date":  "posting_date",
+    "follow_up_at":  "follow_up_at",
+    "updated_at":    "updated_at",
+}
+
 VALID_REJECT_REASONS = {
     "not_interested",
     "invalid_duplicate",
@@ -102,8 +114,15 @@ def _build_filters(user: dict, args, alias: str = ""):
     source       = (args.get("source") or "").strip()
 
     if stage:
-        base_filters.append(f"AND {p}stage = %s")
-        base_params.append(stage)
+        # Comma-separated list → IN (...). Single value still works because
+        # split on ',' returns [stage].
+        stages = [s.strip() for s in stage.split(",") if s.strip()]
+        if len(stages) == 1:
+            base_filters.append(f"AND {p}stage = %s")
+            base_params.append(stages[0])
+        elif stages:
+            base_filters.append(f"AND {p}stage = ANY(%s)")
+            base_params.append(stages)
     if city:
         if city == "Noida":
             base_filters.append(f"AND {p}city IN ('Noida', 'Greater Noida')")
@@ -212,10 +231,22 @@ def list_inventory():
     inner_where = f"WHERE TRUE {scope} {' '.join(base_filters)}"
     outer_where = f"WHERE TRUE {' '.join(post_filters)}"
 
+    # Sort: client picks a column; priority still floats to the top, and we
+    # always tie-break on updated_at DESC so pagination is deterministic.
+    sort_field = (args.get("sort") or "updated_at").strip()
+    sort_dir = "ASC" if (args.get("dir") or "").strip().lower() == "asc" else "DESC"
+    sort_sql = SORTABLE_FIELDS.get(sort_field, SORTABLE_FIELDS["updated_at"])
+    nulls_clause = "NULLS LAST" if sort_dir == "DESC" else "NULLS FIRST"
+    order_clause = (
+        "priority DESC, "
+        f"{sort_sql} {sort_dir} {nulls_clause}, "
+        "updated_at DESC"
+    )
+
     list_sql = f"""
         SELECT * FROM ({_INVENTORY_WITH_PRICING_SQL} {inner_where}) j
         {outer_where}
-        ORDER BY priority DESC, updated_at DESC
+        ORDER BY {order_clause}
         LIMIT %s OFFSET %s
     """
     count_sql = f"""

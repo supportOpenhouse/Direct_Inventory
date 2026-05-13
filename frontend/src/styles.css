@@ -79,15 +79,6 @@ a { color: inherit; }
 }
 .bulk-error { color: #fda4af; font-size: 13px; }
 
-/* Card select mode */
-.card-selectable { position: relative; padding-bottom: 36px; }
-.card-selectable .card-checkbox {
-  position: absolute; right: 10px; bottom: 10px;
-  width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
-  background: #fff; border-radius: 4px; box-shadow: 0 0 0 1px #e2e8f0;
-}
-.card-selectable .card-checkbox input { width: 16px; height: 16px; margin: 0; cursor: pointer; }
-.card-selected { outline: 2px solid #fb923c; }
 
 /* Filter panel extras */
 .filter-block { margin-bottom: 14px; }
@@ -120,7 +111,7 @@ a { color: inherit; }
 .follow-up-chip { background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 5px; font-weight: 600; }
 
 .stage-counts {
-  display: grid; grid-template-columns: repeat(8, minmax(0, 1fr));
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px; margin: 14px 0;
 }
 .count-pill {
@@ -132,84 +123,82 @@ a { color: inherit; }
 .count-pill .num { font-size: 28px; font-weight: 800; }
 .count-pill .lbl { font-size: 11px; letter-spacing: 1px; color: #64748b; margin-top: 2px; }
 
-.view-all-link {
-  margin-top: 6px; padding: 8px 10px; border: 1px dashed #cbd5e1; border-radius: 10px;
-  background: transparent; color: #475569; font-weight: 600; cursor: pointer; text-align: center;
-}
-.view-all-link:hover { background: #f1f5f9; color: #0f1115; }
-
-.filtered-list { display: flex; flex-direction: column; gap: 12px; }
 .filtered-header {
   display: flex; align-items: center; gap: 10px;
   background: #fff; padding: 10px 14px; border-radius: 12px; font-size: 14px;
+  margin-bottom: 10px;
 }
 .filtered-header .muted { color: #94a3b8; font-size: 12px; }
 .filtered-header .page-num { color: #64748b; font-size: 12px; padding: 0 6px; }
-.filtered-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px;
-}
 
-.kanban {
-  display: grid; grid-auto-flow: column; grid-auto-columns: 320px;
-  gap: 14px; overflow-x: auto; padding-bottom: 12px;
-}
-.kanban-col { display: flex; flex-direction: column; min-height: 200px; }
-.col-head {
-  display: flex; align-items: center; gap: 8px; padding: 6px 4px; font-weight: 700;
-}
+/* Value/colour utilities — shared between the table and the detail modal. */
+.val-orange { color: #ea580c; font-weight: 700; }
+.val-green { color: #16a34a; font-weight: 700; }
+.val-amber { color: #b45309; font-weight: 700; }
+.muted { color: #94a3b8; }
+.val-var-pos  { color: #dc2626; font-weight: 700; }
+.val-var-neg  { color: #16a34a; font-weight: 700; }
+.val-var-flat { color: #64748b; font-weight: 600; }
+
 .stage-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-.col-title { flex: 1; }
-.col-count { color: #94a3b8; font-weight: 600; }
-.col-body { display: flex; flex-direction: column; gap: 10px; }
-
-.card {
-  background: #fff; border-radius: 12px; padding: 12px 14px; cursor: pointer;
-  box-shadow: 0 1px 0 rgba(0,0,0,0.03);
-  border-left: 4px solid transparent;
+.city-chip {
+  background: #f1f5f9; color: #334155;
+  padding: 2px 7px; border-radius: 5px;
+  letter-spacing: 1px; font-weight: 700; font-size: 10px;
 }
-.card:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
-/* Cards added via our UI (source='Website') visually distinct from crawled rows. */
-.card-manual { border-left-color: #fb923c; background: #fff7ed; }
-.card-manual:hover { background: #fef3e2; }
-/* Priority leads — gold left rail; wins over the orange when both apply. */
-.card-priority { border-left-color: #eab308; box-shadow: 0 1px 0 rgba(234, 179, 8, 0.18), 0 0 0 1px rgba(234, 179, 8, 0.25); }
+.oh-id { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #475569; }
+
 .prio-star {
-  background: none; border: none; padding: 0; margin-right: 6px; cursor: pointer;
-  font-size: 16px; line-height: 1; color: #cbd5e1; vertical-align: -2px;
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-size: 16px; line-height: 1; color: #cbd5e1;
 }
 .prio-star.prio-on { color: #eab308; }
 .prio-star:disabled { cursor: default; }
 .prio-star:hover:not(:disabled) { transform: scale(1.15); }
 .prio-star-lg { font-size: 22px; margin-right: 8px; vertical-align: -3px; }
-.card-head { display: flex; justify-content: space-between; align-items: flex-start; }
-.card-society { font-weight: 700; font-size: 15px; }
-.card-meta { display: flex; align-items: center; gap: 8px; color: #94a3b8; font-size: 11px; }
-.city-chip { letter-spacing: 1px; font-weight: 700; }
-.oh-id { font-family: ui-monospace, Menlo, monospace; }
-.card-sub { color: #64748b; font-size: 12px; margin-top: 2px; }
-.card-tags { display: flex; gap: 6px; margin: 8px 0; }
-.tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 600; }
-.tag-bhk { background: #fff7ed; color: #9a3412; }
-.tag-area { background: #f1f5f9; color: #334155; }
-.card-prices { display: flex; gap: 18px; padding-top: 8px; border-top: 1px solid #f1f5f9; flex-wrap: wrap; }
-.card-prices .lbl { font-size: 10px; color: #94a3b8; letter-spacing: 1px; }
-.card-prices .val { font-weight: 800; font-size: 15px; }
-.val-orange { color: #ea580c; }
-.val-green { color: #16a34a; }
-.val-amber { color: #b45309; }   /* used for "nearest" (not exact) OH price match */
-.val-muted { color: #cbd5e1; font-weight: 600; }
-.muted { color: #94a3b8; }
-/* Variation: positive = asking above OH (less attractive) → red.
-   Negative = asking below OH (more attractive) → green. Flat = neutral. */
-.val-var-pos  { color: #dc2626; }
-.val-var-neg  { color: #16a34a; }
-.val-var-flat { color: #64748b; }
-.card-foot { color: #94a3b8; font-size: 12px; margin-top: 8px; display: flex; gap: 6px; }
-.src { color: #475569; font-weight: 600; }
-.reject-reason {
-  margin-top: 8px; background: #fef2f2; color: #991b1b;
-  padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-block;
+
+/* Inventory table — the main board view. */
+.inv-table-wrap {
+  background: #fff; border-radius: 12px; overflow: auto;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.03);
 }
+.inv-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.inv-table thead { background: #f8fafc; position: sticky; top: 0; z-index: 1; }
+.inv-th {
+  text-align: left; font-weight: 600; color: #475569;
+  padding: 10px 12px; border-bottom: 1px solid #e2e8f0; white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+.inv-th-right { text-align: right; }
+.inv-th-sortable { cursor: pointer; user-select: none; }
+.inv-th-sortable:hover { color: #0f1115; background: #f1f5f9; }
+.inv-th-active { color: #0f1115; }
+.inv-th-sel { width: 36px; padding-right: 0; }
+.inv-th-star { width: 30px; padding-left: 8px; padding-right: 0; }
+
+.inv-row { cursor: pointer; transition: background-color 0.08s; border-left: 3px solid transparent; }
+.inv-row:hover { background: #f8fafc; }
+.inv-row td {
+  padding: 10px 12px; border-bottom: 1px solid #f1f5f9;
+  white-space: nowrap; vertical-align: middle;
+}
+.inv-row-manual { background: #fffbf4; border-left-color: #fb923c; }
+.inv-row-manual:hover { background: #fef3e2; }
+.inv-row-priority { border-left-color: #eab308; }
+.inv-row-priority.inv-row-manual { border-left-color: #eab308; }    /* gold wins */
+.inv-row-selected { background: #fff7ed !important; box-shadow: inset 2px 0 0 #fb923c; }
+
+.inv-td-sel { width: 36px; padding-right: 0 !important; }
+.inv-td-sel input { width: 16px; height: 16px; cursor: pointer; }
+.inv-td-star { width: 30px; padding-left: 8px !important; padding-right: 0 !important; text-align: center; }
+.inv-td-id { font-family: ui-monospace, Menlo, monospace; color: #475569; font-size: 12px; }
+.inv-td-society { font-weight: 600; color: #0f1115; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.inv-td-num { text-align: right; font-variant-numeric: tabular-nums; }
+.inv-td-stage-lbl { margin-left: 6px; }
+.inv-td-seller { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+.inv-td-phone { font-variant-numeric: tabular-nums; color: #475569; }
+.inv-td-muted { color: #64748b; }
+.inv-empty { padding: 28px; text-align: center; color: #94a3b8; }
 
 /* Card detail modal — replaces the inline expand panel. */
 .modal-card-detail { width: 540px; max-width: 92vw; }
