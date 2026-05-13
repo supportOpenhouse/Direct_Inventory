@@ -32,7 +32,9 @@ a { color: inherit; }
   padding: 2px 8px; border-radius: 999px; text-transform: uppercase;
 }
 .user-name { font-size: 13px; }
-.btn-link { background: transparent; border: 0; color: #cbd5e1; font-size: 13px; }
+.btn-link { background: transparent; border: 0; color: #2563eb; font-size: 13px; cursor: pointer; padding: 4px 8px; }
+.btn-link:hover { text-decoration: underline; }
+.req { color: #dc2626; font-weight: 700; }
 
 .main { padding: 16px 20px; flex: 1; }
 
@@ -57,6 +59,47 @@ a { color: inherit; }
 }
 
 .last-sync { color: #64748b; font-size: 12px; padding: 6px 10px; border-radius: 8px; background: #f1f5f9; cursor: help; }
+
+/* Bulk action bar — floating row above the kanban when ≥1 cards selected */
+.bulk-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: #0f1115; color: #f8fafc; padding: 10px 14px; border-radius: 12px;
+  margin: 12px 0;
+}
+.bulk-count { font-weight: 700; }
+.bulk-bar select, .bulk-bar input {
+  padding: 6px 10px; border-radius: 6px; border: 1px solid #334155;
+  background: #1f2937; color: #f8fafc; font-family: inherit; font-size: 13px;
+}
+.bulk-error { color: #fda4af; font-size: 13px; }
+
+/* Card select mode */
+.card-selectable { padding-left: 36px; position: relative; }
+.card-selectable .card-checkbox {
+  position: absolute; left: 10px; top: 14px;
+  width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+}
+.card-selected { outline: 2px solid #fb923c; }
+
+/* Filter panel extras */
+.filter-block { margin-bottom: 14px; }
+.filter-block > label {
+  display: block; font-size: 11px; color: #64748b; letter-spacing: 1px; margin-bottom: 6px;
+}
+.filter-block > input,
+.filter-block .range-row input {
+  padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; width: 100%;
+}
+.range-row { display: flex; align-items: center; gap: 10px; }
+.range-row input { width: auto; flex: 1; }
+.bhk-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* Card detail extras */
+.exp-input {
+  width: 100%; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 6px;
+  font: inherit; font-size: 13px; background: #fff; margin-top: 2px;
+}
+.follow-up-chip { background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 5px; font-weight: 600; }
 
 .stage-counts {
   display: grid; grid-template-columns: repeat(8, minmax(0, 1fr));

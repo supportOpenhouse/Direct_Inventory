@@ -4,10 +4,16 @@ import { displayCity, formatPrice, formatDateRel, isManualSource, REJECT_REASONS
 import VisitScheduleModal from './VisitScheduleModal.jsx';
 import RejectReasonModal from './RejectReasonModal.jsx';
 
-export default function InventoryCard({ item, onUpdated, role }) {
+export default function InventoryCard({
+  item, onUpdated, role,
+  selectMode = false, selected = false, onToggleSelect,
+}) {
   const [open, setOpen] = useState(false);
   const [notes, setNotes] = useState(item.notes || '');
-  const [savingNotes, setSavingNotes] = useState(false);
+  const [sellerName, setSellerName] = useState(item.seller_name || '');
+  const [sellerPhone, setSellerPhone] = useState(item.seller_phone || '');
+  const [followUp, setFollowUp] = useState(item.follow_up_at ? item.follow_up_at.slice(0, 10) : '');
+  const [savingField, setSavingField] = useState(null);
   const [savingStage, setSavingStage] = useState(false);
   const [showVisit, setShowVisit] = useState(false);
   const [showReject, setShowReject] = useState(false);
@@ -28,31 +34,47 @@ export default function InventoryCard({ item, onUpdated, role }) {
 
   async function changeStage(newStage) {
     if (newStage === item.stage) return;
-    if (newStage === 'visit_scheduled') {
-      setShowVisit(true);
-      return;
-    }
-    if (newStage === 'rejected') {
-      setShowReject(true);
-      return;
-    }
+    if (newStage === 'visit_scheduled') { setShowVisit(true); return; }
+    if (newStage === 'rejected') { setShowReject(true); return; }
     await applyStage(newStage);
   }
 
-  async function saveNotes() {
-    if (notes === (item.notes || '')) return;
+  async function saveField(field, value, originalValue) {
+    if ((value || '') === (originalValue || '')) return;
     try {
-      setSavingNotes(true);
-      const r = await api.patch(`/api/inventory/${item.oh_id}`, { notes });
-      onUpdated(r.item || { ...item, notes });
+      setSavingField(field);
+      const body = { [field]: value || null };
+      const r = await api.patch(`/api/inventory/${item.oh_id}`, body);
+      onUpdated(r.item || { ...item, [field]: value });
     } finally {
-      setSavingNotes(false);
+      setSavingField(null);
+    }
+  }
+
+  function cardClicked() {
+    if (selectMode) {
+      onToggleSelect?.();
+    } else {
+      setOpen(true);
     }
   }
 
   return (
     <>
-      <div className={isManualSource(item.source) ? 'card card-manual' : 'card'} onClick={() => setOpen(true)}>
+      <div
+        className={[
+          'card',
+          isManualSource(item.source) ? 'card-manual' : '',
+          selectMode ? 'card-selectable' : '',
+          selected ? 'card-selected' : '',
+        ].filter(Boolean).join(' ')}
+        onClick={cardClicked}
+      >
+        {selectMode && (
+          <div className="card-checkbox" onClick={(e) => { e.stopPropagation(); onToggleSelect?.(); }}>
+            <input type="checkbox" readOnly checked={selected} />
+          </div>
+        )}
         <div className="card-head">
           <div className="card-society">{item.society || '—'}</div>
           <div className="card-meta">
@@ -92,13 +114,16 @@ export default function InventoryCard({ item, onUpdated, role }) {
           <span>·</span>
           <span>{item.seller_name || '—'}</span>
           {item.source && <><span>·</span><span className="src">{item.source}</span></>}
+          {item.follow_up_at && (
+            <><span>·</span><span className="follow-up-chip" title="Follow up">⏰ {item.follow_up_at.slice(0, 10)}</span></>
+          )}
         </div>
         {item.stage === 'rejected' && item.reject_reason && (
           <div className="reject-reason">{REJECT_REASONS.find((r) => r.value === item.reject_reason)?.label || item.reject_reason}</div>
         )}
       </div>
 
-      {open && (
+      {open && !selectMode && (
         <div className="modal-backdrop" onClick={() => setOpen(false)}>
           <div className="modal modal-card-detail" onClick={(e) => e.stopPropagation()}>
             <div className="card-detail-head">
@@ -115,8 +140,7 @@ export default function InventoryCard({ item, onUpdated, role }) {
               {item.floor ? <span>· F{item.floor}</span> : null}
               {item.bedrooms != null && <span>· {item.bedrooms} BHK</span>}
               {item.area_sqft != null && <span>· {item.area_sqft} sqft</span>}
-              <span>· asking <strong className="val-orange">{formatPrice(item.price)}</strong></span>
-              {item.oh_price && <span>· OH <strong className="val-green">{formatPrice(item.oh_price)}</strong></span>}
+              <span>· <strong className="val-orange">{formatPrice(item.price)}</strong></span>
             </div>
 
             <div className="exp-grid">
@@ -125,12 +149,30 @@ export default function InventoryCard({ item, onUpdated, role }) {
                 <a href={item.listing_link} target="_blank" rel="noreferrer" className="exp-link">{item.listing_link}</a>
               </div>
               <div><span className="exp-lbl">Posted</span><span>{item.posting_date || '—'}</span></div>
-              <div><span className="exp-lbl">Seller</span><span>{item.seller_name || '—'}</span></div>
-              <div><span className="exp-lbl">Source</span><span>{item.source || '—'}</span></div>
               <div>
-                <span className="exp-lbl">Asking Price</span>
-                <span className="val-orange">{formatPrice(item.price)}</span>
+                <span className="exp-lbl">Seller Name</span>
+                <input
+                  className="exp-input"
+                  value={sellerName}
+                  onChange={(e) => setSellerName(e.target.value)}
+                  onBlur={() => saveField('seller_name', sellerName, item.seller_name)}
+                  disabled={!canEdit}
+                />
+                {savingField === 'seller_name' && <span className="exp-saving"> saving…</span>}
               </div>
+              <div>
+                <span className="exp-lbl">Contact No.</span>
+                <input
+                  className="exp-input"
+                  value={sellerPhone}
+                  onChange={(e) => setSellerPhone(e.target.value)}
+                  onBlur={() => saveField('seller_phone', sellerPhone, item.seller_phone)}
+                  placeholder="10-digit phone"
+                  disabled={!canEdit}
+                />
+                {savingField === 'seller_phone' && <span className="exp-saving"> saving…</span>}
+              </div>
+              <div><span className="exp-lbl">Source</span><span>{item.source || '—'}</span></div>
               <div>
                 <span className="exp-lbl">OH Price</span>
                 <span className={item.oh_price ? (isNearest ? 'val-amber' : 'val-green') : 'muted'}>
@@ -145,6 +187,18 @@ export default function InventoryCard({ item, onUpdated, role }) {
                 <span className={v ? `val-var-${v.sign}` : 'muted'}>
                   {v ? v.label : 'no match'}
                 </span>
+              </div>
+              <div>
+                <span className="exp-lbl">Follow-up date</span>
+                <input
+                  type="date"
+                  className="exp-input"
+                  value={followUp}
+                  onChange={(e) => setFollowUp(e.target.value)}
+                  onBlur={() => saveField('follow_up_at', followUp, item.follow_up_at?.slice?.(0, 10))}
+                  disabled={!canEdit}
+                />
+                {savingField === 'follow_up_at' && <span className="exp-saving"> saving…</span>}
               </div>
             </div>
 
@@ -175,12 +229,12 @@ export default function InventoryCard({ item, onUpdated, role }) {
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                onBlur={saveNotes}
+                onBlur={() => saveField('notes', notes, item.notes)}
                 placeholder="Add a note…"
                 rows={4}
                 disabled={!canEdit}
               />
-              {savingNotes && <div className="exp-saving">saving…</div>}
+              {savingField === 'notes' && <div className="exp-saving">saving…</div>}
             </div>
           </div>
         </div>

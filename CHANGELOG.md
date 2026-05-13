@@ -10,6 +10,12 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- Migration 006 adds `seller_phone TEXT` and `follow_up_at DATE` (+index) to `inventory`.
+- Card detail modal: "Seller" relabelled to "Seller Name"; new editable Contact No. and Follow-up date fields right next to it. Card foot shows a follow-up chip when set. Each field saves on blur (PATCH /api/inventory/<oh_id>).
+- New Filter panel (button next to Search). Filters: Society contains, BHK multi-select, Asking-price min/max (₹), Variation % min/max, Date-posted with presets (Today / Yesterday / This Week / This Month / Custom), Source. Active filters show on the button as a count and reset with one click. Backend endpoints accept the corresponding query params; `/api/inventory/counts` now honors them too so chips stay accurate.
+- Bulk update: new Select toggle in the toolbar enables checkboxes on every card. With ≥1 selected, a dark action bar slides in offering Change Stage (with reject-reason picker), Assign RM, Set Follow-up Date. Backend: new `POST /api/inventory/bulk-update` with per-row visibility checks (rm sees only own; manager only own cities; admin all), `visit_scheduled` rejected (needs per-row modal), one activity_log row per (entity, field) tagged `bulk_*`.
+- Refactor: list + counts queries share one LATERAL-joined subquery (`_INVENTORY_WITH_PRICING_SQL`). Variation filter is applied as an outer wrapper so it works on both endpoints. `_build_filters` helper consolidates the query-param parsing.
+
 - BUGFIX: Board search was racy. Every keystroke fired a re-fetch via useEffect, and an older request (e.g. for `q="a"`) sometimes resolved AFTER the newer `q="amrapali"` request and overwrote the state with non-matching rows. Split into qInput (typed text) and qApplied (committed search) — search only takes effect on submit/Enter, plus a Clear button when a search is active.
 - BUGFIX: Kanban column header showed `list.length` when counts.by_stage was missing the stage key, while the chip showed 0 — visibly inconsistent. Backend `/api/inventory/counts` now zero-fills every stage in the response, and the frontend uses 0 as the fallback.
 

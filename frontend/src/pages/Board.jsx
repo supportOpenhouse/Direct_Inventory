@@ -4,21 +4,31 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { CITIES, STAGES, STAGE_DOT_COLOR, formatDateRel, stageLabel } from '../utils/format.js';
 import InventoryCard from '../components/InventoryCard.jsx';
 import AddInventoryModal from '../components/AddInventoryModal.jsx';
+import FilterPanel from '../components/FilterPanel.jsx';
+import BulkActionBar from '../components/BulkActionBar.jsx';
 
 const KANBAN_PER_COL = 50;     // top N per stage in the All/kanban view
 const PAGE_SIZE = 100;         // page size when a stage filter is active
 
 export default function Board() {
   const { user } = useAuth();
-  // qInput = what's in the input box right now (changes on every keystroke).
-  // qApplied = the value the API is currently filtered by (changes only on submit).
-  // Splitting these prevents a race where rapid typing fires N in-flight
-  // requests and the older one resolves last, overwriting the newer result.
+  // qInput vs qApplied — search applies only on submit (avoids per-keystroke races).
   const [qInput, setQInput] = useState('');
   const [qApplied, setQApplied] = useState('');
   const [city, setCity] = useState('');
   const [stageFilter, setStageFilter] = useState(null);   // null = "All" (kanban)
   const [page, setPage] = useState(0);
+
+  // Extended filters from the FilterPanel modal.
+  // filtersApplied is the URL-ready dict; filterFormState is the raw form draft
+  // so reopening the panel restores the user's choices (BHK pills, presets, etc.).
+  const [filtersApplied, setFiltersApplied] = useState({});
+  const [filterFormState, setFilterFormState] = useState({});
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Bulk-select mode.
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState(() => new Set());
 
   // For kanban view: { stage_name: items[] }
   const [grouped, setGrouped] = useState({});
@@ -35,6 +45,9 @@ export default function Board() {
     const p = new URLSearchParams();
     if (qApplied) p.set('q', qApplied);
     if (city) p.set('city', city);
+    for (const [k, v] of Object.entries(filtersApplied)) {
+      p.set(k, String(v));
+    }
     return p;
   }
 
@@ -49,7 +62,6 @@ export default function Board() {
   async function refreshKanban() {
     setLoading(true);
     try {
-      // One call per stage in parallel — keeps each request small even with 15k+ rows.
       const results = await Promise.all(STAGES.map(async (s) => {
         const params = makeFilterParams();
         params.set('stage', s);
@@ -88,15 +100,13 @@ export default function Board() {
     } catch { /* ignore */ }
   }
 
-  // Re-load counts and the active board view when filters change. Critically,
-  // qApplied (not qInput) is the dep — search only takes effect on submit, so
-  // typing 'a','am','amr',... doesn't fire 8 in-flight requests racing each other.
-  useEffect(() => { refreshCounts(); /* eslint-disable-next-line */ }, [city, qApplied]);
+  // Re-load counts and the active board view when any applied filter changes.
+  useEffect(() => { refreshCounts(); /* eslint-disable-next-line */ }, [city, qApplied, filtersApplied]);
   useEffect(() => {
     setPage(0);
     if (stageFilter) refreshFiltered(0); else refreshKanban();
     /* eslint-disable-next-line */
-  }, [city, qApplied, stageFilter]);
+  }, [city, qApplied, stageFilter, filtersApplied]);
   useEffect(() => {
     if (stageFilter) refreshFiltered(page);
     /* eslint-disable-next-line */
@@ -105,7 +115,7 @@ export default function Board() {
 
   function onSearch(e) {
     e?.preventDefault();
-    setQApplied(qInput.trim());   // useEffects above will pick this up
+    setQApplied(qInput.trim());
   }
 
   function patchItemInState(updated) {
@@ -117,19 +127,46 @@ export default function Board() {
       }
       return next;
     });
-    // If the stage changed, the chip counts and column membership are now stale —
-    // re-fetch counts and the active board view in the background.
-    if (updated.stage) {
-      refreshCounts();
-      if (stageFilter) refreshFiltered(page); else refreshKanban();
-    }
   }
 
   function selectStage(s) {
     setStageFilter((current) => (current === s ? null : s));
   }
 
+  function toggleSelect(oh_id) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(oh_id)) next.delete(oh_id); else next.add(oh_id);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelected(new Set());
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    clearSelection();
+  }
+
+  function onBulkDone(result) {
+    // Refresh everything; the changes may move rows between columns.
+    clearSelection();
+    setSelectMode(false);
+    refreshCounts();
+    if (stageFilter) refreshFiltered(page); else refreshKanban();
+    if (result?.skipped_forbidden?.length || result?.not_found?.length) {
+      alert(
+        `Updated ${result.updated} of ${result.requested}.\n` +
+        (result.skipped_forbidden?.length ? `Forbidden: ${result.skipped_forbidden.length}\n` : '') +
+        (result.not_found?.length ? `Not found: ${result.not_found.length}` : '')
+      );
+    }
+  }
+
   const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
+  const filterCount = Object.keys(filtersApplied).length;
 
   return (
     <div className="board-page">
@@ -153,6 +190,14 @@ export default function Board() {
             </button>
           )}
         </form>
+        <button className="btn-ghost" onClick={() => setShowFilters(true)}>
+          Filters{filterCount ? ` (${filterCount})` : ''}
+        </button>
+        {filterCount > 0 && (
+          <button className="btn-link" onClick={() => { setFiltersApplied({}); setFilterFormState({}); }}>
+            Reset
+          </button>
+        )}
         <div className="toolbar-spacer" />
         {lastSync && (
           <span
@@ -162,8 +207,22 @@ export default function Board() {
             Sync: {formatDateRel(lastSync.created_at)}
           </span>
         )}
+        <button
+          className={selectMode ? 'btn-primary' : 'btn-ghost'}
+          onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+        >
+          {selectMode ? 'Exit Select' : 'Select'}
+        </button>
         <button className="btn-primary" onClick={() => setShowAdd(true)}>+ Add Inventory</button>
       </div>
+
+      {selectMode && selected.size > 0 && (
+        <BulkActionBar
+          selected={selected}
+          onCleared={exitSelectMode}
+          onDone={onBulkDone}
+        />
+      )}
 
       <div className="stage-counts">
         <button
@@ -204,7 +263,15 @@ export default function Board() {
           </div>
           <div className="filtered-grid">
             {items.map((it) => (
-              <InventoryCard key={it.oh_id} item={it} role={user?.role} onUpdated={patchItemInState} />
+              <InventoryCard
+                key={it.oh_id}
+                item={it}
+                role={user?.role}
+                onUpdated={patchItemInState}
+                selectMode={selectMode}
+                selected={selected.has(it.oh_id)}
+                onToggleSelect={() => toggleSelect(it.oh_id)}
+              />
             ))}
           </div>
         </div>
@@ -212,9 +279,6 @@ export default function Board() {
         <div className="kanban">
           {STAGES.map((s) => {
             const list = grouped[s] || [];
-            // Backend now zero-fills missing stages, so use 0 as the fallback
-            // (avoids the bug where col-count showed list.length while the chip
-            // showed 0, when counts had loaded but the stage truly was empty).
             const totalForStage = counts.by_stage?.[s] ?? 0;
             const more = Math.max(0, totalForStage - list.length);
             return (
@@ -226,7 +290,15 @@ export default function Board() {
                 </div>
                 <div className="col-body">
                   {list.map((it) => (
-                    <InventoryCard key={it.oh_id} item={it} role={user?.role} onUpdated={patchItemInState} />
+                    <InventoryCard
+                      key={it.oh_id}
+                      item={it}
+                      role={user?.role}
+                      onUpdated={patchItemInState}
+                      selectMode={selectMode}
+                      selected={selected.has(it.oh_id)}
+                      onToggleSelect={() => toggleSelect(it.oh_id)}
+                    />
                   ))}
                   {more > 0 && (
                     <button className="view-all-link" onClick={() => setStageFilter(s)}>
@@ -243,10 +315,22 @@ export default function Board() {
       {showAdd && (
         <AddInventoryModal
           onClose={() => setShowAdd(false)}
-          onAdded={(item) => {
+          onAdded={() => {
             setShowAdd(false);
             refreshCounts();
             if (stageFilter) refreshFiltered(0); else refreshKanban();
+          }}
+        />
+      )}
+
+      {showFilters && (
+        <FilterPanel
+          initial={filterFormState}
+          onClose={() => setShowFilters(false)}
+          onApply={(applied, formState) => {
+            setFiltersApplied(applied);
+            setFilterFormState(formState);
+            setShowFilters(false);
           }}
         />
       )}
