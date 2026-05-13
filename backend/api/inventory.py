@@ -12,7 +12,7 @@ from flask import Blueprint, g, jsonify, request
 from ..db import get_conn
 from ..services.activity import log as log_activity
 from ..services.assignment import resolve_assignment
-from ..services.cp_match import annotate_cp_match
+from ..services.cp_match import MATCH_INPUT_FIELDS, annotate_cp_match, backfill_all_matches
 from ..services.oh_id import next_oh_id
 from .auth import require_auth
 
@@ -376,6 +376,33 @@ def inventory_counts():
         conn.close()
 
 
+@bp.post("/cp-match-scan")
+@require_auth("admin")
+def cp_match_scan():
+    """One-shot: scan every inventory row, classify against CP DB, persist
+    `cp_match`. Returns counts. Admin-only because it can take a minute or
+    two and writes across the whole table.
+    """
+    conn = get_conn()
+    try:
+        result = backfill_all_matches(conn)
+        with conn, conn.cursor() as cur:
+            log_activity(
+                cur,
+                actor_user_id=g.user["id"],
+                actor_email=g.user["email"],
+                entity_type="cp_match_scan",
+                entity_id=None,
+                action="run",
+                metadata=result,
+            )
+        return jsonify(result)
+    except RuntimeError as e:
+        return jsonify({"error": str(e)}), 400
+    finally:
+        conn.close()
+
+
 @bp.get("/notifications")
 @require_auth()
 def notifications():
@@ -541,6 +568,7 @@ def update_one(oh_id: str):
             updates = []
             params: list = []
             requires_visit_form = False
+            invalidate_cp_match = False
 
             allowed = EDITABLE_RAW_FIELDS | {
                 "stage", "reject_reason", "notes", "assigned_rm_id", "assigned_mgr_id",
@@ -564,6 +592,8 @@ def update_one(oh_id: str):
                         requires_visit_form = True
                 if k == "reject_reason" and v and v not in VALID_REJECT_REASONS:
                     return jsonify({"error": f"invalid reject_reason: {v}"}), 400
+                if k in MATCH_INPUT_FIELDS:
+                    invalidate_cp_match = True
                 updates.append(f"{k} = %s")
                 params.append(v)
                 log_activity(
@@ -580,6 +610,11 @@ def update_one(oh_id: str):
 
             if not updates:
                 return jsonify({"oh_id": oh_id, "noop": True})
+
+            # If any match-determining field changed, drop the persisted verdict so
+            # the next scan reclassifies. Cheap NULL is better than a stale label.
+            if invalidate_cp_match:
+                updates.append("cp_match = NULL")
 
             params.append(oh_id)
             cur.execute(

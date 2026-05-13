@@ -102,7 +102,8 @@ export default function InventoryTable({
                   </td>
                 )}
                 <td className="inv-td-star">
-                  {(item.priority || canSetPriority || item.cp_match) && (
+                  {(item.priority || canSetPriority
+                    || item.cp_match === 'perfect' || item.cp_match === 'partial') && (
                     <button
                       type="button"
                       className={`prio-star ${
@@ -115,7 +116,7 @@ export default function InventoryTable({
                       disabled={!canSetPriority}
                       title={
                         item.priority
-                          ? (item.cp_match
+                          ? ((item.cp_match === 'perfect' || item.cp_match === 'partial')
                               ? `Priority lead (also a ${item.cp_match} CP Inventory match)`
                               : 'Priority lead — click to unmark')
                           : item.cp_match === 'perfect'
@@ -126,8 +127,9 @@ export default function InventoryTable({
                       }
                       aria-label={
                         item.priority ? 'Priority lead'
-                          : item.cp_match ? `${item.cp_match} CP match`
-                          : 'Mark as Priority'
+                          : (item.cp_match === 'perfect' || item.cp_match === 'partial')
+                            ? `${item.cp_match} CP match`
+                            : 'Mark as Priority'
                       }
                     >★</button>
                   )}

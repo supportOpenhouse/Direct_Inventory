@@ -30,6 +30,9 @@ export default function Board() {
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState(() => new Set());
 
+  // Admin-triggered CP match scan.
+  const [scanning, setScanning] = useState(false);
+
   // Detail modal for the clicked row.
   const [openItem, setOpenItem] = useState(null);
 
@@ -128,6 +131,25 @@ export default function Board() {
   function clearSelection() { setSelected(new Set()); }
   function exitSelectMode() { setSelectMode(false); clearSelection(); }
 
+  async function runCpScan() {
+    if (scanning) return;
+    if (!window.confirm('Run a full CP Inventory match scan? This takes a minute or two and will update every row in the board.')) return;
+    setScanning(true);
+    try {
+      const r = await api.post('/api/inventory/cp-match-scan', {});
+      alert(
+        `CP scan complete — ${r.total} rows.\n` +
+        `Perfect: ${r.perfect}\nPartial: ${r.partial}\nNo match: ${r.no_match}`
+      );
+      refresh(page);
+      refreshCounts();
+    } catch (e) {
+      alert('Scan failed: ' + (e.data?.error || e.message));
+    } finally {
+      setScanning(false);
+    }
+  }
+
   function onBulkDone(result) {
     clearSelection();
     setSelectMode(false);
@@ -190,6 +212,11 @@ export default function Board() {
         >
           {selectMode ? 'Exit Select' : 'Select'}
         </button>
+        {user?.role === 'admin' && (
+          <button className="btn-ghost" onClick={runCpScan} disabled={scanning}>
+            {scanning ? 'Scanning…' : 'Re-scan CP'}
+          </button>
+        )}
         <button className="btn-primary" onClick={() => setShowAdd(true)}>+ Add Inventory</button>
       </div>
 

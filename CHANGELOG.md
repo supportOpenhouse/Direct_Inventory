@@ -10,6 +10,10 @@ All prod-affecting changes go here. Newest at the top. Format: `YYYY-MM-DD — s
 
 ## Unreleased
 
+- CP Inventory match is now persisted, not recomputed on every page load. Migration 010 adds `cp_match TEXT` to `inventory` with values `'perfect' | 'partial' | 'none' | NULL`. NULL is reserved for "never scanned yet or invalidated"; `'none'` means "scanned and no match found" — keeps the dynamic annotator from re-checking on every list call. PATCH on any match-input field (society, bedrooms, floor, tower, unit_no) clears `cp_match = NULL` so the next scan reclassifies that row.
+- New admin endpoint `POST /api/inventory/cp-match-scan` runs a complete sweep in keyset-paginated chunks of 500, commits per chunk, returns `{ total, perfect, partial, no_match }`. Admin-only, since it writes to every row.
+- New **"Re-scan CP"** button in the board toolbar (admin only). Triggers the sweep with a confirm prompt; on completion shows a summary alert and refreshes the current page. Dynamic annotation in the list endpoint stays as a fallback so new rows from sheet sync get stars until the next scheduled scan.
+
 - Table: new Notes column at the far right (truncated with hover-tooltip for the full text).
 - Table: sortable headers extended to City / BHK / Floor (on top of the existing Asking / OH Price / Variation / Posted / Follow-up). Idle sort hint `↕` rendered in a very light grey on every sortable header; the active column flips to a dark `▲ / ▼`.
 - FilterPanel: new "Follow-up date" section with the same Today / Yesterday / This Week / This Month / Custom presets as Date posted. Clicking the active preset (in either section) now deselects it. Backend honors `?follow_up_from` / `?follow_up_to`.
