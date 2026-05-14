@@ -1,3 +1,12 @@
+// Render a floor value: numeric floors get an "F" prefix (e.g. "9" → "F9");
+// named floors (Ground / Top / basement / etc.) are shown as-is.
+export function formatFloor(floor) {
+  if (floor == null) return '—';
+  const s = String(floor).trim();
+  if (s === '') return '—';
+  return /^\d+$/.test(s) ? `F${s}` : s;
+}
+
 // Local "today" as YYYY-MM-DD (good for <input type="date" min={...}>).
 // Using local date (not UTC) so users in IST don't see the wrong floor
 // in the early-morning hours.

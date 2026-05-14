@@ -1,6 +1,6 @@
 import { api } from '../api/client.js';
 import {
-  displayCity, formatDateRel, formatPrice, isManualSource,
+  displayCity, formatDateRel, formatFloor, formatPrice, isManualSource,
   STAGE_DOT_COLOR, stageLabel, variation,
 } from '../utils/format.js';
 
@@ -138,7 +138,7 @@ export default function InventoryTable({
                 <td><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></td>
                 <td className="inv-td-society">{item.society || '—'}</td>
                 <td>{item.bedrooms != null ? `${item.bedrooms} BHK` : '—'}</td>
-                <td>{item.floor != null && item.floor !== '' ? `F${item.floor}` : '—'}</td>
+                <td>{formatFloor(item.floor)}</td>
                 <td>{item.area_sqft != null ? `${item.area_sqft} sqft` : '—'}</td>
                 <td className="inv-td-num val-orange">{formatPrice(item.price)}</td>
                 <td className={`inv-td-num ${item.oh_price ? (isNearest ? 'val-amber' : 'val-green') : 'muted'}`}>
