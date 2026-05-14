@@ -62,7 +62,8 @@ export default function AddInventoryModal({ onClose, onAdded }) {
         ...f,
         bedrooms: f.bedrooms === '' ? null : Number(f.bedrooms),
         area_sqft: f.area_sqft === '' ? null : Number(f.area_sqft),
-        price: f.price === '' ? null : Number(f.price),
+        // Form field is in lakhs; DB stores rupees as a BIGINT.
+        price: f.price === '' ? null : Math.round(Number(f.price) * 100000),
         posting_date: f.posting_date || null,
         listing_link: (f.listing_link || '').trim() || null,
       };
@@ -120,8 +121,13 @@ export default function AddInventoryModal({ onClose, onAdded }) {
             </datalist>
           </div>
           <div>
-            <label>Bedrooms</label>
-            <input type="number" value={f.bedrooms} onChange={(e) => set('bedrooms', e.target.value)} />
+            <label>BHK</label>
+            <select value={f.bedrooms} onChange={(e) => set('bedrooms', e.target.value)}>
+              <option value="">Select…</option>
+              <option value="2">2 BHK</option>
+              <option value="3">3 BHK</option>
+              <option value="4">4 BHK</option>
+            </select>
           </div>
           <div>
             <label>Area (sqft)</label>
@@ -130,7 +136,14 @@ export default function AddInventoryModal({ onClose, onAdded }) {
 
           <div>
             <label>Floor</label>
-            <input value={f.floor} onChange={(e) => set('floor', e.target.value)} />
+            <select value={f.floor} onChange={(e) => set('floor', e.target.value)}>
+              <option value="">Select…</option>
+              <option value="Ground">Ground</option>
+              <option value="Top">Top</option>
+              {Array.from({ length: 50 }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={String(n)}>{n}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label>Tower</label>
@@ -141,16 +154,22 @@ export default function AddInventoryModal({ onClose, onAdded }) {
             <input value={f.unit_no} onChange={(e) => set('unit_no', e.target.value)} placeholder="e.g. 1502" />
           </div>
           <div>
-            <label>Asking Price (₹)</label>
-            <input type="number" value={f.price} onChange={(e) => set('price', e.target.value)} />
+            <label>Asking Price (in lakhs)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={f.price}
+              onChange={(e) => set('price', e.target.value)}
+              placeholder="e.g. 150 = ₹1.5 Cr"
+            />
           </div>
           <div>
-            <label>Seller name</label>
+            <label>Seller Name</label>
             <input value={f.seller_name} onChange={(e) => set('seller_name', e.target.value)} />
           </div>
 
           <div>
-            <label>Posting date</label>
+            <label>Posting Date</label>
             <input type="date" value={f.posting_date} onChange={(e) => set('posting_date', e.target.value)} />
           </div>
           <div className="form-wide-2">
