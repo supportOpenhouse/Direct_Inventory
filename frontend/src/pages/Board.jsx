@@ -134,7 +134,7 @@ export default function Board() {
 
   async function runCpScan() {
     if (scanning) return;
-    if (!window.confirm('Run a full CP Inventory match scan? This takes a minute or two and will update every row in the board.')) return;
+    if (!window.confirm('Run CP Inventory match scan? This only checks rows that haven’t been scanned yet (or were edited since the last scan).')) return;
     setScanning(true);
     setScanProgress(0);
     try {

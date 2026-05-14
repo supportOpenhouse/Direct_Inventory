@@ -189,15 +189,23 @@ def annotate_cp_match(rows: list[dict]) -> None:
 
 
 def backfill_one_chunk(conn, cursor: str) -> dict:
-    """Scan ONE chunk of inventory rows (oh_id > cursor), classify, persist.
+    """Scan ONE chunk of UNSCANNED inventory rows (cp_match IS NULL), classify,
+    persist.
+
+    Only rows whose verdict isn't set yet are processed; rows already labeled
+    'perfect'/'partial'/'none' are left alone. A PATCH on any match-input field
+    (see MATCH_INPUT_FIELDS) sets cp_match back to NULL, so edited rows get
+    re-evaluated on the next scan. To force a full rescan, run
+    `UPDATE inventory SET cp_match = NULL` first.
 
     Returns:
       { done, next_cursor, perfect, partial, no_match, processed }
 
-    `done` is True when this chunk had fewer than BATCH_SIZE rows (i.e. the
-    table is exhausted). The frontend loops, passing back `next_cursor` each
-    time, until `done` is True — this keeps every HTTP request small enough
-    to survive any proxy/gateway timeout, regardless of total table size.
+    `done` is True when this chunk had fewer than BATCH_SIZE rows (i.e. no
+    more NULL rows past `cursor`). The frontend loops, passing back
+    `next_cursor` each time, until `done` is True — this keeps every HTTP
+    request small enough to survive any proxy/gateway timeout regardless of
+    table size.
 
     Raises if CP_DB_URL is unset.
     """
@@ -207,9 +215,14 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
     perfect = partial = none = 0
 
     with conn.cursor() as cur:
+        # Only re-scan rows whose verdict hasn't been set yet (NULL means
+        # "never scanned" or "invalidated by a recent PATCH to a match-input
+        # field"). Rows already labeled 'perfect'/'partial'/'none' are left
+        # alone — a PATCH on society/bedrooms/floor/tower/unit_no sets the
+        # column back to NULL, so they'll get picked up on the next run.
         cur.execute(
             "SELECT oh_id, society, bedrooms, floor, tower, unit_no "
-            "FROM inventory WHERE oh_id > %s "
+            "FROM inventory WHERE oh_id > %s AND cp_match IS NULL "
             "ORDER BY oh_id LIMIT %s",
             (cursor, BATCH_SIZE),
         )
