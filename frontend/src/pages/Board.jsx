@@ -141,6 +141,8 @@ export default function Board() {
       let cursor = '';
       let totals = { perfect: 0, partial: 0, no_match: 0 };
       let processed = 0;
+      let ohIdsFilled = 0;
+      let ohIdsSkipped = 0;
       // Loop the chunked endpoint until the backend says done. Each call
       // handles BATCH_SIZE rows (currently 2000) — small enough to clear any
       // proxy timeout, regardless of total table size.
@@ -155,14 +157,23 @@ export default function Board() {
           no_match: totals.no_match + r.no_match,
         };
         processed += r.processed;
+        // oh_id backfill only happens on the first chunk; subsequent chunks
+        // return 0s. Plain addition keeps the logic uniform either way.
+        ohIdsFilled += r.oh_ids_filled || 0;
+        ohIdsSkipped += r.oh_ids_skipped || 0;
         setScanProgress(processed);
         if (r.done) break;
         cursor = r.next_cursor;
       }
       const total = totals.perfect + totals.partial + totals.no_match;
+      const ohIdLine = ohIdsFilled || ohIdsSkipped
+        ? `\nOH-IDs assigned: ${ohIdsFilled}` +
+          (ohIdsSkipped ? ` (skipped ${ohIdsSkipped} — missing city)` : '')
+        : '';
       alert(
         `CP scan complete — ${total} rows.\n` +
-        `Perfect: ${totals.perfect}\nPartial: ${totals.partial}\nNo match: ${totals.no_match}`
+        `Perfect: ${totals.perfect}\nPartial: ${totals.partial}\nNo match: ${totals.no_match}` +
+        ohIdLine
       );
       refresh(page);
       refreshCounts();

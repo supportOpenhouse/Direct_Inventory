@@ -10,6 +10,10 @@ take a row-level lock to serialize concurrent inserts.
 """
 from __future__ import annotations
 
+import logging
+
+log = logging.getLogger(__name__)
+
 CITY_TO_CODE = {
     "noida": "N",
     "greater noida": "N",      # treated as Noida for OH-ID purposes
@@ -78,3 +82,40 @@ def next_oh_id(cur, city: str) -> str:
         (counter, suffix, code),
     )
     return format_oh_id(code, counter, suffix)
+
+
+def backfill_missing_oh_ids(conn) -> dict:
+    """Assign an oh_id to every inventory row that's missing one.
+
+    "Missing" = NULL or empty string. Allocates via next_oh_id (per-city
+    counter, row-locked). Rows without a usable city are skipped because
+    next_oh_id can't generate an ID for them.
+
+    Caller owns transaction commit. Returns counts for visibility.
+    """
+    filled = skipped = 0
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id, city FROM inventory "
+            "WHERE oh_id IS NULL OR oh_id = '' "
+            "ORDER BY id "
+            "FOR UPDATE"
+        )
+        rows = cur.fetchall()
+        for r in rows:
+            city = r.get("city")
+            if not city:
+                skipped += 1
+                continue
+            try:
+                new_id = next_oh_id(cur, city)
+            except (ValueError, RuntimeError) as e:
+                log.warning("oh_id backfill skipped id=%s: %s", r["id"], e)
+                skipped += 1
+                continue
+            cur.execute(
+                "UPDATE inventory SET oh_id = %s WHERE id = %s",
+                (new_id, r["id"]),
+            )
+            filled += 1
+    return {"filled": filled, "skipped": skipped}

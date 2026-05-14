@@ -34,6 +34,7 @@ from psycopg2.extras import execute_values
 
 from .. import config
 from ..db import get_cp_conn
+from .oh_id import backfill_missing_oh_ids
 
 log = logging.getLogger(__name__)
 
@@ -212,6 +213,17 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
     if not config.CP_DB_URL:
         raise RuntimeError("CP_DB_URL is not set — cannot run scan")
 
+    # First-chunk-only: backfill any rows missing an oh_id. Has to run BEFORE
+    # the cp_match work below because that loop paginates on `oh_id > cursor`
+    # — rows with NULL/empty oh_id are invisible to it otherwise.
+    oh_id_fill = {"filled": 0, "skipped": 0}
+    if cursor == "":
+        oh_id_fill = backfill_missing_oh_ids(conn)
+        if oh_id_fill["filled"] or oh_id_fill["skipped"]:
+            log.info("oh_id backfill: filled=%d skipped=%d",
+                     oh_id_fill["filled"], oh_id_fill["skipped"])
+        conn.commit()
+
     perfect = partial = none = 0
 
     with conn.cursor() as cur:
@@ -229,7 +241,9 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
         rows = cur.fetchall()
         if not rows:
             return {"done": True, "next_cursor": cursor,
-                    "perfect": 0, "partial": 0, "no_match": 0, "processed": 0}
+                    "perfect": 0, "partial": 0, "no_match": 0, "processed": 0,
+                    "oh_ids_filled": oh_id_fill["filled"],
+                    "oh_ids_skipped": oh_id_fill["skipped"]}
 
         keys = set()
         for r in rows:
@@ -273,6 +287,8 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
         "partial": partial,
         "no_match": none,
         "processed": len(rows),
+        "oh_ids_filled": oh_id_fill["filled"],
+        "oh_ids_skipped": oh_id_fill["skipped"],
     }
 
 
