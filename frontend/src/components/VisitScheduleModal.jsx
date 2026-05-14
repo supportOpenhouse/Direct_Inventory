@@ -31,19 +31,10 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
   useEffect(() => {
     if (!isAdmin) return;
     let alive = true;
-    // Combine manager + rm lists. /api/users supports a single role filter, so
-    // run both in parallel and merge.
-    Promise.all([
-      api.get('/api/users?role=manager'),
-      api.get('/api/users?role=rm'),
-    ])
-      .then(([m, r]) => {
-        if (!alive) return;
-        const items = [...(m.items || []), ...(r.items || [])]
-          .filter((u) => u.is_active !== false)
-          .sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
-        setAssignees(items);
-      })
+    // Pulled from properties.users — same source the Forms app validates
+    // assigned_by against — so we can only ever pick an email it will accept.
+    api.get('/api/visits/assignees')
+      .then((r) => { if (alive) setAssignees(r.items || []); })
       .catch((e) => { if (alive) setError(`Couldn't load assignees: ${e.data?.error || e.message}`); })
       .finally(() => { if (alive) setLoadingAssignees(false); });
     return () => { alive = false; };
@@ -119,7 +110,7 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
               <option value="">{loadingAssignees ? 'Loading…' : 'Select manager / RM…'}</option>
               {assignees.map((u) => (
                 <option key={u.id} value={u.email}>
-                  {u.name || u.email} · {u.role}
+                  {u.name || u.email}
                 </option>
               ))}
             </select>

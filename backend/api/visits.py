@@ -44,6 +44,29 @@ def list_field_execs():
         conn.close()
 
 
+@bp.get("/assignees")
+@require_auth("admin", "manager", "rm")
+def list_assignees():
+    """Active users from the shared properties.users table — same source the
+    Forms app validates `assigned_by` against. The admin's "Assigned By"
+    dropdown reads from here so it can only ever pick an email that Forms
+    will accept.
+    """
+    conn = get_props_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                """SELECT id, name, email
+                   FROM users
+                   WHERE is_active = TRUE AND email IS NOT NULL
+                   ORDER BY name NULLS LAST, email"""
+            )
+            rows = cur.fetchall()
+        return jsonify({"items": rows})
+    finally:
+        conn.close()
+
+
 @bp.post("/schedule")
 @require_auth("admin", "manager", "rm")
 def schedule_visit():
