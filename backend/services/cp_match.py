@@ -3,9 +3,19 @@
 For a batch of Direct Inventory rows, look up matches in the CP Inventory
 Portal DB and annotate each row with `cp_match`:
 
-  'perfect' — society + bhk + floor + tower + unit_no all match
-  'partial' — society + bhk + floor match (but not tower+unit_no)
+  'perfect' — society + bhk match, AND floor (if matchable on both sides)
+              AND tower + unit_no all match in CP.
+  'partial' — society + bhk match in CP, but the unit-level identifiers
+              (floor / tower / unit_no) don't all line up.
   None      — no match found, or CP DB not configured / unreachable.
+
+Normalization quirks worth knowing:
+  - bhk: CP stores '2 BHK' / '3 BHK', Direct stores the integer 2. Both
+    sides reduce to leading digits ('2 BHK' → '2', 2 → '2').
+  - floor: CP often uses bucket labels ('Higher', 'Middle', 'Lower') that
+    can't be reconciled with Direct's exact floor number. A floor value
+    participates in matching only if it's an integer in [1, 50] or the
+    literal 'Top'. Otherwise floor is skipped and we lean on tower/unit_no.
 
 CP DB connection is read-only; failure to reach it is non-fatal.
 
@@ -35,49 +45,99 @@ def _norm(v) -> str:
 
 
 def _norm_bhk(v) -> str | None:
-    """bhk lives as varchar in CP DB but int in Direct — normalize to a
-    stripped string on both sides so dict-keys and SQL params line up. Returns
-    None for missing values (caller skips classification)."""
+    """Reduce '2', '2 BHK', '2BHK', '2.0', 2 → '2'. Anything without a leading
+    digit (e.g. 'Studio') → None, meaning unmatchable."""
     if v is None or v == "":
         return None
-    return str(v).strip()
+    s = str(v).strip()
+    digits = ""
+    for ch in s:
+        if ch.isdigit():
+            digits += ch
+        else:
+            break
+    return digits or None
 
 
-def _classify(direct_row: dict, cp_index: dict[tuple, set]) -> str | None:
+def _floor_matchable(f: str) -> bool:
+    """True if this floor value can participate in matching.
+
+    Matchable: an integer 1-50, or the literal 'top'. Anything else
+    (bucket labels like 'higher'/'middle'/'lower', empty, garbage) → skip.
+    """
+    if f == "top":
+        return True
+    try:
+        n = int(f)
+    except (ValueError, TypeError):
+        return False
+    return 1 <= n <= 50
+
+
+def _floor_compatible(d_floor: str, cp_floor: str) -> bool:
+    """A CP candidate is floor-compatible with a Direct row if BOTH sides have
+    matchable floor values that are equal, OR at least one side is non-matchable
+    (in which case floor is skipped and we fall back to other parameters).
+    """
+    if not _floor_matchable(d_floor) or not _floor_matchable(cp_floor):
+        return True
+    return d_floor == cp_floor
+
+
+def _classify(direct_row: dict, cp_index: dict[tuple, list[tuple]]) -> str | None:
+    """Classify one Direct row against the pre-built CP index.
+
+    Index shape: { (society, bhk): [(floor, tower, unit_no), ...] }
+
+    Returns 'perfect' | 'partial' | None.
+    """
     s = _norm(direct_row.get("society"))
     b = _norm_bhk(direct_row.get("bedrooms"))
-    f = _norm(direct_row.get("floor"))
     if not s or b is None:
         return None
-    cp_set = cp_index.get((s, b, f))
-    if not cp_set:
+    candidates = cp_index.get((s, b))
+    if not candidates:
         return None
-    t = _norm(direct_row.get("tower"))
-    u = _norm(direct_row.get("unit_no"))
-    if t and u and (t, u) in cp_set:
-        return "perfect"
-    return "partial"
+
+    d_floor = _norm(direct_row.get("floor"))
+    d_tower = _norm(direct_row.get("tower"))
+    d_unit = _norm(direct_row.get("unit_no"))
+
+    any_partial = False
+    for cf, ct, cu in candidates:
+        if not _floor_compatible(d_floor, cf):
+            continue
+        if d_tower and d_unit and d_tower == ct and d_unit == cu:
+            return "perfect"
+        any_partial = True
+
+    return "partial" if any_partial else None
 
 
-def _query_cp(keys: set) -> dict[tuple, set]:
-    """Run one CP-DB query for the given set of (society, bhk, floor) keys.
-    Returns: { (s,b,f): {(tower, unit_no), ...} }
+def _query_cp(keys: set) -> dict[tuple, list[tuple]]:
+    """Run one CP-DB query for the given set of (society, bhk) keys.
+
+    Returns: { (s, b): [(floor, tower, unit_no), ...] }
+
+    Both sides normalize bhk to its leading digits, so 'M3M The Marina'+'2 BHK'
+    in CP joins to the same bucket as 'M3M The Marina'+2 in Direct.
     """
     if not keys:
         return {}
-    placeholders = ",".join(["(%s,%s,%s)"] * len(keys))
+    placeholders = ",".join(["(%s,%s)"] * len(keys))
     flat: list = []
-    for s, b, f in keys:
-        flat.extend([s, b, f])
+    for s, b in keys:
+        flat.extend([s, b])
+    # SUBSTRING(... FROM '^[0-9]+') extracts the leading digits — same logic
+    # as _norm_bhk on the Python side. NULL (e.g. bhk='Studio') is unmatchable.
     sql = (
         f"SELECT LOWER(TRIM(society_name)) AS s, "
-        f"       TRIM(bhk::TEXT) AS b, "
+        f"       SUBSTRING(bhk::TEXT FROM '^[0-9]+') AS b, "
         f"       LOWER(TRIM(COALESCE(floor::TEXT, ''))) AS f, "
         f"       LOWER(TRIM(COALESCE(tower::TEXT, ''))) AS t, "
         f"       LOWER(TRIM(COALESCE(unit_no::TEXT, ''))) AS u "
         f"FROM {config.CP_INVENTORY_TABLE} "
-        f"WHERE (LOWER(TRIM(society_name)), TRIM(bhk::TEXT), "
-        f"       LOWER(TRIM(COALESCE(floor::TEXT, '')))) "
+        f"WHERE (LOWER(TRIM(society_name)), SUBSTRING(bhk::TEXT FROM '^[0-9]+')) "
         f"  IN ({placeholders})"
     )
     conn = None
@@ -93,10 +153,10 @@ def _query_cp(keys: set) -> dict[tuple, set]:
             try: conn.close()
             except Exception: pass
 
-    index: dict[tuple, set] = {}
+    index: dict[tuple, list[tuple]] = {}
     for cp in cp_rows:
-        key = (cp["s"], cp["b"], cp["f"])
-        index.setdefault(key, set()).add((cp["t"], cp["u"]))
+        key = (cp["s"], cp["b"])
+        index.setdefault(key, []).append((cp["f"], cp["t"], cp["u"]))
     return index
 
 
@@ -115,9 +175,8 @@ def annotate_cp_match(rows: list[dict]) -> None:
     for r in todo:
         s = _norm(r.get("society"))
         b = _norm_bhk(r.get("bedrooms"))
-        f = _norm(r.get("floor"))
         if s and b is not None:
-            keys.add((s, b, f))
+            keys.add((s, b))
 
     try:
         index = _query_cp(keys)
@@ -163,9 +222,8 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
         for r in rows:
             s = _norm(r.get("society"))
             b = _norm_bhk(r.get("bedrooms"))
-            f = _norm(r.get("floor"))
             if s and b is not None:
-                keys.add((s, b, f))
+                keys.add((s, b))
         cp_index = _query_cp(keys)
 
         verdicts = []
