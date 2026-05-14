@@ -1,7 +1,7 @@
 """Visit Scheduled <-> Forms app integration.
 
 Outbound: when stage flips to visit_scheduled, the frontend calls
-  POST /api/visits/schedule { oh_id, scheduled_at, field_exec_phone }
+  POST /api/visits/schedule { oh_id, schedule_date, schedule_time, field_exec_phone }
 which forwards to FORMS_APP_URL/api/external/schedule with INTERNAL_API_KEY.
 
 Inbound webhook: Forms app calls
@@ -10,8 +10,12 @@ to mark visits as completed (or rescheduled/cancelled) and flip our stage.
 """
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 import requests
 from flask import Blueprint, g, jsonify, request
+
+IST = timezone(timedelta(hours=5, minutes=30))
 
 from .. import config
 from ..db import get_conn, get_props_conn
@@ -45,13 +49,23 @@ def list_field_execs():
 def schedule_visit():
     body = request.get_json(silent=True) or {}
     oh_id = body.get("oh_id")
-    scheduled_at = body.get("scheduled_at")
+    # Schedule is split into separate date / time strings (HTML inputs send
+    # them that way, and the Forms app wants them separately too).
+    schedule_date = body.get("schedule_date")
+    schedule_time = body.get("schedule_time")
     field_exec_phone = body.get("field_exec_phone")
 
-    if not oh_id or not scheduled_at or not field_exec_phone:
-        return jsonify({"error": "oh_id, scheduled_at, field_exec_phone required"}), 400
+    if not oh_id or not schedule_date or not schedule_time or not field_exec_phone:
+        return jsonify({
+            "error": "oh_id, schedule_date, schedule_time, field_exec_phone required"
+        }), 400
     if not config.FORMS_APP_URL or not config.INTERNAL_API_KEY:
         return jsonify({"error": "forms integration not configured"}), 500
+
+    try:
+        visit_at = datetime.fromisoformat(f"{schedule_date}T{schedule_time}").replace(tzinfo=IST)
+    except ValueError:
+        return jsonify({"error": f"invalid schedule_date/time: {schedule_date} {schedule_time}"}), 400
 
     conn = get_conn()
     try:
@@ -61,16 +75,32 @@ def schedule_visit():
             if not inv:
                 return jsonify({"error": "inventory not found"}), 404
 
-            # Forward to Forms app
+            # The Forms app's schema (lead_id / first_name / contact_no /
+            # configuration / etc.) is independent of our column names, so we
+            # adapt here. Keep external_id alongside lead_id so the existing
+            # forms-webhook (which reads external_id) keeps working in case
+            # Forms echoes either key back.
+            seller_first = (inv.get("seller_name") or "").strip().split(" ", 1)[0]
+            configuration = (
+                f"{inv['bedrooms']} BHK" if inv.get("bedrooms") is not None else ""
+            )
             payload = {
-                "external_id": oh_id,
-                "city": inv["city"],
-                "locality": inv["locality"],
-                "society": inv["society"],
-                "scheduled_at": scheduled_at,
-                "field_exec_phone": field_exec_phone,
-                "assigned_by": g.user["email"],
-                "callback_url": request.host_url.rstrip("/") + "/api/visits/forms-webhook",
+                "lead_id":        oh_id,
+                "external_id":    oh_id,
+                "source":         inv.get("source") or "",
+                "schedule_date":  schedule_date,
+                "schedule_time":  schedule_time,
+                "first_name":     seller_first,
+                "contact_no":     inv.get("seller_phone") or "",
+                "society_name":   inv.get("society") or "",
+                "area_sqft":      inv.get("area_sqft"),
+                "configuration":  configuration,
+                "field_exec":     field_exec_phone,
+                # extra context the Forms app may use or ignore
+                "city":           inv.get("city"),
+                "locality":       inv.get("locality"),
+                "assigned_by":    g.user["email"],
+                "callback_url":   request.host_url.rstrip("/") + "/api/visits/forms-webhook",
             }
             try:
                 r = requests.post(
@@ -112,7 +142,7 @@ def schedule_visit():
                        visit_at = %s,
                        visit_exec = %s
                    WHERE oh_id = %s RETURNING *""",
-                (visit_id, scheduled_at, field_exec_phone, oh_id),
+                (visit_id, visit_at, field_exec_phone, oh_id),
             )
             row = cur.fetchone()
             log_activity(
@@ -123,7 +153,8 @@ def schedule_visit():
                 entity_id=oh_id,
                 action="visit_scheduled",
                 metadata={
-                    "scheduled_at": scheduled_at,
+                    "schedule_date": schedule_date,
+                    "schedule_time": schedule_time,
                     "field_exec_phone": field_exec_phone,
                     "forms_visit_id": visit_id,
                 },

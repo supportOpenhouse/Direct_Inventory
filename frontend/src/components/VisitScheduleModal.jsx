@@ -27,17 +27,12 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
       setError('Date, Time and Field Exec are required');
       return;
     }
-    // Combine date + time as a local datetime → ISO. Backend stores it as TIMESTAMPTZ.
-    const local = new Date(`${date}T${time}`);
-    if (Number.isNaN(local.getTime())) {
-      setError('Invalid date or time');
-      return;
-    }
     try {
       setSubmitting(true);
       const r = await api.post('/api/visits/schedule', {
         oh_id: item.oh_id,
-        scheduled_at: local.toISOString(),
+        schedule_date: date,    // YYYY-MM-DD (Forms app wants date + time separately)
+        schedule_time: time,    // HH:MM (24-hour from the <input type=time>)
         field_exec_phone: execPhone,
       });
       onScheduled(r);
