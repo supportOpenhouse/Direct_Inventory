@@ -78,7 +78,7 @@ export default function NotificationBell({ role }) {
                 <span className="bell-meta">
                   {displayCity(it.city)}
                   {it.bedrooms != null ? ` · ${it.bedrooms} BHK` : ''}
-                  {it.floor ? ` · F${it.floor}` : ''}
+                  {it.floor ? ` · ${it.floor}` : ''}
                   {it.source ? ` · ${it.source}` : ''}
                 </span>
               </button>
