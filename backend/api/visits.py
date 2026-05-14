@@ -87,7 +87,11 @@ def schedule_visit():
             payload = {
                 "lead_id":        oh_id,
                 "external_id":    oh_id,
-                "source":         inv.get("source") or "",
+                # Forms app accepts only {"CP", "Direct", "CP Listing"}. Every
+                # row scheduled from this portal is — by definition — sourced
+                # via Direct Inventory, regardless of what `inventory.source`
+                # (99acres / magicbricks / Website / etc.) actually contains.
+                "source":         "Direct",
                 "schedule_date":  schedule_date,
                 "schedule_time":  schedule_time,
                 "first_name":     seller_first,
