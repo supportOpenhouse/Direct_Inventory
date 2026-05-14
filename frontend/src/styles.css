@@ -186,8 +186,8 @@ a { color: inherit; }
   padding: 10px 12px; border-bottom: 1px solid #f1f5f9;
   white-space: nowrap; vertical-align: middle;
 }
-.inv-row-manual { background: #fffbf4; border-left-color: #fb923c; }
-.inv-row-manual:hover { background: #fef3e2; }
+.inv-row-manual { background: #ffe9c8; border-left-color: #fb923c; }
+.inv-row-manual:hover { background: #fdd8a4; }
 .inv-row-priority { border-left-color: #eab308; }
 .inv-row-priority.inv-row-manual { border-left-color: #eab308; }    /* gold wins */
 .inv-row-selected { background: #fff7ed !important; box-shadow: inset 2px 0 0 #fb923c; }
