@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client.js';
-import { displayCity, formatFloor, stageLabel } from '../utils/format.js';
+import { displayCity, stageLabel } from '../utils/format.js';
 import CardDetailModal from './CardDetailModal.jsx';
 
 /**
@@ -78,7 +78,7 @@ export default function NotificationBell({ role }) {
                 <span className="bell-meta">
                   {displayCity(it.city)}
                   {it.bedrooms != null ? ` · ${it.bedrooms} BHK` : ''}
-                  {it.floor ? ` · ${formatFloor(it.floor)}` : ''}
+                  {it.floor ? ` · ${it.floor}` : ''}
                   {it.source ? ` · ${it.source}` : ''}
                 </span>
               </button>

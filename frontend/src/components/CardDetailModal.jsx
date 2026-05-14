@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api/client.js';
 import {
-  displayCity, formatFloor, formatPrice, REJECT_REASONS, STAGE_DOT_COLOR, STAGES,
+  displayCity, formatPrice, REJECT_REASONS, STAGE_DOT_COLOR, STAGES,
   stageLabel, todayISO, variation,
 } from '../utils/format.js';
 import VisitScheduleModal from './VisitScheduleModal.jsx';
@@ -107,7 +107,7 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
 
           <div className="card-detail-sub">
             {item.locality ? <span>{item.locality}</span> : null}
-            {item.floor ? <span>· {formatFloor(item.floor)}</span> : null}
+            {item.floor ? <span>· {item.floor}</span> : null}
             {item.bedrooms != null && <span>· {item.bedrooms} BHK</span>}
             {item.area_sqft != null && <span>· {item.area_sqft} sqft</span>}
             <span>· <strong className="val-orange">{formatPrice(item.price)}</strong></span>
