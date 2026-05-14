@@ -4,11 +4,18 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 
 export default function VisitScheduleModal({ item, onClose, onScheduled }) {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [execs, setExecs] = useState([]);
   const [execPhone, setExecPhone] = useState('');
   const [loadingExecs, setLoadingExecs] = useState(true);
+  // Admin-only — pick which manager/RM the visit is being scheduled on
+  // behalf of. Required for the Forms app to attribute the assignment.
+  const [assignees, setAssignees] = useState([]);
+  const [assignedBy, setAssignedBy] = useState('');
+  const [loadingAssignees, setLoadingAssignees] = useState(isAdmin);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -21,19 +28,45 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
     return () => { alive = false; };
   }, []);
 
+  useEffect(() => {
+    if (!isAdmin) return;
+    let alive = true;
+    // Combine manager + rm lists. /api/users supports a single role filter, so
+    // run both in parallel and merge.
+    Promise.all([
+      api.get('/api/users?role=manager'),
+      api.get('/api/users?role=rm'),
+    ])
+      .then(([m, r]) => {
+        if (!alive) return;
+        const items = [...(m.items || []), ...(r.items || [])]
+          .filter((u) => u.is_active !== false)
+          .sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+        setAssignees(items);
+      })
+      .catch((e) => { if (alive) setError(`Couldn't load assignees: ${e.data?.error || e.message}`); })
+      .finally(() => { if (alive) setLoadingAssignees(false); });
+    return () => { alive = false; };
+  }, [isAdmin]);
+
   async function submit() {
     setError(null);
     if (!date || !time || !execPhone) {
       setError('Date, Time and Field Exec are required');
       return;
     }
+    if (isAdmin && !assignedBy) {
+      setError('Pick who this visit is assigned by');
+      return;
+    }
     try {
       setSubmitting(true);
       const r = await api.post('/api/visits/schedule', {
         oh_id: item.oh_id,
-        schedule_date: date,    // YYYY-MM-DD (Forms app wants date + time separately)
-        schedule_time: time,    // HH:MM (24-hour from the <input type=time>)
+        schedule_date: date,
+        schedule_time: time,
         field_exec_phone: execPhone,
+        ...(isAdmin ? { assigned_by_email: assignedBy } : {}),
       });
       onScheduled(r);
     } catch (e) {
@@ -75,9 +108,27 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
           ))}
         </select>
 
-        <div className="assigned-by">
-          Assigned by: <strong>{user?.name || user?.email || '—'}</strong>
-        </div>
+        {isAdmin ? (
+          <>
+            <label>Assigned By <span className="req">*</span></label>
+            <select
+              value={assignedBy}
+              onChange={(e) => setAssignedBy(e.target.value)}
+              disabled={loadingAssignees}
+            >
+              <option value="">{loadingAssignees ? 'Loading…' : 'Select manager / RM…'}</option>
+              {assignees.map((u) => (
+                <option key={u.id} value={u.email}>
+                  {u.name || u.email} · {u.role}
+                </option>
+              ))}
+            </select>
+          </>
+        ) : (
+          <div className="assigned-by">
+            Assigned by: <strong>{user?.name || user?.email || '—'}</strong>
+          </div>
+        )}
 
         {error && <div className="modal-error">{error}</div>}
 

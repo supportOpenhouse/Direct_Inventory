@@ -55,6 +55,17 @@ def schedule_visit():
     schedule_time = body.get("schedule_time")
     field_exec_phone = body.get("field_exec_phone")
 
+    # "Assigned By" — for managers/RMs this is implicitly themselves. Admins
+    # don't usually own leads, so the modal forces them to pick a manager/RM
+    # to mark as the assignee; if missing we reject so the Forms app gets a
+    # meaningful name (and not an admin's email).
+    if g.user["role"] == "admin":
+        assigned_by_email = (body.get("assigned_by_email") or "").strip().lower()
+        if not assigned_by_email:
+            return jsonify({"error": "assigned_by_email required when admin schedules a visit"}), 400
+    else:
+        assigned_by_email = g.user["email"]
+
     if not oh_id or not schedule_date or not schedule_time or not field_exec_phone:
         return jsonify({
             "error": "oh_id, schedule_date, schedule_time, field_exec_phone required"
@@ -103,7 +114,7 @@ def schedule_visit():
                 # extra context the Forms app may use or ignore
                 "city":           inv.get("city"),
                 "locality":       inv.get("locality"),
-                "assigned_by":    g.user["email"],
+                "assigned_by":    assigned_by_email,
                 "callback_url":   request.host_url.rstrip("/") + "/api/visits/forms-webhook",
             }
             try:
@@ -160,6 +171,7 @@ def schedule_visit():
                     "schedule_date": schedule_date,
                     "schedule_time": schedule_time,
                     "field_exec_phone": field_exec_phone,
+                    "assigned_by": assigned_by_email,
                     "forms_visit_id": visit_id,
                 },
             )
