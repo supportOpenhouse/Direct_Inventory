@@ -76,7 +76,9 @@ class FakeCursor:
         code = self._last[1]
         if code not in self.state:
             return None
-        return self.state[code]
+        # Match psycopg2.RealDictCursor — rows are dicts keyed by column name.
+        counter, suffix = self.state[code]
+        return {"counter": counter, "suffix": suffix}
 
 
 def test_next_oh_id_first_id_for_each_city():

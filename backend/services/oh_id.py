@@ -65,7 +65,8 @@ def next_oh_id(cur, city: str) -> str:
     row = cur.fetchone()
     if not row:
         raise RuntimeError(f"oh_id_counter row missing for city_code={code!r} — run migrations")
-    counter, suffix = row[0], row[1]
+    # Cursor is a RealDictCursor (see db.py), so rows are dicts not tuples.
+    counter, suffix = row["counter"], row["suffix"]
 
     counter += 1
     if counter > 9999:
