@@ -62,26 +62,47 @@ def schedule_visit():
                 return jsonify({"error": "inventory not found"}), 404
 
             # Forward to Forms app
+            payload = {
+                "external_id": oh_id,
+                "city": inv["city"],
+                "locality": inv["locality"],
+                "society": inv["society"],
+                "scheduled_at": scheduled_at,
+                "field_exec_phone": field_exec_phone,
+                "assigned_by": g.user["email"],
+                "callback_url": request.host_url.rstrip("/") + "/api/visits/forms-webhook",
+            }
             try:
                 r = requests.post(
                     f"{config.FORMS_APP_URL}/api/external/schedule",
-                    json={
-                        "external_id": oh_id,
-                        "city": inv["city"],
-                        "locality": inv["locality"],
-                        "society": inv["society"],
-                        "scheduled_at": scheduled_at,
-                        "field_exec_phone": field_exec_phone,
-                        "assigned_by": g.user["email"],
-                        "callback_url": request.host_url.rstrip("/") + "/api/visits/forms-webhook",
-                    },
+                    json=payload,
                     headers={"X-Internal-Key": config.INTERNAL_API_KEY},
                     timeout=10,
                 )
-                r.raise_for_status()
-                forms_response = r.json()
             except requests.RequestException as e:
-                return jsonify({"error": f"forms app error: {e}"}), 502
+                return jsonify({"error": f"forms app unreachable: {e}"}), 502
+
+            if not r.ok:
+                # Surface the Forms-app response verbatim so we can debug
+                # schema mismatches without redeploying.
+                body_text = (r.text or "")[:500]
+                try:
+                    body_json = r.json()
+                except ValueError:
+                    body_json = None
+                return jsonify({
+                    "error": "forms app rejected request",
+                    "forms_status": r.status_code,
+                    "forms_response": body_json or body_text,
+                    "sent_payload": payload,
+                }), 502
+            try:
+                forms_response = r.json()
+            except ValueError:
+                return jsonify({
+                    "error": "forms app returned non-JSON",
+                    "forms_response": (r.text or "")[:500],
+                }), 502
 
             visit_id = forms_response.get("visit_id")
             cur.execute(

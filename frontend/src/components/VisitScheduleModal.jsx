@@ -42,7 +42,13 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
       });
       onScheduled(r);
     } catch (e) {
-      setError(e.data?.error || e.message);
+      const parts = [e.data?.error || e.message];
+      if (e.data?.forms_status) parts.push(`(status ${e.data.forms_status})`);
+      if (e.data?.forms_response) {
+        const fr = e.data.forms_response;
+        parts.push(typeof fr === 'string' ? fr : JSON.stringify(fr));
+      }
+      setError(parts.filter(Boolean).join(' — '));
     } finally {
       setSubmitting(false);
     }
