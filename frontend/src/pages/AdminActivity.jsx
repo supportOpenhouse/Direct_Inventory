@@ -152,16 +152,16 @@ export default function AdminActivity() {
 
         <select className="al-filter-select" value={f.actor_email} onChange={(e) => setF({ ...f, actor_email: e.target.value })}>
           <option value="">Actor Email</option>
-          {filterOpts.actors.map((a) => <option key={a.email} value={a.email}>{a.email}</option>)}
+          {filterOpts.actors.map((a) => (
+            <option key={a.email} value={a.email}>
+              {a.email === 'apps-script:*' ? 'Apps Script Sync (all batches)' : a.email}
+            </option>
+          ))}
         </select>
 
         <select className="al-filter-select" value={f.actor_email} onChange={(e) => setF({ ...f, actor_email: e.target.value })}>
           <option value="">Actor Name</option>
           {filterOpts.actors.filter((a) => a.name).map((a) => <option key={a.email} value={a.email}>{a.name}</option>)}
-        </select>
-
-        <select className="al-filter-select" value="direct" disabled>
-          <option value="direct">Direct Inventory</option>
         </select>
 
         <div className="al-date-range">
@@ -187,15 +187,14 @@ export default function AdminActivity() {
               <SortableTh field="actor_email" label="Actor"    sort={sort} onSort={setSort} />
               <SortableTh field="action"     label="Action"    sort={sort} onSort={setSort} />
               <SortableTh field="entity_type" label="Category" sort={sort} onSort={setSort} />
-              <th className="al-th">Dashboard</th>
               <th className="al-th">Details</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="al-empty">Loading…</td></tr>
+              <tr><td colSpan={6} className="al-empty">Loading…</td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={7} className="al-empty">No matching activity.</td></tr>
+              <tr><td colSpan={6} className="al-empty">No matching activity.</td></tr>
             ) : items.map((a) => (
               <tr key={a.id}>
                 <td className="al-ts">{formatTs(a.created_at)}</td>
@@ -206,7 +205,6 @@ export default function AdminActivity() {
                 </td>
                 <td className="al-action"><code>{a.action || '—'}</code></td>
                 <td><span className={categoryClass(a.entity_type)}>{a.entity_type || '—'}</span></td>
-                <td className="al-dashboard">Direct Inventory</td>
                 <td className="al-details"><Details row={a} /></td>
               </tr>
             ))}

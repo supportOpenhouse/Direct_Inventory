@@ -75,8 +75,14 @@ def list_activity():
         where.append("a.entity_type = %s")
         params.append(entity_type)
     if actor_email:
-        where.append("a.actor_email = %s")
-        params.append(actor_email)
+        # `apps-script:*` is the grouping sentinel from the filters endpoint
+        # — matches every per-batch sync entry as one logical "Apps Script"
+        # actor instead of forcing the user to filter to a specific batch.
+        if actor_email == "apps-script:*":
+            where.append("a.actor_email LIKE 'apps-script:%%'")
+        else:
+            where.append("a.actor_email = %s")
+            params.append(actor_email)
     if date_from:
         where.append("a.created_at >= %s")
         params.append(date_from)
@@ -130,13 +136,25 @@ def filter_options():
             actions = [r["action"] for r in cur.fetchall()]
             cur.execute("SELECT DISTINCT entity_type FROM activity_log WHERE entity_type IS NOT NULL ORDER BY entity_type")
             entity_types = [r["entity_type"] for r in cur.fetchall()]
+            # Every Apps-Script batch posts under a distinct synthetic actor_email
+            # (e.g. apps-script:direct-inventory:batch-5/77). Don't dump all of those
+            # into the dropdown — collapse them into a single "Apps Script Sync"
+            # entry whose value is the sentinel `apps-script:*`. The list endpoint
+            # special-cases that value to a LIKE 'apps-script:%' filter.
             cur.execute(
                 "SELECT DISTINCT a.actor_email AS email, u.name "
                 "FROM activity_log a LEFT JOIN users u ON u.email = a.actor_email "
                 "WHERE a.actor_email IS NOT NULL "
+                "  AND a.actor_email NOT LIKE 'apps-script:%' "
                 "ORDER BY a.actor_email"
             )
             actors = cur.fetchall()
+            # Add the single grouped entry if any apps-script:* row exists.
+            cur.execute(
+                "SELECT 1 FROM activity_log WHERE actor_email LIKE 'apps-script:%' LIMIT 1"
+            )
+            if cur.fetchone():
+                actors.append({"email": "apps-script:*", "name": "Apps Script Sync"})
         return jsonify({"actions": actions, "entity_types": entity_types, "actors": actors})
     finally:
         conn.close()
