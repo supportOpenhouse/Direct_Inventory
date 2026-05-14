@@ -12,7 +12,7 @@ from flask import Blueprint, g, jsonify, request
 from ..db import get_conn
 from ..services.activity import log as log_activity
 from ..services.assignment import resolve_assignment
-from ..services.cp_match import MATCH_INPUT_FIELDS, annotate_cp_match, backfill_all_matches
+from ..services.cp_match import MATCH_INPUT_FIELDS, annotate_cp_match, backfill_one_chunk
 from ..services.oh_id import next_oh_id
 from .auth import require_auth
 
@@ -379,24 +379,41 @@ def inventory_counts():
 @bp.post("/cp-match-scan")
 @require_auth("admin")
 def cp_match_scan():
-    """One-shot: scan every inventory row, classify against CP DB, persist
-    `cp_match`. Returns counts. Admin-only because it can take a minute or
-    two and writes across the whole table.
+    """Chunked scan: process ONE batch starting after `cursor` (oh_id).
+
+    Frontend loops, passing back `next_cursor` from the previous response and
+    accumulating totals in `prior_totals`, until the response has `done: true`.
+    Keeps each request short enough to survive any proxy/gateway timeout
+    regardless of total table size. Admin-only.
+
+    Request:  { cursor?: string, prior_totals?: {perfect, partial, no_match} }
+    Response: { done, next_cursor, perfect, partial, no_match, processed }
     """
+    body = request.get_json(silent=True) or {}
+    cursor = body.get("cursor") or ""
+    prior = body.get("prior_totals") or {}
+
     conn = get_conn()
     try:
-        result = backfill_all_matches(conn)
-        with conn, conn.cursor() as cur:
-            log_activity(
-                cur,
-                actor_user_id=g.user["id"],
-                actor_email=g.user["email"],
-                entity_type="cp_match_scan",
-                entity_id=None,
-                action="run",
-                metadata=result,
-            )
-        return jsonify(result)
+        chunk = backfill_one_chunk(conn, cursor)
+        if chunk["done"]:
+            cumulative = {
+                "perfect": int(prior.get("perfect") or 0) + chunk["perfect"],
+                "partial": int(prior.get("partial") or 0) + chunk["partial"],
+                "no_match": int(prior.get("no_match") or 0) + chunk["no_match"],
+            }
+            cumulative["total"] = cumulative["perfect"] + cumulative["partial"] + cumulative["no_match"]
+            with conn, conn.cursor() as cur:
+                log_activity(
+                    cur,
+                    actor_user_id=g.user["id"],
+                    actor_email=g.user["email"],
+                    entity_type="cp_match_scan",
+                    entity_id=None,
+                    action="run",
+                    metadata=cumulative,
+                )
+        return jsonify(chunk)
     except RuntimeError as e:
         return jsonify({"error": str(e)}), 400
     finally:

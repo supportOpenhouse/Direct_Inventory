@@ -12,19 +12,22 @@ CP DB connection is read-only; failure to reach it is non-fatal.
 Two entry points:
   - annotate_cp_match(rows) — mutate in-memory rows (used by the list endpoint
     as a fallback for rows that haven't been scanned yet).
-  - backfill_all_matches(conn) — admin-triggered: scan every inventory row
-    in chunks and persist the result on `inventory.cp_match`.
+  - backfill_one_chunk(conn, cursor) — admin-triggered: scan ONE chunk of
+    inventory rows starting after `cursor`; frontend loops until done. Keeps
+    each HTTP request well under any proxy/gateway timeout.
 """
 from __future__ import annotations
 
 import logging
+
+from psycopg2.extras import execute_values
 
 from .. import config
 from ..db import get_cp_conn
 
 log = logging.getLogger(__name__)
 
-BATCH_SIZE = 500
+BATCH_SIZE = 2000
 
 
 def _norm(v) -> str:
@@ -117,63 +120,80 @@ def annotate_cp_match(rows: list[dict]) -> None:
         r["cp_match"] = _classify(r, index) or "none"
 
 
-def backfill_all_matches(conn) -> dict:
-    """Scan EVERY inventory row, classify against CP, persist `cp_match`.
+def backfill_one_chunk(conn, cursor: str) -> dict:
+    """Scan ONE chunk of inventory rows (oh_id > cursor), classify, persist.
 
-    Iterates in keyset-paginated chunks of BATCH_SIZE and commits per chunk
-    so a mid-flight failure leaves the DB in a partial-but-consistent state
-    rather than rolling back everything.
+    Returns:
+      { done, next_cursor, perfect, partial, no_match, processed }
 
-    Returns: { total, perfect, partial, no_match }.
+    `done` is True when this chunk had fewer than BATCH_SIZE rows (i.e. the
+    table is exhausted). The frontend loops, passing back `next_cursor` each
+    time, until `done` is True — this keeps every HTTP request small enough
+    to survive any proxy/gateway timeout, regardless of total table size.
+
     Raises if CP_DB_URL is unset.
     """
     if not config.CP_DB_URL:
         raise RuntimeError("CP_DB_URL is not set — cannot run scan")
 
-    total = perfect = partial = none = 0
-    last_oh_id = ""
+    perfect = partial = none = 0
 
-    while True:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT oh_id, society, bedrooms, floor, tower, unit_no "
-                "FROM inventory WHERE oh_id > %s "
-                "ORDER BY oh_id LIMIT %s",
-                (last_oh_id, BATCH_SIZE),
-            )
-            rows = cur.fetchall()
-            if not rows:
-                break
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT oh_id, society, bedrooms, floor, tower, unit_no "
+            "FROM inventory WHERE oh_id > %s "
+            "ORDER BY oh_id LIMIT %s",
+            (cursor, BATCH_SIZE),
+        )
+        rows = cur.fetchall()
+        if not rows:
+            return {"done": True, "next_cursor": cursor,
+                    "perfect": 0, "partial": 0, "no_match": 0, "processed": 0}
 
-            keys = set()
-            for r in rows:
-                s = _norm(r.get("society"))
-                b = r.get("bedrooms")
-                f = _norm(r.get("floor"))
-                if s and b is not None:
-                    keys.add((s, b, f))
-            cp_index = _query_cp(keys)
+        keys = set()
+        for r in rows:
+            s = _norm(r.get("society"))
+            b = r.get("bedrooms")
+            f = _norm(r.get("floor"))
+            if s and b is not None:
+                keys.add((s, b, f))
+        cp_index = _query_cp(keys)
 
-            for r in rows:
-                # 'none' (not NULL) — distinguishes "scanned and no match found"
-                # from "never scanned yet". NULL is reserved for the latter
-                # (set by PATCH when a match-input field changes).
-                verdict = _classify(r, cp_index) or "none"
-                cur.execute(
-                    "UPDATE inventory SET cp_match = %s WHERE oh_id = %s",
-                    (verdict, r["oh_id"]),
-                )
-                if verdict == "perfect": perfect += 1
-                elif verdict == "partial": partial += 1
-                else: none += 1
-                total += 1
+        verdicts = []
+        for r in rows:
+            # 'none' (not NULL) — distinguishes "scanned and no match found"
+            # from "never scanned yet". NULL is reserved for the latter
+            # (set by PATCH when a match-input field changes).
+            verdict = _classify(r, cp_index) or "none"
+            verdicts.append((r["oh_id"], verdict))
+            if verdict == "perfect": perfect += 1
+            elif verdict == "partial": partial += 1
+            else: none += 1
 
-            last_oh_id = rows[-1]["oh_id"]
-        conn.commit()
-        log.info("cp_match backfill chunk: oh_id<=%s, running totals: total=%d perfect=%d partial=%d no_match=%d",
-                 last_oh_id, total, perfect, partial, none)
+        # Single bulk UPDATE — one round-trip instead of BATCH_SIZE.
+        execute_values(
+            cur,
+            "UPDATE inventory AS i SET cp_match = v.verdict "
+            "FROM (VALUES %s) AS v(oh_id, verdict) "
+            "WHERE i.oh_id = v.oh_id",
+            verdicts, page_size=BATCH_SIZE,
+        )
 
-    return {"total": total, "perfect": perfect, "partial": partial, "no_match": none}
+        last_oh_id = rows[-1]["oh_id"]
+    conn.commit()
+
+    done = len(rows) < BATCH_SIZE
+    log.info("cp_match chunk: cursor<=%s processed=%d perfect=%d partial=%d no_match=%d done=%s",
+             last_oh_id, len(rows), perfect, partial, none, done)
+
+    return {
+        "done": done,
+        "next_cursor": last_oh_id,
+        "perfect": perfect,
+        "partial": partial,
+        "no_match": none,
+        "processed": len(rows),
+    }
 
 
 # Fields whose change invalidates the persisted cp_match verdict.

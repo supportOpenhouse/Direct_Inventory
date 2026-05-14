@@ -32,6 +32,7 @@ export default function Board() {
 
   // Admin-triggered CP match scan.
   const [scanning, setScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
 
   // Detail modal for the clicked row.
   const [openItem, setOpenItem] = useState(null);
@@ -135,11 +136,33 @@ export default function Board() {
     if (scanning) return;
     if (!window.confirm('Run a full CP Inventory match scan? This takes a minute or two and will update every row in the board.')) return;
     setScanning(true);
+    setScanProgress(0);
     try {
-      const r = await api.post('/api/inventory/cp-match-scan', {});
+      let cursor = '';
+      let totals = { perfect: 0, partial: 0, no_match: 0 };
+      let processed = 0;
+      // Loop the chunked endpoint until the backend says done. Each call
+      // handles BATCH_SIZE rows (currently 2000) — small enough to clear any
+      // proxy timeout, regardless of total table size.
+      while (true) {
+        const r = await api.post('/api/inventory/cp-match-scan', {
+          cursor,
+          prior_totals: totals,
+        });
+        totals = {
+          perfect: totals.perfect + r.perfect,
+          partial: totals.partial + r.partial,
+          no_match: totals.no_match + r.no_match,
+        };
+        processed += r.processed;
+        setScanProgress(processed);
+        if (r.done) break;
+        cursor = r.next_cursor;
+      }
+      const total = totals.perfect + totals.partial + totals.no_match;
       alert(
-        `CP scan complete — ${r.total} rows.\n` +
-        `Perfect: ${r.perfect}\nPartial: ${r.partial}\nNo match: ${r.no_match}`
+        `CP scan complete — ${total} rows.\n` +
+        `Perfect: ${totals.perfect}\nPartial: ${totals.partial}\nNo match: ${totals.no_match}`
       );
       refresh(page);
       refreshCounts();
@@ -147,6 +170,7 @@ export default function Board() {
       alert('Scan failed: ' + (e.data?.error || e.message));
     } finally {
       setScanning(false);
+      setScanProgress(0);
     }
   }
 
@@ -214,7 +238,7 @@ export default function Board() {
         </button>
         {user?.role === 'admin' && (
           <button className="btn-ghost" onClick={runCpScan} disabled={scanning}>
-            {scanning ? 'Scanning…' : 'Re-scan CP'}
+            {scanning ? `Scanning… ${scanProgress}` : 'Re-scan CP'}
           </button>
         )}
         <button className="btn-primary" onClick={() => setShowAdd(true)}>+ Add Inventory</button>
