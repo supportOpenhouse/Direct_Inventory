@@ -34,9 +34,18 @@ def _norm(v) -> str:
     return (str(v).strip().lower() if v not in (None, "") else "")
 
 
+def _norm_bhk(v) -> str | None:
+    """bhk lives as varchar in CP DB but int in Direct — normalize to a
+    stripped string on both sides so dict-keys and SQL params line up. Returns
+    None for missing values (caller skips classification)."""
+    if v is None or v == "":
+        return None
+    return str(v).strip()
+
+
 def _classify(direct_row: dict, cp_index: dict[tuple, set]) -> str | None:
     s = _norm(direct_row.get("society"))
-    b = direct_row.get("bedrooms")
+    b = _norm_bhk(direct_row.get("bedrooms"))
     f = _norm(direct_row.get("floor"))
     if not s or b is None:
         return None
@@ -62,12 +71,12 @@ def _query_cp(keys: set) -> dict[tuple, set]:
         flat.extend([s, b, f])
     sql = (
         f"SELECT LOWER(TRIM(society_name)) AS s, "
-        f"       bhk AS b, "
+        f"       TRIM(bhk::TEXT) AS b, "
         f"       LOWER(TRIM(COALESCE(floor::TEXT, ''))) AS f, "
         f"       LOWER(TRIM(COALESCE(tower::TEXT, ''))) AS t, "
         f"       LOWER(TRIM(COALESCE(unit_no::TEXT, ''))) AS u "
         f"FROM {config.CP_INVENTORY_TABLE} "
-        f"WHERE (LOWER(TRIM(society_name)), bhk, "
+        f"WHERE (LOWER(TRIM(society_name)), TRIM(bhk::TEXT), "
         f"       LOWER(TRIM(COALESCE(floor::TEXT, '')))) "
         f"  IN ({placeholders})"
     )
@@ -105,7 +114,7 @@ def annotate_cp_match(rows: list[dict]) -> None:
     keys = set()
     for r in todo:
         s = _norm(r.get("society"))
-        b = r.get("bedrooms")
+        b = _norm_bhk(r.get("bedrooms"))
         f = _norm(r.get("floor"))
         if s and b is not None:
             keys.add((s, b, f))
@@ -153,7 +162,7 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
         keys = set()
         for r in rows:
             s = _norm(r.get("society"))
-            b = r.get("bedrooms")
+            b = _norm_bhk(r.get("bedrooms"))
             f = _norm(r.get("floor"))
             if s and b is not None:
                 keys.add((s, b, f))
