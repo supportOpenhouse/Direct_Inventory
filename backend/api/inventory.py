@@ -76,7 +76,16 @@ PRIORITY_ROLES = {"admin", "manager"}
 def _scope_clause(user: dict, alias: str = "") -> tuple[str, list]:
     """Return (sql_where_fragment, params) for visibility filtering.
 
-    `alias` is the optional table alias prefix (e.g. 'i' if the query uses `inventory i`).
+    Roles:
+      admin    — sees everything.
+      manager  — sees rows in their assigned cities (empty cities → nothing).
+      rm       — sees rows assigned to them AND rows in their assigned cities
+                 (so an RM has full context for their cities, plus any
+                 cross-city rows specifically routed to them). An RM with no
+                 cities falls back to assignment-only.
+
+    `alias` is the optional table alias prefix (e.g. 'i' if the query uses
+    `inventory i`).
     """
     p = f"{alias}." if alias else ""
     if user["role"] == "admin":
@@ -87,6 +96,12 @@ def _scope_clause(user: dict, alias: str = "") -> tuple[str, list]:
             return ("AND FALSE", [])
         return (f"AND {p}city = ANY(%s)", [cities])
     # rm
+    cities = user.get("cities") or []
+    if cities:
+        return (
+            f"AND ({p}assigned_rm_id = %s OR {p}city = ANY(%s))",
+            [user["id"], cities],
+        )
     return (f"AND {p}assigned_rm_id = %s", [user["id"]])
 
 
