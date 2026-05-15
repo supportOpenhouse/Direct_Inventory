@@ -42,7 +42,7 @@ from .oh_id import backfill_missing_oh_ids
 
 log = logging.getLogger(__name__)
 
-BATCH_SIZE = 500
+BATCH_SIZE = 200
 
 
 def _norm(v) -> str:
