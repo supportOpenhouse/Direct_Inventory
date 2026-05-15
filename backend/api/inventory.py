@@ -404,7 +404,7 @@ def inventory_counts():
 
 
 @bp.post("/cp-match-scan")
-@require_auth("admin")
+@require_auth("admin", "manager", "rm")
 def cp_match_scan():
     """Chunked scan: process ONE batch starting after `cursor` (oh_id).
 

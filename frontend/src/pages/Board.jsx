@@ -247,11 +247,9 @@ export default function Board() {
         >
           {selectMode ? 'Exit Select' : 'Select'}
         </button>
-        {user?.role === 'admin' && (
-          <button className="btn-ghost" onClick={runCpScan} disabled={scanning}>
-            {scanning ? `Scanning… ${scanProgress}` : 'Re-scan CP'}
-          </button>
-        )}
+        <button className="btn-ghost" onClick={runCpScan} disabled={scanning}>
+          {scanning ? `Scanning… ${scanProgress}` : 'Re-scan CP'}
+        </button>
         <button className="btn-primary" onClick={() => setShowAdd(true)}>+ Add Inventory</button>
       </div>
 
