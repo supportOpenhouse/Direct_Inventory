@@ -73,6 +73,18 @@ BULK_ALLOWED_FIELDS = {
 PRIORITY_ROLES = {"admin", "manager"}
 
 
+def _expand_cities(cities: list[str]) -> list[str]:
+    """Match the city-tab convention used at [_build_filters/`if city == "Noida"`]
+    and at the counts endpoint: the logical city 'Noida' includes 'Greater Noida'
+    in the DB. Without this, an RM/manager scoped to 'Noida' would silently miss
+    every 'Greater Noida' row even though the Noida tab shows them.
+    """
+    expanded = set(cities)
+    if "Noida" in expanded:
+        expanded.add("Greater Noida")
+    return list(expanded)
+
+
 def _scope_clause(user: dict, alias: str = "") -> tuple[str, list]:
     """Return (sql_where_fragment, params) for visibility filtering.
 
@@ -94,13 +106,13 @@ def _scope_clause(user: dict, alias: str = "") -> tuple[str, list]:
         cities = user.get("cities") or []
         if not cities:
             return ("AND FALSE", [])
-        return (f"AND {p}city = ANY(%s)", [cities])
+        return (f"AND {p}city = ANY(%s)", [_expand_cities(cities)])
     # rm
     cities = user.get("cities") or []
     if cities:
         return (
             f"AND ({p}assigned_rm_id = %s OR {p}city = ANY(%s))",
-            [user["id"], cities],
+            [user["id"], _expand_cities(cities)],
         )
     return (f"AND {p}assigned_rm_id = %s", [user["id"]])
 
@@ -594,7 +606,7 @@ def update_one(oh_id: str):
 
             if user["role"] == "rm" and existing["assigned_rm_id"] != user["id"]:
                 return jsonify({"error": "forbidden"}), 403
-            if user["role"] == "manager" and existing["city"] not in (user.get("cities") or []):
+            if user["role"] == "manager" and existing["city"] not in _expand_cities(user.get("cities") or []):
                 return jsonify({"error": "forbidden"}), 403
 
             updates = []
@@ -719,7 +731,7 @@ def bulk_update():
             for oid, row in existing.items():
                 if user["role"] == "rm" and row["assigned_rm_id"] != user["id"]:
                     forbidden.append(oid); continue
-                if user["role"] == "manager" and row["city"] not in (user.get("cities") or []):
+                if user["role"] == "manager" and row["city"] not in _expand_cities(user.get("cities") or []):
                     forbidden.append(oid); continue
                 allowed_ids.append(oid)
 

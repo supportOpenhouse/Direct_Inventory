@@ -32,13 +32,20 @@ HARD_LIMIT = 500   # the page caps here; FE shows a banner when total > limit
 
 
 def _scope_clause(user: dict) -> tuple[str, list]:
-    """Restrict managers to inventory activity in their cities. Admin sees all."""
+    """Restrict managers to inventory activity in their cities. Admin sees all.
+
+    City-list is expanded so 'Noida' includes 'Greater Noida' — matches the
+    same convention used by inventory._scope_clause and the Noida city tab.
+    """
     if user["role"] == "manager":
+        cities = user.get("cities") or []
+        if "Noida" in cities:
+            cities = list(set(cities) | {"Greater Noida"})
         return (
             " AND (a.entity_type <> 'inventory' OR a.entity_id IN ("
             "    SELECT oh_id FROM inventory WHERE city = ANY(%s)"
             " ))",
-            [user.get("cities") or []],
+            [cities],
         )
     return ("", [])
 
