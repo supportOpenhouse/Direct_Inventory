@@ -124,7 +124,7 @@ def _rm_society_scope(user: dict) -> list[str] | None:
                 with conn.cursor() as cur:
                     cur.execute(
                         "SELECT DISTINCT society_name FROM master_societies "
-                        "WHERE micro_market = ANY(%s) AND society_name IS NOT NULL",
+                        "WHERE micro_market = ANY(%s)",
                         (micros,),
                     )
                     rows = cur.fetchall()
