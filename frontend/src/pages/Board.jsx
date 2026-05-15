@@ -144,7 +144,7 @@ export default function Board() {
       let ohIdsFilled = 0;
       let ohIdsSkipped = 0;
       // Loop the chunked endpoint until the backend says done. Each call
-      // handles BATCH_SIZE rows (currently 2000) — small enough to clear any
+      // handles BATCH_SIZE rows (currently 500) — small enough to clear any
       // proxy timeout, regardless of total table size.
       while (true) {
         const r = await api.post('/api/inventory/cp-match-scan', {
