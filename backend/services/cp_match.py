@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import logging
 
+import psycopg2
 from psycopg2.extras import execute_values
 
 from .. import config
@@ -43,6 +44,11 @@ from .oh_id import backfill_missing_oh_ids
 log = logging.getLogger(__name__)
 
 BATCH_SIZE = 200
+
+# Set to False once we detect CP_INVENTORY_TABLE has no `area_sqft` column —
+# then we stop selecting it and area becomes None for all CP candidates
+# (which makes _area_compatible return True, i.e. area is skipped).
+_CP_HAS_AREA = True
 
 
 def _norm(v) -> str:
@@ -145,33 +151,49 @@ def _query_cp(keys: set) -> dict[tuple, list[tuple]]:
     `area` is the raw CP area_sqft (REAL) — kept numeric for the ±25 sqft
     tolerance check in _classify. Both sides normalize bhk to leading digits.
     """
+    global _CP_HAS_AREA
     if not keys:
         return {}
     placeholders = ",".join(["(%s,%s)"] * len(keys))
     flat: list = []
     for s, b in keys:
         flat.extend([s, b])
-    # SUBSTRING(... FROM '^[0-9]+') extracts the leading digits — same logic
-    # as _norm_bhk on the Python side. NULL (e.g. bhk='Studio') is unmatchable.
-    sql = (
-        f"SELECT LOWER(TRIM(society_name)) AS s, "
-        f"       SUBSTRING(bhk::TEXT FROM '^[0-9]+') AS b, "
-        f"       LOWER(TRIM(COALESCE(floor::TEXT, ''))) AS f, "
-        f"       LOWER(TRIM(COALESCE(tower::TEXT, ''))) AS t, "
-        f"       LOWER(TRIM(COALESCE(unit_no::TEXT, ''))) AS u, "
-        f"       area_sqft AS a "
-        f"FROM {config.CP_INVENTORY_TABLE} "
-        f"WHERE (LOWER(TRIM(society_name)), SUBSTRING(bhk::TEXT FROM '^[0-9]+')) "
-        f"  IN ({placeholders})"
-    )
+
+    def _build_sql(include_area: bool) -> str:
+        # SUBSTRING(... FROM '^[0-9]+') extracts the leading digits — same
+        # logic as _norm_bhk. NULL (e.g. bhk='Studio') stays unmatchable.
+        area_col = "       area_sqft AS a " if include_area else "       NULL::REAL AS a "
+        return (
+            f"SELECT LOWER(TRIM(society_name)) AS s, "
+            f"       SUBSTRING(bhk::TEXT FROM '^[0-9]+') AS b, "
+            f"       LOWER(TRIM(COALESCE(floor::TEXT, ''))) AS f, "
+            f"       LOWER(TRIM(COALESCE(tower::TEXT, ''))) AS t, "
+            f"       LOWER(TRIM(COALESCE(unit_no::TEXT, ''))) AS u, "
+            f"{area_col}"
+            f"FROM {config.CP_INVENTORY_TABLE} "
+            f"WHERE (LOWER(TRIM(society_name)), SUBSTRING(bhk::TEXT FROM '^[0-9]+')) "
+            f"  IN ({placeholders})"
+        )
+
     conn = None
     try:
         conn = get_cp_conn()
         if conn is None:
             return {}
         with conn, conn.cursor() as cur:
-            cur.execute(sql, flat)
-            cp_rows = cur.fetchall()
+            try:
+                cur.execute(_build_sql(_CP_HAS_AREA), flat)
+                cp_rows = cur.fetchall()
+            except psycopg2.errors.UndefinedColumn:
+                # CP_INVENTORY_TABLE has no `area_sqft` column. Degrade:
+                # skip area on the SQL side from now on (area=None for all
+                # candidates → _area_compatible returns True, behaving the
+                # same as before the area-fallback feature).
+                log.warning("CP table lacks area_sqft column — disabling area sanity check")
+                _CP_HAS_AREA = False
+                conn.rollback()
+                cur.execute(_build_sql(False), flat)
+                cp_rows = cur.fetchall()
     finally:
         if conn is not None:
             try: conn.close()
