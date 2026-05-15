@@ -16,6 +16,10 @@ Normalization quirks worth knowing:
     can't be reconciled with Direct's exact floor number. A floor value
     participates in matching only if it's an integer in [1, 50] or the
     literal 'Top'. Otherwise floor is skipped and we lean on tower/unit_no.
+  - area: when floor is skipped, area_sqft acts as a sanity check — if
+    both sides have an area value, they must be within ±25 sqft. This
+    prevents matching against a structurally different unit in the same
+    (society, bhk) bucket when floor data is unusable.
 
 CP DB connection is read-only; failure to reach it is non-fatal.
 
@@ -75,20 +79,37 @@ def _floor_matchable(f: str) -> bool:
     return 1 <= n <= 50
 
 
-def _floor_compatible(d_floor: str, cp_floor: str) -> bool:
-    """A CP candidate is floor-compatible with a Direct row if BOTH sides have
-    matchable floor values that are equal, OR at least one side is non-matchable
-    (in which case floor is skipped and we fall back to other parameters).
+AREA_TOLERANCE_SQFT = 25
+
+
+def _area_compatible(d_area, cp_area) -> bool:
+    """Sanity check used only when floor isn't reliable. Returns True if
+    either side's area is missing (skip the check) or both are present and
+    within ±AREA_TOLERANCE_SQFT.
     """
-    if not _floor_matchable(d_floor) or not _floor_matchable(cp_floor):
+    if d_area is None or cp_area is None:
         return True
-    return d_floor == cp_floor
+    try:
+        return abs(float(d_area) - float(cp_area)) <= AREA_TOLERANCE_SQFT
+    except (ValueError, TypeError):
+        return True
+
+
+def _unit_compatible(d_floor: str, cp_floor: str, d_area, cp_area) -> bool:
+    """A CP candidate is "same physical unit"-compatible with a Direct row if:
+      - both floors are matchable values that are equal, OR
+      - at least one floor is non-matchable (skip floor) AND areas are within
+        ±AREA_TOLERANCE_SQFT (or either area is missing).
+    """
+    if _floor_matchable(d_floor) and _floor_matchable(cp_floor):
+        return d_floor == cp_floor
+    return _area_compatible(d_area, cp_area)
 
 
 def _classify(direct_row: dict, cp_index: dict[tuple, list[tuple]]) -> str | None:
     """Classify one Direct row against the pre-built CP index.
 
-    Index shape: { (society, bhk): [(floor, tower, unit_no), ...] }
+    Index shape: { (society, bhk): [(floor, tower, unit_no, area), ...] }
 
     Returns 'perfect' | 'partial' | None.
     """
@@ -103,10 +124,11 @@ def _classify(direct_row: dict, cp_index: dict[tuple, list[tuple]]) -> str | Non
     d_floor = _norm(direct_row.get("floor"))
     d_tower = _norm(direct_row.get("tower"))
     d_unit = _norm(direct_row.get("unit_no"))
+    d_area = direct_row.get("area_sqft")
 
     any_partial = False
-    for cf, ct, cu in candidates:
-        if not _floor_compatible(d_floor, cf):
+    for cf, ct, cu, ca in candidates:
+        if not _unit_compatible(d_floor, cf, d_area, ca):
             continue
         if d_tower and d_unit and d_tower == ct and d_unit == cu:
             return "perfect"
@@ -118,10 +140,10 @@ def _classify(direct_row: dict, cp_index: dict[tuple, list[tuple]]) -> str | Non
 def _query_cp(keys: set) -> dict[tuple, list[tuple]]:
     """Run one CP-DB query for the given set of (society, bhk) keys.
 
-    Returns: { (s, b): [(floor, tower, unit_no), ...] }
+    Returns: { (s, b): [(floor, tower, unit_no, area), ...] }
 
-    Both sides normalize bhk to its leading digits, so 'M3M The Marina'+'2 BHK'
-    in CP joins to the same bucket as 'M3M The Marina'+2 in Direct.
+    `area` is the raw CP area_sqft (REAL) — kept numeric for the ±25 sqft
+    tolerance check in _classify. Both sides normalize bhk to leading digits.
     """
     if not keys:
         return {}
@@ -136,7 +158,8 @@ def _query_cp(keys: set) -> dict[tuple, list[tuple]]:
         f"       SUBSTRING(bhk::TEXT FROM '^[0-9]+') AS b, "
         f"       LOWER(TRIM(COALESCE(floor::TEXT, ''))) AS f, "
         f"       LOWER(TRIM(COALESCE(tower::TEXT, ''))) AS t, "
-        f"       LOWER(TRIM(COALESCE(unit_no::TEXT, ''))) AS u "
+        f"       LOWER(TRIM(COALESCE(unit_no::TEXT, ''))) AS u, "
+        f"       area_sqft AS a "
         f"FROM {config.CP_INVENTORY_TABLE} "
         f"WHERE (LOWER(TRIM(society_name)), SUBSTRING(bhk::TEXT FROM '^[0-9]+')) "
         f"  IN ({placeholders})"
@@ -157,7 +180,7 @@ def _query_cp(keys: set) -> dict[tuple, list[tuple]]:
     index: dict[tuple, list[tuple]] = {}
     for cp in cp_rows:
         key = (cp["s"], cp["b"])
-        index.setdefault(key, []).append((cp["f"], cp["t"], cp["u"]))
+        index.setdefault(key, []).append((cp["f"], cp["t"], cp["u"], cp["a"]))
     return index
 
 
@@ -233,7 +256,7 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
         # alone — a PATCH on society/bedrooms/floor/tower/unit_no sets the
         # column back to NULL, so they'll get picked up on the next run.
         cur.execute(
-            "SELECT oh_id, society, bedrooms, floor, tower, unit_no "
+            "SELECT oh_id, society, bedrooms, floor, tower, unit_no, area_sqft "
             "FROM inventory WHERE oh_id > %s AND cp_match IS NULL "
             "ORDER BY oh_id LIMIT %s",
             (cursor, BATCH_SIZE),
