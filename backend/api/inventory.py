@@ -3,13 +3,16 @@
 Visibility:
   - admin     : sees everything
   - manager   : sees rows in their cities
-  - rm        : narrowest-first society scope, plus assignments —
-                  users.society → city ∩ those societies,
-                  else users.micro_market → look up societies via
-                    PROPERTIES_DB.master_societies (society_name where
-                    micro_market = ANY user's micros), then city ∩ those,
-                  else → all rows in their cities.
-                Rows assigned_rm_id = me are always visible regardless.
+  - rm        : strict narrowest-wins —
+                  users.society set    → ONLY those societies (no city, no
+                                          assignment overlay),
+                  else users.micro_market set
+                                       → look up societies via
+                                          PROPERTIES_DB.master_societies
+                                          (society_name where micro_market =
+                                          ANY user's micros); ONLY those
+                                          societies. Empty lookup → nothing.
+                  else (both empty)    → assigned_rm_id = me OR city ∈ cities.
 """
 from __future__ import annotations
 
@@ -96,14 +99,14 @@ def _expand_cities(cities: list[str]) -> list[str]:
 
 
 def _rm_society_scope(user: dict) -> list[str] | None:
-    """Resolve an RM's effective society scope, with this precedence:
+    """Resolve the RM's micro_market list to a list of society names via
+    PROPERTIES_DB.master_societies. Only invoked when users.society is empty
+    AND users.micro_market is non-empty (callers handle the other branches).
 
-      1. users.society non-empty → use that list verbatim.
-      2. else users.micro_market non-empty → look up societies in
-         PROPERTIES_DB.master_societies where micro_market = ANY(user's
-         micros), use those society_name values.
-      3. else → None (caller treats as "no society narrowing — fall back to
-         the broader city scope").
+    Returns:
+      list[str] — societies found (possibly empty if the lookup hit no rows).
+      None      — lookup couldn't run (DB unreachable / schema mismatch).
+                  Caller treats this the same as "empty" under strict scoping.
 
     Cached per-request on flask.g so list+counts+notifications in the same
     request don't duplicate the master_societies query.
@@ -112,34 +115,27 @@ def _rm_society_scope(user: dict) -> list[str] | None:
     if hasattr(g, cache_key):
         return getattr(g, cache_key)
 
-    societies = user.get("society") or []
-    if societies:
-        result: list[str] | None = list(societies)
-    else:
-        micros = user.get("micro_market") or []
-        if not micros:
-            result = None
-        else:
-            result = None
+    micros = user.get("micro_market") or []
+    result: list[str] | None = None
+    if micros:
+        try:
+            conn = get_props_conn()
             try:
-                conn = get_props_conn()
-                try:
-                    with conn.cursor() as cur:
-                        cur.execute(
-                            "SELECT DISTINCT society_name FROM master_societies "
-                            "WHERE micro_market = ANY(%s) AND society_name IS NOT NULL",
-                            (micros,),
-                        )
-                        rows = cur.fetchall()
-                        result = [r["society_name"] for r in rows] or []
-                finally:
-                    conn.close()
-            except Exception:
-                log.exception(
-                    "master_societies lookup failed for user_id=%s — falling back to city scope",
-                    user.get("id"),
-                )
-                result = None
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT DISTINCT society_name FROM master_societies "
+                        "WHERE micro_market = ANY(%s) AND society_name IS NOT NULL",
+                        (micros,),
+                    )
+                    rows = cur.fetchall()
+                    result = [r["society_name"] for r in rows]
+            finally:
+                conn.close()
+        except Exception:
+            log.exception(
+                "master_societies lookup failed for user_id=%s", user.get("id")
+            )
+            result = None
 
     setattr(g, cache_key, result)
     return result
@@ -151,13 +147,14 @@ def _scope_clause(user: dict, alias: str = "") -> tuple[str, list]:
     Roles:
       admin    — sees everything.
       manager  — sees rows in their assigned cities (empty cities → nothing).
-      rm       — narrowest-first society scope, plus assignments:
-                 1) users.society non-empty → city ∩ society IN those
+      rm       — strict narrowest-wins, in this order:
+                 1) users.society non-empty → ONLY rows where society is in
+                    that list. No city / assignment overlay.
                  2) else users.micro_market non-empty → resolve to societies
-                    via master_societies, then city ∩ society IN resolved set
-                 3) else → all rows in their cities
-                 Plus: rows specifically assigned to this RM are always
-                 visible, regardless of city/society/micromarket.
+                    via PROPERTIES_DB.master_societies; ONLY rows in those
+                    societies. Empty resolution → nothing visible.
+                 3) else (both NULL/empty) → rows assigned to them OR rows
+                    in their cities (the prior default behavior).
 
     `alias` is the optional table alias prefix (e.g. 'i' if the query uses
     `inventory i`).
@@ -171,43 +168,28 @@ def _scope_clause(user: dict, alias: str = "") -> tuple[str, list]:
             return ("AND FALSE", [])
         return (f"AND {p}city = ANY(%s)", [_expand_cities(cities)])
 
-    # rm
+    # rm — strict society overlay if configured, else city/assignment fallback.
+    societies = user.get("society") or []
+    if societies:
+        return (f"AND {p}society = ANY(%s)", [list(societies)])
+
+    micros = user.get("micro_market") or []
+    if micros:
+        resolved = _rm_society_scope(user)  # cached master_societies lookup
+        if resolved:
+            return (f"AND {p}society = ANY(%s)", [resolved])
+        # Micromarket set but the master_societies lookup returned nothing
+        # (or failed). Strict scoping → no rows visible.
+        return ("AND FALSE", [])
+
+    # Neither society nor micro_market → fall back to city + assignment.
     cities = user.get("cities") or []
-    society_scope = _rm_society_scope(user)
-    expanded_cities = _expand_cities(cities) if cities else []
-
-    # Always include the "row is assigned to me" leg so RMs never lose sight
-    # of work specifically routed to them, even if society narrowing would
-    # otherwise exclude it.
-    assigned_leg = f"{p}assigned_rm_id = %s"
-    assigned_params: list = [user["id"]]
-
-    if society_scope is None:
-        # No society narrowing — fall back to city scope (or pure assignment
-        # if the RM has no cities either).
-        if expanded_cities:
-            return (
-                f"AND ({assigned_leg} OR {p}city = ANY(%s))",
-                [*assigned_params, expanded_cities],
-            )
-        return (f"AND {assigned_leg}", assigned_params)
-
-    # Society narrowing in effect. If the resolved list is empty (e.g.
-    # master_societies returned nothing for the user's micromarkets), the
-    # RM only sees rows assigned to them.
-    if not society_scope:
-        return (f"AND {assigned_leg}", assigned_params)
-
-    if expanded_cities:
+    if cities:
         return (
-            f"AND ({assigned_leg} OR ({p}city = ANY(%s) AND {p}society = ANY(%s)))",
-            [*assigned_params, expanded_cities, society_scope],
+            f"AND ({p}assigned_rm_id = %s OR {p}city = ANY(%s))",
+            [user["id"], _expand_cities(cities)],
         )
-    # No cities → society scope alone, ignoring city
-    return (
-        f"AND ({assigned_leg} OR {p}society = ANY(%s))",
-        [*assigned_params, society_scope],
-    )
+    return (f"AND {p}assigned_rm_id = %s", [user["id"]])
 
 
 def _build_filters(user: dict, args, alias: str = ""):
