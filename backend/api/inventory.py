@@ -3,14 +3,24 @@
 Visibility:
   - admin     : sees everything
   - manager   : sees rows in their cities
-  - rm        : sees only rows assigned to them
+  - rm        : narrowest-first society scope, plus assignments —
+                  users.society → city ∩ those societies,
+                  else users.micro_market → look up societies via
+                    PROPERTIES_DB.master_societies (society_name where
+                    micro_market = ANY user's micros), then city ∩ those,
+                  else → all rows in their cities.
+                Rows assigned_rm_id = me are always visible regardless.
 """
 from __future__ import annotations
 
 from flask import Blueprint, g, jsonify, request
 
-from ..db import get_conn
+import logging
+
+from ..db import get_conn, get_props_conn
 from ..services.activity import log as log_activity
+
+log = logging.getLogger(__name__)
 from ..services.assignment import resolve_assignment
 from ..services.cp_match import MATCH_INPUT_FIELDS, annotate_cp_match, backfill_one_chunk
 from ..services.oh_id import next_oh_id
@@ -85,16 +95,69 @@ def _expand_cities(cities: list[str]) -> list[str]:
     return list(expanded)
 
 
+def _rm_society_scope(user: dict) -> list[str] | None:
+    """Resolve an RM's effective society scope, with this precedence:
+
+      1. users.society non-empty → use that list verbatim.
+      2. else users.micro_market non-empty → look up societies in
+         PROPERTIES_DB.master_societies where micro_market = ANY(user's
+         micros), use those society_name values.
+      3. else → None (caller treats as "no society narrowing — fall back to
+         the broader city scope").
+
+    Cached per-request on flask.g so list+counts+notifications in the same
+    request don't duplicate the master_societies query.
+    """
+    cache_key = "_rm_society_scope"
+    if hasattr(g, cache_key):
+        return getattr(g, cache_key)
+
+    societies = user.get("society") or []
+    if societies:
+        result: list[str] | None = list(societies)
+    else:
+        micros = user.get("micro_market") or []
+        if not micros:
+            result = None
+        else:
+            result = None
+            try:
+                conn = get_props_conn()
+                try:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            "SELECT DISTINCT society_name FROM master_societies "
+                            "WHERE micro_market = ANY(%s) AND society_name IS NOT NULL",
+                            (micros,),
+                        )
+                        rows = cur.fetchall()
+                        result = [r["society_name"] for r in rows] or []
+                finally:
+                    conn.close()
+            except Exception:
+                log.exception(
+                    "master_societies lookup failed for user_id=%s — falling back to city scope",
+                    user.get("id"),
+                )
+                result = None
+
+    setattr(g, cache_key, result)
+    return result
+
+
 def _scope_clause(user: dict, alias: str = "") -> tuple[str, list]:
     """Return (sql_where_fragment, params) for visibility filtering.
 
     Roles:
       admin    — sees everything.
       manager  — sees rows in their assigned cities (empty cities → nothing).
-      rm       — sees rows assigned to them AND rows in their assigned cities
-                 (so an RM has full context for their cities, plus any
-                 cross-city rows specifically routed to them). An RM with no
-                 cities falls back to assignment-only.
+      rm       — narrowest-first society scope, plus assignments:
+                 1) users.society non-empty → city ∩ society IN those
+                 2) else users.micro_market non-empty → resolve to societies
+                    via master_societies, then city ∩ society IN resolved set
+                 3) else → all rows in their cities
+                 Plus: rows specifically assigned to this RM are always
+                 visible, regardless of city/society/micromarket.
 
     `alias` is the optional table alias prefix (e.g. 'i' if the query uses
     `inventory i`).
@@ -107,14 +170,44 @@ def _scope_clause(user: dict, alias: str = "") -> tuple[str, list]:
         if not cities:
             return ("AND FALSE", [])
         return (f"AND {p}city = ANY(%s)", [_expand_cities(cities)])
+
     # rm
     cities = user.get("cities") or []
-    if cities:
+    society_scope = _rm_society_scope(user)
+    expanded_cities = _expand_cities(cities) if cities else []
+
+    # Always include the "row is assigned to me" leg so RMs never lose sight
+    # of work specifically routed to them, even if society narrowing would
+    # otherwise exclude it.
+    assigned_leg = f"{p}assigned_rm_id = %s"
+    assigned_params: list = [user["id"]]
+
+    if society_scope is None:
+        # No society narrowing — fall back to city scope (or pure assignment
+        # if the RM has no cities either).
+        if expanded_cities:
+            return (
+                f"AND ({assigned_leg} OR {p}city = ANY(%s))",
+                [*assigned_params, expanded_cities],
+            )
+        return (f"AND {assigned_leg}", assigned_params)
+
+    # Society narrowing in effect. If the resolved list is empty (e.g.
+    # master_societies returned nothing for the user's micromarkets), the
+    # RM only sees rows assigned to them.
+    if not society_scope:
+        return (f"AND {assigned_leg}", assigned_params)
+
+    if expanded_cities:
         return (
-            f"AND ({p}assigned_rm_id = %s OR {p}city = ANY(%s))",
-            [user["id"], _expand_cities(cities)],
+            f"AND ({assigned_leg} OR ({p}city = ANY(%s) AND {p}society = ANY(%s)))",
+            [*assigned_params, expanded_cities, society_scope],
         )
-    return (f"AND {p}assigned_rm_id = %s", [user["id"]])
+    # No cities → society scope alone, ignoring city
+    return (
+        f"AND ({assigned_leg} OR {p}society = ANY(%s))",
+        [*assigned_params, society_scope],
+    )
 
 
 def _build_filters(user: dict, args, alias: str = ""):

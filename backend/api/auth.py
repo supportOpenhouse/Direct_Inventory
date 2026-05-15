@@ -27,8 +27,12 @@ def _issue_jwt(user_row: dict) -> str:
     payload = {
         "sub": user_row["id"],
         "email": user_row["email"],
+        "name": user_row.get("name"),
         "role": user_row["role"],
         "cities": user_row["cities"] or [],
+        # Optional finer-grained RM scoping (see inventory._scope_clause).
+        "society": user_row.get("society") or [],
+        "micro_market": user_row.get("micro_market") or [],
         "exp": datetime.now(tz=timezone.utc) + timedelta(hours=config.JWT_EXPIRY_HOURS),
     }
     return jwt.encode(payload, config.JWT_SECRET, algorithm=config.JWT_ALGORITHM)
@@ -62,7 +66,7 @@ def google_login():
     try:
         with conn, conn.cursor() as cur:
             cur.execute(
-                "SELECT id, email, name, role, cities, is_active FROM users WHERE email = %s",
+                "SELECT id, email, name, role, cities, society, micro_market, is_active FROM users WHERE email = %s",
                 (email,),
             )
             user = cur.fetchone()
@@ -72,7 +76,7 @@ def google_login():
                     """
                     INSERT INTO users (email, name, role, cities, is_active)
                     VALUES (%s, %s, 'rm', '{}', FALSE)
-                    RETURNING id, email, name, role, cities, is_active
+                    RETURNING id, email, name, role, cities, society, micro_market, is_active
                     """,
                     (email, name),
                 )
@@ -144,6 +148,8 @@ def require_auth(*allowed_roles: str):
                 "name": payload.get("name"),
                 "role": payload["role"],
                 "cities": payload.get("cities", []),
+                "society": payload.get("society", []),
+                "micro_market": payload.get("micro_market", []),
             }
             if allowed_roles and g.user["role"] not in allowed_roles:
                 return jsonify({"error": "forbidden"}), 403
