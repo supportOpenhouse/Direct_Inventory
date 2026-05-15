@@ -281,6 +281,8 @@ a { color: inherit; }
   font-family: inherit; font-size: 14px; resize: vertical;
 }
 .exp-saving { font-size: 11px; color: #64748b; margin-top: 4px; }
+.exp-notes-actions { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.exp-notes-actions .btn-primary { margin-left: auto; padding: 6px 14px; font-size: 13px; }
 
 /* Visit Schedule modal */
 .modal-visit { width: 480px; max-width: 92vw; }

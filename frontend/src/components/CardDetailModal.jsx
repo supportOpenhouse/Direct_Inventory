@@ -248,7 +248,19 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
               rows={4}
               disabled={!canEdit}
             />
-            {savingField === 'notes' && <div className="exp-saving">saving…</div>}
+            <div className="exp-notes-actions">
+              {savingField === 'notes' && <div className="exp-saving">saving…</div>}
+              {canEdit && (notes || '') !== (item.notes || '') && (
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => saveField('notes', notes, item.notes)}
+                  disabled={savingField === 'notes'}
+                >
+                  {savingField === 'notes' ? 'Saving…' : 'Save'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
