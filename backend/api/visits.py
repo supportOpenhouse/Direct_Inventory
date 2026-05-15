@@ -109,6 +109,22 @@ def schedule_visit():
             if not inv:
                 return jsonify({"error": "inventory not found"}), 404
 
+            # Short-circuit if a visit already exists for this row. Without this
+            # the request would hit Forms a second time; Forms typically dedupes
+            # on lead_id and returns an error, but we don't want to depend on
+            # that — and we want the UI to show the existing visit details
+            # instead of a generic failure.
+            if inv.get("forms_visit_id") or inv.get("visit_at"):
+                return jsonify({
+                    "error": "visit already scheduled for this oh_id",
+                    "existing_visit": {
+                        "forms_visit_id": inv.get("forms_visit_id"),
+                        "visit_at": inv["visit_at"].isoformat() if inv.get("visit_at") else None,
+                        "visit_exec": inv.get("visit_exec"),
+                        "stage": inv.get("stage"),
+                    },
+                }), 409
+
             # Forms validates assigned_by and field_exec by NAME (not email or
             # phone). Resolve both against properties.users — the same source
             # the modal dropdowns are populated from. Fail fast with a clear

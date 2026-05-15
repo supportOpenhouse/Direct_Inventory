@@ -45,7 +45,18 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
 
   async function changeStage(newStage) {
     if (newStage === item.stage) return;
-    if (newStage === 'visit_scheduled') { setShowVisit(true); return; }
+    if (newStage === 'visit_scheduled') {
+      // If a visit already exists for this row, don't open the schedule modal
+      // — that path would POST to Forms a second time. Show the existing
+      // visit details and let the user know it's already scheduled.
+      if (item.forms_visit_id || item.visit_at) {
+        const when = item.visit_at ? new Date(item.visit_at).toLocaleString() : 'previously';
+        alert(`Visit already scheduled for ${item.oh_id} on ${when}.\nNo new request was sent.`);
+        return;
+      }
+      setShowVisit(true);
+      return;
+    }
     if (newStage === 'rejected') { setShowReject(true); return; }
     await applyStage(newStage);
   }

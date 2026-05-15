@@ -61,6 +61,15 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
       });
       onScheduled(r);
     } catch (e) {
+      // 409: backend detected a visit already exists. Don't show the raw
+      // error — surface the existing details and close gracefully.
+      if (e.status === 409 && e.data?.existing_visit) {
+        const ev = e.data.existing_visit;
+        const when = ev.visit_at ? new Date(ev.visit_at).toLocaleString() : 'previously';
+        alert(`Visit already scheduled for ${item.oh_id} on ${when}.\nNo new request was sent.`);
+        onClose();
+        return;
+      }
       const parts = [e.data?.error || e.message];
       if (e.data?.forms_status) parts.push(`(status ${e.data.forms_status})`);
       if (e.data?.forms_response) {
