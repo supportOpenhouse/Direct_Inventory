@@ -109,36 +109,71 @@ def schedule_visit():
             if not inv:
                 return jsonify({"error": "inventory not found"}), 404
 
-            # The Forms app's schema (lead_id / first_name / contact_no /
-            # configuration / etc.) is independent of our column names, so we
-            # adapt here. Keep external_id alongside lead_id so the existing
-            # forms-webhook (which reads external_id) keeps working in case
-            # Forms echoes either key back.
-            seller_first = (inv.get("seller_name") or "").strip().split(" ", 1)[0]
+            # Forms validates assigned_by and field_exec by NAME (not email or
+            # phone). Resolve both against properties.users — the same source
+            # the modal dropdowns are populated from. Fail fast with a clear
+            # message if either can't be resolved.
+            props_conn = get_props_conn()
+            try:
+                with props_conn.cursor() as pcur:
+                    pcur.execute(
+                        "SELECT name FROM users WHERE email = %s AND is_active = TRUE LIMIT 1",
+                        (assigned_by_email,),
+                    )
+                    ab = pcur.fetchone()
+                    pcur.execute(
+                        "SELECT name FROM users WHERE phone = %s AND can_visit = TRUE AND is_active = TRUE LIMIT 1",
+                        (field_exec_phone,),
+                    )
+                    fx = pcur.fetchone()
+            finally:
+                props_conn.close()
+            if not ab or not ab.get("name"):
+                return jsonify({
+                    "error": f"assigned_by user not found / inactive: {assigned_by_email}"
+                }), 400
+            if not fx or not fx.get("name"):
+                return jsonify({
+                    "error": f"field exec not found / can't visit: {field_exec_phone}"
+                }), 400
+            assigned_by_name = ab["name"]
+            field_exec_name = fx["name"]
+
+            # Adapt Direct columns to Forms' canonical schema. Numeric fields
+            # go out as strings to match the canonical sample.
+            seller_parts = (inv.get("seller_name") or "").strip().split(" ", 1)
+            seller_first = seller_parts[0] if seller_parts else ""
+            seller_last = seller_parts[1] if len(seller_parts) > 1 else ""
             configuration = (
-                f"{inv['bedrooms']} BHK" if inv.get("bedrooms") is not None else ""
+                f"{inv['bedrooms']}BHK" if inv.get("bedrooms") is not None else ""
             )
+
+            def _s(v):
+                return "" if v is None else str(v)
+
             payload = {
                 "lead_id":        oh_id,
-                "external_id":    oh_id,
-                # Forms app accepts only {"CP", "Direct", "CP Listing"}. Every
-                # row scheduled from this portal is — by definition — sourced
-                # via Direct Inventory, regardless of what `inventory.source`
-                # (99acres / magicbricks / Website / etc.) actually contains.
+                "city":           inv.get("city") or "",
+                # Forms accepts {"CP", "Direct", "CP Listing"}; rows scheduled
+                # from this portal are by definition Direct.
                 "source":         "Direct",
                 "schedule_date":  schedule_date,
                 "schedule_time":  schedule_time,
                 "first_name":     seller_first,
+                "last_name":      seller_last,
                 "contact_no":     inv.get("seller_phone") or "",
                 "society_name":   inv.get("society") or "",
-                "area_sqft":      inv.get("area_sqft"),
+                "locality":       inv.get("locality") or "",
+                "area_sqft":      _s(inv.get("area_sqft")),
+                "demand_price":   _s(inv.get("price")),
                 "configuration":  configuration,
-                "field_exec":     field_exec_phone,
-                # extra context the Forms app may use or ignore
-                "city":           inv.get("city"),
-                "locality":       inv.get("locality"),
-                "assigned_by":    assigned_by_email,
-                "callback_url":   request.host_url.rstrip("/") + "/api/visits/forms-webhook",
+                "unit_no":        inv.get("unit_no") or "",
+                "tower_no":       inv.get("tower") or "",
+                "floor":          _s(inv.get("floor")),
+                "assigned_by":    assigned_by_name,
+                "field_exec":     field_exec_name,
+                "actor_email":    g.user["email"],
+                "actor_name":     g.user.get("name") or g.user["email"],
             }
             try:
                 r = requests.post(
@@ -194,7 +229,9 @@ def schedule_visit():
                     "schedule_date": schedule_date,
                     "schedule_time": schedule_time,
                     "field_exec_phone": field_exec_phone,
-                    "assigned_by": assigned_by_email,
+                    "field_exec_name": field_exec_name,
+                    "assigned_by_email": assigned_by_email,
+                    "assigned_by_name": assigned_by_name,
                     "forms_visit_id": visit_id,
                 },
             )

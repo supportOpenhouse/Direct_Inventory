@@ -141,6 +141,7 @@ def require_auth(*allowed_roles: str):
             g.user = {
                 "id": payload["sub"],
                 "email": payload["email"],
+                "name": payload.get("name"),
                 "role": payload["role"],
                 "cities": payload.get("cities", []),
             }
