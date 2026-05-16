@@ -679,10 +679,17 @@ def update_one(oh_id: str):
             if not existing:
                 return jsonify({"error": "not found"}), 404
 
-            if user["role"] == "rm" and existing["assigned_rm_id"] != user["id"]:
-                return jsonify({"error": "forbidden"}), 403
-            if user["role"] == "manager" and existing["city"] not in _expand_cities(user.get("cities") or []):
-                return jsonify({"error": "forbidden"}), 403
+            # Any authenticated admin/manager/rm can edit any field they have UI
+            # access to. Cross-assignment edits are intentionally allowed; the
+            # per-field activity_log row (with actor_email + role) is the audit
+            # trail. Priority is the one exception — still admin/manager only,
+            # enforced below.
+            cross_assignment_edit = (
+                user["role"] == "rm" and existing["assigned_rm_id"] != user["id"]
+            ) or (
+                user["role"] == "manager"
+                and existing["city"] not in _expand_cities(user.get("cities") or [])
+            )
 
             updates = []
             params: list = []
@@ -725,6 +732,10 @@ def update_one(oh_id: str):
                     field=k,
                     before_value=existing.get(k),
                     after_value=v,
+                    metadata={
+                        "actor_role": user["role"],
+                        "cross_assignment": cross_assignment_edit,
+                    },
                 )
 
             if not updates:
