@@ -96,10 +96,29 @@ export default function Board() {
     setPage(0);
     refresh(0);
     refreshCounts();
+    refreshLastSync();
     /* eslint-disable-next-line */
   }, [city, qApplied, stageSel, filtersApplied, sort.field, sort.dir]);
   useEffect(() => { refresh(page); /* eslint-disable-next-line */ }, [page]);
   useEffect(() => { refreshLastSync(); /* eslint-disable-next-line */ }, []);
+
+  // Keep the "Sync: <date>" pill fresh without forcing a hard reload — the
+  // daily Apps Script trigger fires at 11:30 IST, so a tab left open
+  // overnight would otherwise stay stuck on yesterday's date until the user
+  // navigated. Refetch when the tab regains focus, and poll every 10 min as
+  // a fallback for users who never leave focus.
+  useEffect(() => {
+    const onVis = () => { if (document.visibilityState === 'visible') refreshLastSync(); };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('focus', refreshLastSync);
+    const id = setInterval(refreshLastSync, 10 * 60 * 1000);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('focus', refreshLastSync);
+      clearInterval(id);
+    };
+    /* eslint-disable-next-line */
+  }, []);
 
   function onSearch(e) {
     e?.preventDefault();

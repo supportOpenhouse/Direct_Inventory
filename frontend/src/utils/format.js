@@ -26,7 +26,7 @@ export function formatDateRel(iso) {
 
 export function stageLabel(s) {
   return ({
-    qualified: 'Qualified',
+    qualified: 'Lead',
     call_not_received: 'Call Not Received',
     follow_up: 'Follow Up',
     visit_scheduled: 'Visit Scheduled',

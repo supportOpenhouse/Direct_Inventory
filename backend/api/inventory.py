@@ -346,13 +346,16 @@ def list_inventory():
     inner_where = f"WHERE TRUE {scope} {' '.join(base_filters)}"
     outer_where = f"WHERE TRUE {' '.join(post_filters)}"
 
-    # Sort: client picks a column; priority still floats to the top, and we
-    # always tie-break on updated_at DESC so pagination is deterministic.
+    # Sort: client picks a column; rejected rows are pinned to the bottom of
+    # the full result (regardless of the active sort or priority — once rejected,
+    # the row is "out"), then priority floats to the top, then the chosen sort,
+    # then updated_at DESC as a deterministic tie-break for pagination.
     sort_field = (args.get("sort") or "updated_at").strip()
     sort_dir = "ASC" if (args.get("dir") or "").strip().lower() == "asc" else "DESC"
     sort_sql = SORTABLE_FIELDS.get(sort_field, SORTABLE_FIELDS["updated_at"])
     nulls_clause = "NULLS LAST" if sort_dir == "DESC" else "NULLS FIRST"
     order_clause = (
+        "(CASE WHEN stage = 'rejected' THEN 1 ELSE 0 END) ASC, "
         "priority DESC, "
         f"{sort_sql} {sort_dir} {nulls_clause}, "
         "updated_at DESC"
