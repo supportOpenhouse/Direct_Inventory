@@ -14,6 +14,18 @@ export function formatPrice(p) {
   return `₹${n.toLocaleString('en-IN')}`;
 }
 
+// Format an ISO date (or YYYY-MM-DD prefix) as "DD MMM YYYY" using a 3-letter
+// month. Parses the YYYY-MM-DD parts directly to avoid Date() timezone shifts
+// on date-only values stored in IST.
+export function formatDateShort(iso) {
+  if (!iso) return '—';
+  const [y, m, d] = String(iso).slice(0, 10).split('-');
+  const mi = parseInt(m, 10) - 1;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  if (!y || !d || mi < 0 || mi > 11) return String(iso).slice(0, 10);
+  return `${d} ${months[mi]} ${y}`;
+}
+
 export function formatDateRel(iso) {
   if (!iso) return '—';
   const then = new Date(iso);

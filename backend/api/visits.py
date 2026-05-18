@@ -155,37 +155,32 @@ def schedule_visit():
             assigned_by_name = ab["name"]
             field_exec_name = fx["name"]
 
-            # Adapt Direct columns to Forms' canonical schema. Numeric fields
-            # go out as strings to match the canonical sample.
-            seller_parts = (inv.get("seller_name") or "").strip().split(" ", 1)
-            seller_first = seller_parts[0] if seller_parts else ""
-            seller_last = seller_parts[1] if len(seller_parts) > 1 else ""
+            # Adapt Direct columns to Forms' canonical schema.
+            #   lead_id      — inventory.id (numeric) as string; Forms keys on this.
+            #   first_name   — full seller name; Forms has no last_name field.
+            #   area_sqft    — string in Forms' schema.
+            #   demand_price — numeric.
             configuration = (
                 f"{inv['bedrooms']}BHK" if inv.get("bedrooms") is not None else ""
             )
 
-            def _s(v):
-                return "" if v is None else str(v)
-
             payload = {
-                "lead_id":        oh_id,
+                "lead_id":        str(inv["id"]),
                 "city":           inv.get("city") or "",
                 # Forms accepts {"CP", "Direct", "CP Listing"}; rows scheduled
                 # from this portal are by definition Direct.
                 "source":         "Direct",
                 "schedule_date":  schedule_date,
                 "schedule_time":  schedule_time,
-                "first_name":     seller_first,
-                "last_name":      seller_last,
+                "first_name":     (inv.get("seller_name") or "").strip(),
                 "contact_no":     inv.get("seller_phone") or "",
                 "society_name":   inv.get("society") or "",
                 "locality":       inv.get("locality") or "",
-                "area_sqft":      _s(inv.get("area_sqft")),
-                "demand_price":   _s(inv.get("price")),
+                "area_sqft":      "" if inv.get("area_sqft") is None else str(inv["area_sqft"]),
+                "demand_price":   inv.get("price"),
                 "configuration":  configuration,
                 "unit_no":        inv.get("unit_no") or "",
                 "tower_no":       inv.get("tower") or "",
-                "floor":          _s(inv.get("floor")),
                 "assigned_by":    assigned_by_name,
                 "field_exec":     field_exec_name,
                 "actor_email":    g.user["email"],

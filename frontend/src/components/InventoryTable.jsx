@@ -1,6 +1,6 @@
 import { api } from '../api/client.js';
 import {
-  displayCity, formatDateRel, formatPrice, isManualSource, starColor,
+  displayCity, formatDateRel, formatDateShort, formatPrice, isManualSource, starColor,
   STAGE_DOT_COLOR, stageLabel, variation,
 } from '../utils/format.js';
 
@@ -158,7 +158,7 @@ export default function InventoryTable({
                 <td className="inv-td-seller">{item.seller_name || '—'}</td>
                 <td className="inv-td-phone">{item.seller_phone || '—'}</td>
                 <td className="inv-td-muted">{item.created_at ? formatDateRel(item.created_at) : '—'}</td>
-                <td className="inv-td-muted inv-td-date">{item.follow_up_at ? item.follow_up_at.slice(0, 10) : '—'}</td>
+                <td className="inv-td-muted inv-td-date">{formatDateShort(item.follow_up_at)}</td>
                 <td className="inv-td-notes" title={item.notes || ''}>{item.notes || '—'}</td>
               </tr>
             );

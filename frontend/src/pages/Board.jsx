@@ -18,7 +18,7 @@ export default function Board() {
   const [city, setCity] = useState('');
   // Multi-select stage filter. Empty set = "All".
   const [stageSel, setStageSel] = useState(() => new Set());
-  const [sort, setSort] = useState({ field: 'updated_at', dir: 'desc' });
+  const [sort, setSort] = useState({ field: 'follow_up_at', dir: 'desc' });
   const [page, setPage] = useState(0);
 
   // Extended filters from the FilterPanel modal.
@@ -49,10 +49,7 @@ export default function Board() {
     if (qApplied) p.set('q', qApplied);
     if (city) p.set('city', city);
     if (stageSel.size > 0) p.set('stage', Array.from(stageSel).join(','));
-    if (sort.field && sort.field !== 'updated_at') {
-      p.set('sort', sort.field);
-      p.set('dir', sort.dir);
-    } else if (sort.dir !== 'desc') {
+    if (sort.field) {
       p.set('sort', sort.field);
       p.set('dir', sort.dir);
     }
