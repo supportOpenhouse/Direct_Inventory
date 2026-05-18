@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
 import { CITIES } from '../utils/format.js';
 
@@ -44,10 +44,10 @@ function preset(name) {
 }
 
 const EMPTY = {
-  // suggest_city scopes the Society autocomplete suggestions only.
+  // suggest_city scopes the Society/Locality autocomplete suggestions only.
   // It does NOT become a board-level city filter (top tabs do that).
   suggest_city: '',
-  society: '', bhk: [],
+  society: [], locality: [], bhk: [],
   price_min: '', price_max: '',
   variation_min: '', variation_max: '',
   source: '',
@@ -58,10 +58,87 @@ const EMPTY = {
   priority: false,
 };
 
+// Normalize legacy single-string society values to arrays so saved filter
+// state from before the multi-select change still hydrates the panel.
+function toArray(v) {
+  if (Array.isArray(v)) return v;
+  if (v == null || v === '') return [];
+  return [String(v)];
+}
+
+function ChipMultiSelect({ id, values, options, onChange, placeholder, disabled }) {
+  const [draft, setDraft] = useState('');
+  const remaining = options.filter((o) => !values.includes(o));
+
+  function add(v) {
+    const t = (v || '').trim();
+    if (!t) return;
+    // Accept only known options (datalist picks); silently ignore typos.
+    const match = options.find((o) => o.toLowerCase() === t.toLowerCase());
+    if (!match || values.includes(match)) return;
+    onChange([...values, match]);
+    setDraft('');
+  }
+
+  return (
+    <>
+      {values.length > 0 && (
+        <div className="bhk-pills" style={{ marginBottom: 6 }}>
+          {values.map((v) => (
+            <span key={v} className="pill pill-on" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              {v}
+              <button
+                type="button"
+                onClick={() => onChange(values.filter((x) => x !== v))}
+                style={{ background: 'transparent', border: 0, color: '#fff', fontSize: 14, cursor: 'pointer', padding: 0, lineHeight: 1 }}
+                aria-label={`Remove ${v}`}
+              >×</button>
+            </span>
+          ))}
+        </div>
+      )}
+      <input
+        list={id}
+        value={draft}
+        disabled={disabled}
+        placeholder={placeholder}
+        onChange={(e) => {
+          const v = e.target.value;
+          setDraft(v);
+          // Datalist pick: value matches an option exactly → auto-add.
+          if (options.includes(v)) add(v);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') { e.preventDefault(); add(draft); }
+        }}
+      />
+      <datalist id={id}>
+        {remaining.map((o) => <option key={o} value={o} />)}
+      </datalist>
+    </>
+  );
+}
+
 export default function FilterPanel({ initial, defaultCity = '', onApply, onClose }) {
-  const [f, setF] = useState({ ...EMPTY, suggest_city: defaultCity, ...initial });
+  const [f, setF] = useState(() => ({
+    ...EMPTY,
+    suggest_city: defaultCity,
+    ...initial,
+    society:  toArray(initial?.society),
+    locality: toArray(initial?.locality),
+    bhk:      Array.isArray(initial?.bhk) ? initial.bhk : [],
+  }));
   const [societies, setSocieties] = useState([]);
   const [loadingSocs, setLoadingSocs] = useState(false);
+
+  const societyOptions = useMemo(
+    () => [...new Set(societies.map((s) => s.society).filter(Boolean))].sort(),
+    [societies],
+  );
+  const localityOptions = useMemo(
+    () => [...new Set(societies.map((s) => (s.locality || '').trim()).filter(Boolean))].sort(),
+    [societies],
+  );
 
   // Fetch society suggestions for the selected scope city. Empty city → no suggestions
   // (1138 societies across all cities is too noisy to show without a scope).
@@ -111,7 +188,8 @@ export default function FilterPanel({ initial, defaultCity = '', onApply, onClos
   function apply() {
     // Strip empties so the URL stays clean.
     const out = {};
-    if (f.society) out.society = f.society;
+    if (f.society.length) out.society = f.society.join(',');
+    if (f.locality.length) out.locality = f.locality.join(',');
     if (f.bhk.length) out.bhk = f.bhk.join(',');
     if (f.price_min !== '') out.price_min = Number(f.price_min);
     if (f.price_max !== '') out.price_max = Number(f.price_max);
@@ -142,25 +220,36 @@ export default function FilterPanel({ initial, defaultCity = '', onApply, onClos
             </div>
             <div className="society-input">
               <label>Society</label>
-              <input
-                list="filter-society-options"
-                value={f.society}
-                onChange={(e) => set('society', e.target.value)}
+              <ChipMultiSelect
+                id="filter-society-options"
+                values={f.society}
+                options={societyOptions}
+                onChange={(v) => set('society', v)}
+                disabled={!f.suggest_city}
                 placeholder={
                   !f.suggest_city ? 'Pick a city to see suggestions…'
                   : loadingSocs ? 'Loading societies…'
-                  : 'Type or pick a society…'
+                  : f.society.length ? 'Add another society…' : 'Type or pick societies…'
                 }
               />
-              <datalist id="filter-society-options">
-                {societies.map((s) => (
-                  <option key={`${s.society}|${s.locality || ''}`} value={s.society}>
-                    {s.locality ? `(${s.locality})` : ''}
-                  </option>
-                ))}
-              </datalist>
             </div>
           </div>
+        </div>
+
+        <div className="filter-block">
+          <label>Locality</label>
+          <ChipMultiSelect
+            id="filter-locality-options"
+            values={f.locality}
+            options={localityOptions}
+            onChange={(v) => set('locality', v)}
+            disabled={!f.suggest_city}
+            placeholder={
+              !f.suggest_city ? 'Pick a city to see suggestions…'
+              : loadingSocs ? 'Loading localities…'
+              : f.locality.length ? 'Add another locality…' : 'Type or pick localities…'
+            }
+          />
         </div>
 
         <div className="filter-block">

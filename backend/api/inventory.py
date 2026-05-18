@@ -213,6 +213,7 @@ def _build_filters(user: dict, args, alias: str = ""):
     rm_id    = args.get("rm_id", type=int)
     q        = (args.get("q") or "").strip()
     society  = (args.get("society") or "").strip()
+    locality = (args.get("locality") or "").strip()
     bhk_csv  = args.get("bhk")
     price_min = args.get("price_min", type=int)
     price_max = args.get("price_max", type=int)
@@ -243,8 +244,17 @@ def _build_filters(user: dict, args, alias: str = ""):
         base_filters.append(f"AND {p}search_tsv @@ plainto_tsquery('simple', %s)")
         base_params.append(q)
     if society:
-        base_filters.append(f"AND {p}society ILIKE %s")
-        base_params.append(f"%{society}%")
+        # Comma-separated list of canonical society names from the filter UI.
+        # Match case-insensitively to absorb minor casing/whitespace drift.
+        names = [s.strip().lower() for s in society.split(",") if s.strip()]
+        if names:
+            base_filters.append(f"AND LOWER(TRIM({p}society)) = ANY(%s)")
+            base_params.append(names)
+    if locality:
+        names = [s.strip().lower() for s in locality.split(",") if s.strip()]
+        if names:
+            base_filters.append(f"AND LOWER(TRIM({p}locality)) = ANY(%s)")
+            base_params.append(names)
     if bhk_csv:
         try:
             bhks = [int(x) for x in bhk_csv.split(",") if x.strip()]
