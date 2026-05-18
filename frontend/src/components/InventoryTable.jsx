@@ -9,7 +9,7 @@ const SORTABLE = new Set([
   'price', 'oh_price', 'variation', 'posting_date', 'follow_up_at',
 ]);
 
-function SortableTh({ field, label, sort, onSort, align = 'left' }) {
+function SortableTh({ field, label, sort, onSort, align = 'left', className = '' }) {
   const active = sort?.field === field;
   const arrow = active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕';
   function click() {
@@ -19,7 +19,7 @@ function SortableTh({ field, label, sort, onSort, align = 'left' }) {
   }
   return (
     <th
-      className={`inv-th inv-th-${align} ${SORTABLE.has(field) ? 'inv-th-sortable' : ''} ${active ? 'inv-th-active' : ''}`}
+      className={`inv-th inv-th-${align} ${SORTABLE.has(field) ? 'inv-th-sortable' : ''} ${active ? 'inv-th-active' : ''} ${className}`.trim()}
       onClick={click}
     >
       {label}
@@ -71,7 +71,7 @@ export default function InventoryTable({
             <th className="inv-th">Seller</th>
             <th className="inv-th">Phone</th>
             <SortableTh field="posting_date" label="Posted" sort={sort} onSort={onSort} />
-            <SortableTh field="follow_up_at" label="Follow-up" sort={sort} onSort={onSort} />
+            <SortableTh field="follow_up_at" label="Follow-up" sort={sort} onSort={onSort} className="inv-th-date" />
             <th className="inv-th">Notes</th>
           </tr>
         </thead>
@@ -156,7 +156,7 @@ export default function InventoryTable({
                 <td className="inv-td-seller">{item.seller_name || '—'}</td>
                 <td className="inv-td-phone">{item.seller_phone || '—'}</td>
                 <td className="inv-td-muted">{item.created_at ? formatDateRel(item.created_at) : '—'}</td>
-                <td className="inv-td-muted">{item.follow_up_at ? item.follow_up_at.slice(0, 10) : '—'}</td>
+                <td className="inv-td-muted inv-td-date">{item.follow_up_at ? item.follow_up_at.slice(0, 10) : '—'}</td>
                 <td className="inv-td-notes" title={item.notes || ''}>{item.notes || '—'}</td>
               </tr>
             );

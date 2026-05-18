@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { CITIES, STAGES, STAGE_DOT_COLOR, formatDateRel, stageLabel } from '../utils/format.js';
+import { CITIES, STAGES, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
 import InventoryTable from '../components/InventoryTable.jsx';
 import CardDetailModal from '../components/CardDetailModal.jsx';
 import AddInventoryModal from '../components/AddInventoryModal.jsx';
@@ -42,7 +42,6 @@ export default function Board() {
   const [loading, setLoading] = useState(true);
 
   const [counts, setCounts] = useState({ total: 0, by_stage: {} });
-  const [lastSync, setLastSync] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
 
   function makeParams() {
@@ -83,42 +82,14 @@ export default function Board() {
     } catch { /* non-blocking */ }
   }
 
-  async function refreshLastSync() {
-    if (user?.role !== 'admin' && user?.role !== 'manager') return;
-    try {
-      const r = await api.get('/api/sync/last');
-      if (r?.created_at) setLastSync(r);
-    } catch { /* ignore */ }
-  }
-
   // Reset to page 0 + reload whenever filters / sort / search change.
   useEffect(() => {
     setPage(0);
     refresh(0);
     refreshCounts();
-    refreshLastSync();
     /* eslint-disable-next-line */
   }, [city, qApplied, stageSel, filtersApplied, sort.field, sort.dir]);
   useEffect(() => { refresh(page); /* eslint-disable-next-line */ }, [page]);
-  useEffect(() => { refreshLastSync(); /* eslint-disable-next-line */ }, []);
-
-  // Keep the "Sync: <date>" pill fresh without forcing a hard reload — the
-  // daily Apps Script trigger fires at 11:30 IST, so a tab left open
-  // overnight would otherwise stay stuck on yesterday's date until the user
-  // navigated. Refetch when the tab regains focus, and poll every 10 min as
-  // a fallback for users who never leave focus.
-  useEffect(() => {
-    const onVis = () => { if (document.visibilityState === 'visible') refreshLastSync(); };
-    document.addEventListener('visibilitychange', onVis);
-    window.addEventListener('focus', refreshLastSync);
-    const id = setInterval(refreshLastSync, 10 * 60 * 1000);
-    return () => {
-      document.removeEventListener('visibilitychange', onVis);
-      window.removeEventListener('focus', refreshLastSync);
-      clearInterval(id);
-    };
-    /* eslint-disable-next-line */
-  }, []);
 
   function onSearch(e) {
     e?.preventDefault();
@@ -238,14 +209,6 @@ export default function Board() {
           </button>
         )}
         <div className="toolbar-spacer" />
-        {lastSync && (
-          <span
-            className="last-sync"
-            title={`Last sync: ${new Date(lastSync.created_at).toLocaleString()} — fetched ${lastSync.metadata?.fetched ?? '?'}, inserted ${lastSync.metadata?.inserted ?? '?'}, updated ${lastSync.metadata?.updated ?? '?'}`}
-          >
-            Sync: {formatDateRel(lastSync.created_at)}
-          </span>
-        )}
         <button
           className={selectMode ? 'btn-primary' : 'btn-ghost'}
           onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}

@@ -21,7 +21,6 @@ from .. import config
 from ..db import get_conn
 from ..services.sheet_sync import run_push_sync
 from ..services.oh_pricing_sync import run_pricing_sync
-from .auth import require_auth
 
 bp = Blueprint("sync", __name__, url_prefix="/api/sync")
 
@@ -79,29 +78,5 @@ def push_pricing_sync():
             actor_email=actor,
         )
         return jsonify(summary)
-    finally:
-        conn.close()
-
-
-@bp.get("/last")
-@require_auth("admin", "manager")
-def last_sync():
-    """Most-recent sync activity, across BOTH sheet-sync (sync_run) and
-    OH-pricing sync (pricing_sync_run). The UI shows a single "Sync: <date>"
-    pill, so we surface the freshest of either — that way if only one of the
-    two daily jobs runs, the indicator still reflects today instead of going
-    stale on whichever job's last successful run.
-    """
-    conn = get_conn()
-    try:
-        with conn, conn.cursor() as cur:
-            cur.execute(
-                """SELECT created_at, action, metadata FROM activity_log
-                   WHERE entity_type = 'sync'
-                     AND action IN ('sync_run', 'pricing_sync_run')
-                   ORDER BY created_at DESC LIMIT 1"""
-            )
-            row = cur.fetchone()
-        return jsonify(row or {})
     finally:
         conn.close()

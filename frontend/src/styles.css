@@ -64,7 +64,6 @@ a { color: inherit; }
   background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 14px; font-weight: 600;
 }
 
-.last-sync { color: #64748b; font-size: 12px; padding: 6px 10px; border-radius: 8px; background: #f1f5f9; cursor: help; }
 
 /* Bulk action bar — floating row above the kanban when ≥1 cards selected */
 .bulk-bar {
@@ -202,6 +201,7 @@ a { color: inherit; }
 .inv-td-seller { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
 .inv-td-phone { font-variant-numeric: tabular-nums; color: #475569; }
 .inv-td-muted { color: #64748b; }
+.inv-th-date, .inv-td-date { white-space: nowrap; min-width: 100px; }
 .inv-td-notes {
   color: #475569; max-width: 260px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
