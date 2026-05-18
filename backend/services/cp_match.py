@@ -45,7 +45,6 @@ from psycopg2.extras import execute_values
 
 from .. import config
 from ..db import get_cp_conn
-from .oh_id import backfill_missing_oh_ids
 
 log = logging.getLogger(__name__)
 
@@ -369,10 +368,14 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
     """Single-shot cp_match scan via postgres_fdw, packaged to keep the
     chunked-endpoint API stable.
 
-    First call (cursor=='') does ALL the work: oh_id backfill + FDW-driven
-    cp_match scan + 'none' settle. Returns done=true with full totals.
-    Subsequent calls return done=true with zero totals — kept for API
-    compatibility with the frontend loop, which still terminates correctly.
+    First call (cursor=='') does the FDW-driven cp_match scan + 'none' settle
+    and returns done=true with full totals. Subsequent calls return done=true
+    with zero totals — kept for API compatibility with the frontend loop,
+    which still terminates correctly.
+
+    oh_id assignment is handled at insert time (manual create + sheet sync).
+    Legacy rows missing oh_id should be backfilled once via
+    `python -m backend.scripts.backfill_oh_ids`.
 
     To force a full rescan, run `UPDATE inventory SET cp_match = NULL` first.
     Raises if CP_DB_URL is unset (CP DB unreachable would surface as a
@@ -382,20 +385,8 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
         raise RuntimeError("CP_DB_URL is not set — cannot run scan")
 
     if cursor != "":
-        # Compatibility no-op: legacy chunked frontend may call again with
-        # next_cursor; one-shot has already finished.
         return {"done": True, "next_cursor": cursor,
-                "perfect": 0, "partial": 0, "no_match": 0, "processed": 0,
-                "oh_ids_filled": 0, "oh_ids_skipped": 0}
-
-    # Backfill any rows missing an oh_id first. Doesn't depend on CP and
-    # has to run regardless — the cp_match column update keys on inventory.id
-    # but downstream features (visibility / activity / forms) need oh_id.
-    oh_id_fill = backfill_missing_oh_ids(conn)
-    if oh_id_fill["filled"] or oh_id_fill["skipped"]:
-        log.info("oh_id backfill: filled=%d skipped=%d",
-                 oh_id_fill["filled"], oh_id_fill["skipped"])
-    conn.commit()
+                "perfect": 0, "partial": 0, "no_match": 0, "processed": 0}
 
     result = backfill_all_fdw(conn)
     return {
@@ -405,8 +396,6 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
         "partial": result["partial"],
         "no_match": result["no_match"],
         "processed": result["processed"],
-        "oh_ids_filled": oh_id_fill["filled"],
-        "oh_ids_skipped": oh_id_fill["skipped"],
     }
 
 
