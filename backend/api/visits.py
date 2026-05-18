@@ -159,9 +159,14 @@ def schedule_visit():
             #   lead_id      — oh_id (e.g. OHLGD0123); Forms keys on this.
             #   first_name   — full seller name; Forms has no last_name field.
             #   area_sqft    — string in Forms' schema.
-            #   demand_price — numeric.
+            #   demand_price — in lakhs (rupees / 100000), matching the
+            #                  `demand_price` column convention in Forms'
+            #                  properties table.
             configuration = (
                 f"{inv['bedrooms']}BHK" if inv.get("bedrooms") is not None else ""
+            )
+            demand_price_lakhs = (
+                None if inv.get("price") in (None, "") else float(inv["price"]) / 100000
             )
 
             payload = {
@@ -177,7 +182,7 @@ def schedule_visit():
                 "society_name":   inv.get("society") or "",
                 "locality":       inv.get("locality") or "",
                 "area_sqft":      "" if inv.get("area_sqft") is None else str(inv["area_sqft"]),
-                "demand_price":   inv.get("price"),
+                "demand_price":   demand_price_lakhs,
                 "configuration":  configuration,
                 "unit_no":        inv.get("unit_no") or "",
                 "tower_no":       inv.get("tower") or "",

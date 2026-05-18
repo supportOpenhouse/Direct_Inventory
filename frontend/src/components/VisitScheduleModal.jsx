@@ -70,10 +70,21 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
         onClose();
         return;
       }
+      // Forms-side slot conflict: the field exec already has a booking at this
+      // time. Tell the user to pick something else and show Forms' suggestions.
+      const fr = e.data?.forms_response;
+      if (e.data?.forms_status === 409 && fr && typeof fr === 'object' && fr.error === 'Slot conflict') {
+        const lines = ['Choose a different time or date.'];
+        if (fr.message) lines.push(fr.message);
+        if (Array.isArray(fr.suggested_times) && fr.suggested_times.length) {
+          lines.push(`Suggested times: ${fr.suggested_times.join(', ')}`);
+        }
+        setError(lines.join(' '));
+        return;
+      }
       const parts = [e.data?.error || e.message];
       if (e.data?.forms_status) parts.push(`(status ${e.data.forms_status})`);
-      if (e.data?.forms_response) {
-        const fr = e.data.forms_response;
+      if (fr) {
         parts.push(typeof fr === 'string' ? fr : JSON.stringify(fr));
       }
       setError(parts.filter(Boolean).join(' — '));
