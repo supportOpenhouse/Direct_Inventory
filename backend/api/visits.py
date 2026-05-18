@@ -181,6 +181,7 @@ def schedule_visit():
                 "configuration":  configuration,
                 "unit_no":        inv.get("unit_no") or "",
                 "tower_no":       inv.get("tower") or "",
+                "floor":          inv.get("floor") or "",
                 "assigned_by":    assigned_by_name,
                 "field_exec":     field_exec_name,
                 "actor_email":    g.user["email"],
