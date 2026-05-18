@@ -521,6 +521,9 @@ def cp_match_scan():
         return jsonify(chunk)
     except RuntimeError as e:
         return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        log.exception("cp_match scan failed (cursor=%r)", cursor)
+        return jsonify({"error": f"{type(e).__name__}: {e}"}), 500
     finally:
         conn.close()
 
