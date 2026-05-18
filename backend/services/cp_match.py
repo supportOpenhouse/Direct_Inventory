@@ -30,13 +30,12 @@ Two entry points:
     as a fallback for individual rows that haven't been scanned yet (e.g.
     just inserted, or invalidated by a recent PATCH). One CP-DB query per
     list page; cheap.
-  - backfill_one_chunk(conn, cursor) — admin-triggered chunked scan via
-    postgres_fdw (see migration 012_cp_fdw.sql). Each call processes one
-    CHUNK_SIZE batch of unscanned rows as a single SQL pipeline: materialize
-    CP across the FDW wire, join with the chunk on (society, bhk), aggregate
-    verdicts, UPDATE. Chunking keeps each HTTP request under the Vercel
-    edge rewrite timeout (~30s) regardless of total table size; the
-    frontend loops until done=true.
+  - backfill_one_chunk(conn, cursor) — admin-triggered chunked scan. Each
+    call fetches CHUNK_SIZE unscanned inventory rows, queries the CP DB
+    once for the (society, bhk) keys in this chunk, classifies in Python,
+    bulk-UPDATEs verdicts. Chunking keeps each HTTP request under the Vercel
+    edge rewrite timeout (~30s) regardless of total table size; the frontend
+    loops until done=true.
 """
 from __future__ import annotations
 
@@ -49,8 +48,6 @@ from .. import config
 from ..db import get_cp_conn
 
 log = logging.getLogger(__name__)
-
-BATCH_SIZE = 200
 
 # Set to False once we detect CP_INVENTORY_TABLE has no `area_sqft` column —
 # then we stop selecting it and area becomes None for all CP candidates
@@ -247,114 +244,21 @@ def annotate_cp_match(rows: list[dict]) -> None:
 
 CHUNK_SIZE = 500
 
-_SCAN_CHUNK_SQL = """
-WITH cp_snapshot AS MATERIALIZED (
-    -- Pull CP rows across the FDW wire once per chunk. With chunking,
-    -- this happens N times across a full scan, but each chunk stays well
-    -- under the proxy timeout.
-    SELECT
-        LOWER(TRIM(society_name)) AS s,
-        SUBSTRING(bhk FROM '^[0-9]+') AS b,
-        LOWER(TRIM(COALESCE(floor, ''))) AS f,
-        LOWER(TRIM(COALESCE(tower, ''))) AS t,
-        LOWER(TRIM(COALESCE(unit_no, ''))) AS u,
-        sqft::NUMERIC AS a,
-        (
-            LOWER(TRIM(COALESCE(floor, ''))) = 'top'
-            OR (
-                LOWER(TRIM(COALESCE(floor, ''))) ~ '^[0-9]+$'
-                AND LOWER(TRIM(COALESCE(floor, '')))::INT BETWEEN 1 AND 50
-            )
-        ) AS f_ok
-    FROM cp_submissions
-    WHERE society_name IS NOT NULL
-      AND SUBSTRING(bhk FROM '^[0-9]+') IS NOT NULL
-),
-direct_rows AS (
-    -- One chunk of unscanned, classifiable Direct rows. Cursor advances
-    -- by primary key id so chunks never overlap. NULL society/bedrooms
-    -- rows are skipped here and settled to 'none' on the final chunk.
-    SELECT
-        id,
-        LOWER(TRIM(society)) AS s,
-        bedrooms::TEXT AS b,
-        LOWER(TRIM(COALESCE(floor, ''))) AS f,
-        LOWER(TRIM(COALESCE(tower, ''))) AS t,
-        LOWER(TRIM(COALESCE(unit_no, ''))) AS u,
-        area_sqft AS a,
-        (
-            LOWER(TRIM(COALESCE(floor, ''))) = 'top'
-            OR (
-                LOWER(TRIM(COALESCE(floor, ''))) ~ '^[0-9]+$'
-                AND LOWER(TRIM(COALESCE(floor, '')))::INT BETWEEN 1 AND 50
-            )
-        ) AS f_ok
-    FROM inventory
-    WHERE cp_match IS NULL
-      AND id > %(cursor)s
-      AND society IS NOT NULL
-      AND TRIM(society) <> ''
-      AND bedrooms IS NOT NULL
-    ORDER BY id
-    LIMIT %(batch_size)s
-),
-pairs AS (
-    SELECT
-        d.id,
-        CASE
-            WHEN d.f_ok AND c.f_ok THEN (d.f = c.f)
-            ELSE (d.a IS NULL OR c.a IS NULL OR ABS(d.a - c.a) <= 25)
-        END AS floor_ok,
-        (d.t <> '' AND d.u <> '' AND d.t = c.t AND d.u = c.u) AS tu_perfect,
-        -- Both sides have a full tower+unit value (which can then be
-        -- compared definitively). When this is true AND tu_perfect is
-        -- false, the candidate is a hard mismatch, not a partial.
-        (d.t <> '' AND d.u <> '' AND c.t <> '' AND c.u <> '') AS tu_both_set
-    FROM direct_rows d
-    INNER JOIN cp_snapshot c ON c.s = d.s AND c.b = d.b
-),
-verdicts AS (
-    SELECT
-        id,
-        CASE
-            WHEN BOOL_OR(floor_ok AND tu_perfect) THEN 'perfect'
-            -- Partial only if floor/area compatible AND we don't have
-            -- definitive tower/unit disagreement on this candidate.
-            WHEN BOOL_OR(floor_ok AND (NOT tu_both_set OR tu_perfect)) THEN 'partial'
-            ELSE 'none'
-        END AS verdict
-    FROM pairs
-    GROUP BY id
-),
-updated AS (
-    UPDATE inventory i
-    SET cp_match = COALESCE(v.verdict, 'none')
-    FROM direct_rows d
-    LEFT JOIN verdicts v ON v.id = d.id
-    WHERE i.id = d.id
-    RETURNING i.id, i.cp_match
-)
-SELECT
-    COUNT(*) FILTER (WHERE cp_match = 'perfect')::INT AS perfect,
-    COUNT(*) FILTER (WHERE cp_match = 'partial')::INT AS partial,
-    COUNT(*) FILTER (WHERE cp_match = 'none')::INT    AS no_match,
-    COUNT(*)::INT                                     AS processed,
-    MAX(id)                                           AS max_id
-FROM updated;
-"""
-
 
 def backfill_one_chunk(conn, cursor: str) -> dict:
-    """Process ONE chunk (CHUNK_SIZE rows) of unscanned inventory via the
-    postgres_fdw cp_match pipeline. Designed to fit inside the Vercel edge
-    rewrite timeout (~30s) regardless of total table size.
+    """Process ONE chunk (CHUNK_SIZE rows) of unscanned inventory rows by
+    querying the CP DB directly via get_cp_conn(). Sized to fit inside the
+    Vercel edge rewrite timeout (~30s) regardless of total table size.
 
-    Frontend loops, passing back `next_cursor` from the previous response,
-    until the response has `done: true`. On the final chunk, a follow-up
-    UPDATE settles any remaining cp_match=NULL rows (those with NULL
-    society/bedrooms, which the CTE skips) to 'none'.
+    Per chunk: fetch the next CHUNK_SIZE unscanned classifiable rows from
+    inventory, query CP once for the (society, bhk) keys in this chunk,
+    classify each row in Python with _classify, bulk UPDATE inventory.
 
-    Requires migration 012_cp_fdw.sql (foreign table `cp_submissions`).
+    Frontend loops, passing back `next_cursor` (max inventory.id from the
+    previous chunk) until `done: true`. On the final chunk, a follow-up
+    UPDATE settles leftover NULL rows (NULL society / bedrooms — unmatchable)
+    to 'none'.
+
     oh_id assignment is handled at insert time + by migration 013's trigger;
     legacy rows are backfilled once via `python -m backend.scripts.backfill_oh_ids`.
 
@@ -365,21 +269,54 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
 
     cursor_id = int(cursor) if cursor else 0
 
-    with conn.cursor() as cur:
-        cur.execute(_SCAN_CHUNK_SQL, {"cursor": cursor_id, "batch_size": CHUNK_SIZE})
-        row = cur.fetchone()
-        perfect = row["perfect"] or 0
-        partial = row["partial"] or 0
-        no_match = row["no_match"] or 0
-        processed = row["processed"] or 0
-        max_id = row["max_id"]
+    perfect = partial = no_match = 0
 
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id, society, bedrooms, floor, tower, unit_no, area_sqft "
+            "FROM inventory "
+            "WHERE cp_match IS NULL "
+            "  AND id > %s "
+            "  AND society IS NOT NULL "
+            "  AND TRIM(society) <> '' "
+            "  AND bedrooms IS NOT NULL "
+            "ORDER BY id LIMIT %s",
+            (cursor_id, CHUNK_SIZE),
+        )
+        rows = cur.fetchall()
+
+        if rows:
+            keys = set()
+            for r in rows:
+                s = _norm(r.get("society"))
+                b = _norm_bhk(r.get("bedrooms"))
+                if s and b is not None:
+                    keys.add((s, b))
+            cp_index = _query_cp(keys)
+
+            verdicts = []
+            for r in rows:
+                verdict = _classify(r, cp_index) or "none"
+                verdicts.append((r["id"], verdict))
+                if verdict == "perfect": perfect += 1
+                elif verdict == "partial": partial += 1
+                else: no_match += 1
+
+            execute_values(
+                cur,
+                "UPDATE inventory AS i SET cp_match = v.verdict "
+                "FROM (VALUES %s) AS v(id, verdict) "
+                "WHERE i.id = v.id",
+                verdicts, page_size=CHUNK_SIZE,
+            )
+
+        processed = len(rows)
         done = processed < CHUNK_SIZE
-        next_cursor = str(max_id) if max_id is not None else cursor
+        next_cursor = str(rows[-1]["id"]) if rows else cursor
 
         if done:
-            # Last chunk: settle leftover NULLs (rows with NULL society /
-            # bedrooms — unmatchable, so they land at 'none').
+            # Last chunk: settle leftover NULLs (NULL society / bedrooms —
+            # unmatchable, so they land at 'none').
             cur.execute(
                 "UPDATE inventory SET cp_match = 'none' WHERE cp_match IS NULL"
             )
