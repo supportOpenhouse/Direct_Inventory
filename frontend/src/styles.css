@@ -216,7 +216,7 @@ a { color: inherit; }
 .inv-td-seller { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
 .inv-td-phone { font-variant-numeric: tabular-nums; color: #475569; }
 .inv-td-muted { color: #64748b; }
-.inv-th-date, .inv-td-date { white-space: nowrap; min-width: 100px; }
+.inv-th-date, .inv-td-date { white-space: nowrap; min-width: 130px; }
 .inv-td-notes {
   color: #475569; max-width: 260px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
