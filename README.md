@@ -37,12 +37,12 @@ RM/manager assignment uses the `rm_mapping` table — resolution order **society
 # 1. Backend (run from repo root)
 cp backend/.env.example backend/.env   # fill DATABASE_URL, GOOGLE_OAUTH_CLIENT_ID, etc.
 python3.12 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+.venv/bin/pip install -r backend/requirements.txt
 psql "$DATABASE_URL" -f backend/migrations/001_init.sql
 psql "$DATABASE_URL" -f backend/migrations/002_seed_admin.sql
 psql "$DATABASE_URL" -f backend/migrations/003_seed_test_users.sql
 .venv/bin/python -m backend.app        # http://localhost:5060
-# (production: gunicorn wsgi:app — entry point is wsgi.py at repo root)
+# (production: Render's Root Directory is `backend/`; it runs `gunicorn wsgi:app` using backend/wsgi.py)
 
 # 2. Frontend
 cd frontend
@@ -91,7 +91,11 @@ The webhook URL needs to be added to the Forms-app config: `https://direct-inven
 ## Files
 
 ```
-backend/
+backend/                     # Render Root Directory points here
+  wsgi.py                    # gunicorn entry (bootstraps sys.path for the `backend` package import)
+  requirements.txt           # Python deps (used by Render build + local venv)
+  runtime.txt                # Python version pin for Render
+  render.yaml                # Render service config (reference; dashboard is authoritative)
   app.py                     # Flask entrypoint, blueprint registration
   config.py                  # env vars
   db.py                      # connection helpers (app + properties)
@@ -113,7 +117,8 @@ backend/
     002_seed_admin.sql       # seed first admin
   tests/
     test_oh_id.py            # 11 unit tests
-frontend/
+frontend/                    # Vercel Root Directory points here
+  vercel.json                # rewrites /api/* → Render backend
   src/
     App.jsx                  # routes + role guard
     main.jsx                 # GoogleOAuthProvider + AuthProvider
