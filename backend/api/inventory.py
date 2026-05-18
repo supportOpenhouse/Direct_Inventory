@@ -714,7 +714,7 @@ def update_one(oh_id: str):
 
             allowed = EDITABLE_RAW_FIELDS | {
                 "stage", "reject_reason", "notes", "assigned_rm_id", "assigned_mgr_id",
-                "follow_up_at", "priority",
+                "follow_up_at", "priority", "star_color",
             }
             for k, v in body.items():
                 if k not in allowed:
@@ -725,6 +725,13 @@ def update_one(oh_id: str):
                     return jsonify({"error": "only admin/manager can change priority"}), 403
                 if k == "priority":
                     v = bool(v)
+                if k == "star_color":
+                    if user["role"] not in PRIORITY_ROLES:
+                        return jsonify({"error": "only admin/manager can change star_color"}), 403
+                    if v in ("", None):
+                        v = None
+                    elif v not in ("red", "green", "yellow", "none"):
+                        return jsonify({"error": f"invalid star_color: {v}"}), 400
                 if k == "stage":
                     if v not in VALID_STAGES:
                         return jsonify({"error": f"invalid stage: {v}"}), 400

@@ -19,3 +19,7 @@ backend/.pytest_cache/
 
 # Local-only screenshots scratch dir for pasting images during Claude Code sessions.
 /screenshots/
+
+# Personal/local Claude Code session notes.
+CLAUDE.md
+.claude/

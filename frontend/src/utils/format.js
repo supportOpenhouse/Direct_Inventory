@@ -90,6 +90,23 @@ export function isManualSource(src) {
   return MANUAL_SOURCES.has(src);
 }
 
+// Resolves the star color that should be rendered for a row.
+// Manual override (item.star_color) wins; otherwise fall back to the
+// existing rules — priority -> yellow, cp_match -> green/red, else null.
+// Returns one of 'yellow' | 'green' | 'red' | null.
+//   star_color === 'none'  -> manual blank (suppress default rules)
+//   star_color === null    -> no override, apply default rules
+export function starColor(item) {
+  if (!item) return null;
+  const sc = item.star_color;
+  if (sc === 'red' || sc === 'green' || sc === 'yellow') return sc;
+  if (sc === 'none') return null;
+  if (item.priority) return 'yellow';
+  if (item.cp_match === 'perfect') return 'green';
+  if (item.cp_match === 'partial') return 'red';
+  return null;
+}
+
 // Variation = (asking - oh_price) / oh_price * 100, signed.
 // Returns { pct, label, sign } or null if either side is missing/zero.
 //   sign === 'pos' means asking is OVER OH (typically less attractive)

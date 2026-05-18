@@ -1,6 +1,6 @@
 import { api } from '../api/client.js';
 import {
-  displayCity, formatDateRel, formatPrice, isManualSource,
+  displayCity, formatDateRel, formatPrice, isManualSource, starColor,
   STAGE_DOT_COLOR, stageLabel, variation,
 } from '../utils/format.js';
 
@@ -83,10 +83,11 @@ export default function InventoryTable({
             const v = variation(item.price, item.oh_price);
             const isNearest = item.oh_price_match === 'nearest';
             const isSel = selected?.has?.(item.oh_id);
+            const color = starColor(item);
             const rowClasses = [
               'inv-row',
               isManualSource(item.source) ? 'inv-row-manual' : '',
-              item.priority ? 'inv-row-priority' : '',
+              color === 'yellow' ? 'inv-row-priority' : '',
               isSel ? 'inv-row-selected' : '',
             ].filter(Boolean).join(' ');
 
@@ -102,34 +103,35 @@ export default function InventoryTable({
                   </td>
                 )}
                 <td className="inv-td-star">
-                  {(item.priority || canSetPriority
-                    || item.cp_match === 'perfect' || item.cp_match === 'partial') && (
+                  {(color || canSetPriority) && (
                     <button
                       type="button"
                       className={`prio-star ${
-                        item.priority ? 'prio-on'
-                          : item.cp_match === 'perfect' ? 'cp-perfect'
-                          : item.cp_match === 'partial' ? 'cp-partial'
+                        color === 'yellow' ? 'prio-on'
+                          : color === 'green' ? 'cp-perfect'
+                          : color === 'red' ? 'cp-partial'
                           : 'prio-off'
                       }`}
                       onClick={(e) => togglePriority(e, item)}
                       disabled={!canSetPriority}
                       title={
-                        item.priority
-                          ? ((item.cp_match === 'perfect' || item.cp_match === 'partial')
-                              ? `Priority lead (also a ${item.cp_match} CP Inventory match)`
-                              : 'Priority lead — click to unmark')
-                          : item.cp_match === 'perfect'
-                            ? 'Perfect CP Inventory match — society + BHK + floor + tower + unit_no'
-                            : item.cp_match === 'partial'
-                              ? 'Partial CP Inventory match — society + BHK + floor'
-                              : (canSetPriority ? 'Mark Priority' : 'Priority')
+                        item.star_color
+                          ? `Manual ${item.star_color} star — open card to change`
+                          : color === 'yellow'
+                            ? ((item.cp_match === 'perfect' || item.cp_match === 'partial')
+                                ? `Priority lead (also a ${item.cp_match} CP Inventory match)`
+                                : 'Priority lead — click to unmark')
+                            : color === 'green'
+                              ? 'Perfect CP Inventory match — society + BHK + floor + tower + unit_no'
+                              : color === 'red'
+                                ? 'Partial CP Inventory match — society + BHK + floor'
+                                : (canSetPriority ? 'Mark Priority' : 'Priority')
                       }
                       aria-label={
-                        item.priority ? 'Priority lead'
-                          : (item.cp_match === 'perfect' || item.cp_match === 'partial')
-                            ? `${item.cp_match} CP match`
-                            : 'Mark as Priority'
+                        color === 'yellow' ? 'Priority lead'
+                          : color === 'green' ? 'perfect CP match'
+                          : color === 'red' ? 'partial CP match'
+                          : 'Mark as Priority'
                       }
                     >★</button>
                   )}

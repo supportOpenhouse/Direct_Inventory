@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client.js';
 import {
   displayCity, formatPrice, REJECT_REASONS, STAGE_DOT_COLOR, STAGES,
-  stageLabel, todayISO, variation,
+  stageLabel, starColor, todayISO, variation,
 } from '../utils/format.js';
 import VisitScheduleModal from './VisitScheduleModal.jsx';
 import RejectReasonModal from './RejectReasonModal.jsx';
@@ -25,13 +25,26 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
   const [savingStage, setSavingStage] = useState(false);
   const [showVisit, setShowVisit] = useState(false);
   const [showReject, setShowReject] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const colorPickerRef = useRef(null);
 
   const canEdit = ['admin', 'manager', 'rm'].includes(role);
   const canSetPriority = ['admin', 'manager'].includes(role);
   const v = variation(item.price, item.oh_price);
   const isNearest = item.oh_price_match === 'nearest';
   const matchTag = isNearest ? '~' : '';
-  const isPriority = !!item.priority;
+  const color = starColor(item);
+
+  useEffect(() => {
+    if (!showColorPicker) return undefined;
+    function onDocClick(e) {
+      if (colorPickerRef.current && !colorPickerRef.current.contains(e.target)) {
+        setShowColorPicker(false);
+      }
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [showColorPicker]);
 
   async function applyStage(newStage, extraBody = {}) {
     try {
@@ -77,18 +90,24 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
     }
   }
 
-  async function togglePriority(e) {
-    e?.stopPropagation();
-    if (!canSetPriority || savingField === 'priority') return;
-    const next = !isPriority;
-    onUpdated({ ...item, priority: next });
-    setSavingField('priority');
+  async function pickColor(picked) {
+    if (!canSetPriority || savingField === 'star_color') return;
+    setShowColorPicker(false);
+    // Map UI choice -> persisted value + side effects on `priority`.
+    // 'yellow' keeps the gold-star priority filter / sort working; the other
+    // colors clear `priority` so what you see is what gets sorted.
+    const body = { star_color: picked };
+    if (picked === 'yellow') body.priority = true;
+    else body.priority = false;
+    const optimistic = { ...item, ...body };
+    onUpdated(optimistic);
+    setSavingField('star_color');
     try {
-      const r = await api.patch(`/api/inventory/${item.oh_id}`, { priority: next });
+      const r = await api.patch(`/api/inventory/${item.oh_id}`, body);
       if (r?.item) onUpdated(r.item);
     } catch (err) {
-      onUpdated({ ...item, priority: !next });
-      console.error('priority toggle failed', err);
+      onUpdated(item);
+      console.error('star_color update failed', err);
     } finally {
       setSavingField(null);
     }
@@ -100,17 +119,60 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
         <div className="modal modal-card-detail" onClick={(e) => e.stopPropagation()}>
           <div className="card-detail-head">
             <div className="card-detail-title">
-              {(isPriority || canSetPriority) && (
-                <button
-                  type="button"
-                  className={`prio-star prio-star-lg ${isPriority ? 'prio-on' : 'prio-off'}`}
-                  onClick={togglePriority}
-                  disabled={!canSetPriority || savingField === 'priority'}
-                  title={canSetPriority
-                    ? (isPriority ? 'Unmark Priority' : 'Mark Priority')
-                    : 'Priority'}
-                  aria-label={isPriority ? 'Priority lead' : 'Mark as Priority'}
-                >★</button>
+              {(color || canSetPriority) && (
+                <span className="prio-star-wrap" ref={colorPickerRef}>
+                  <button
+                    type="button"
+                    className={`prio-star prio-star-lg ${
+                      color === 'yellow' ? 'prio-on'
+                        : color === 'green' ? 'cp-perfect'
+                        : color === 'red' ? 'cp-partial'
+                        : 'prio-off'
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!canSetPriority || savingField === 'star_color') return;
+                      setShowColorPicker((s) => !s);
+                    }}
+                    disabled={!canSetPriority || savingField === 'star_color'}
+                    title={canSetPriority ? 'Pick star color' : 'Priority'}
+                    aria-label="Pick star color"
+                    aria-haspopup="true"
+                    aria-expanded={showColorPicker}
+                  >★</button>
+                  {showColorPicker && canSetPriority && (
+                    <div className="color-picker" role="menu">
+                      <button
+                        type="button"
+                        className="color-picker-swatch"
+                        onClick={() => pickColor('red')}
+                        title="Red"
+                        aria-label="Red star"
+                      ><span className="prio-star cp-partial">★</span></button>
+                      <button
+                        type="button"
+                        className="color-picker-swatch"
+                        onClick={() => pickColor('green')}
+                        title="Green"
+                        aria-label="Green star"
+                      ><span className="prio-star cp-perfect">★</span></button>
+                      <button
+                        type="button"
+                        className="color-picker-swatch"
+                        onClick={() => pickColor('yellow')}
+                        title="Yellow (priority)"
+                        aria-label="Yellow star"
+                      ><span className="prio-star prio-on">★</span></button>
+                      <button
+                        type="button"
+                        className="color-picker-swatch"
+                        onClick={() => pickColor('none')}
+                        title="Blank"
+                        aria-label="Blank star"
+                      ><span className="prio-star prio-off">★</span></button>
+                    </div>
+                  )}
+                </span>
               )}
               <strong>{item.society || '—'}</strong>
               <span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span>

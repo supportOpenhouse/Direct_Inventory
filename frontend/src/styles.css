@@ -158,6 +158,21 @@ a { color: inherit; }
 .prio-star:hover:not(:disabled) { transform: scale(1.15); }
 .prio-star-lg { font-size: 22px; margin-right: 8px; vertical-align: -3px; }
 
+.prio-star-wrap { position: relative; display: inline-block; }
+.color-picker {
+  position: absolute; top: calc(100% + 6px); left: 0;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+  padding: 6px; display: flex; gap: 4px; z-index: 50;
+}
+.color-picker-swatch {
+  background: none; border: 1px solid transparent; border-radius: 6px;
+  padding: 4px 6px; cursor: pointer; line-height: 1;
+}
+.color-picker-swatch:hover { background: #f1f5f9; border-color: #cbd5e1; }
+.color-picker-swatch .prio-star { font-size: 20px; cursor: pointer; }
+.color-picker-swatch .prio-star.prio-off { color: #cbd5e1; }
+
 /* Inventory table — the main board view. */
 .inv-table-wrap {
   background: #fff; border-radius: 12px; overflow: auto;
