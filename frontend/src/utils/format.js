@@ -14,16 +14,17 @@ export function formatPrice(p) {
   return `₹${n.toLocaleString('en-IN')}`;
 }
 
-// Format an ISO date (or YYYY-MM-DD prefix) as "DD MMM YYYY" using a 3-letter
-// month. Parses the YYYY-MM-DD parts directly to avoid Date() timezone shifts
-// on date-only values stored in IST.
+// Format a date as "DD MMM YYYY" with a 3-letter month. Accepts either
+// RFC 2822 ("Thu, 14 May 2026 00:00:00 GMT", what Flask jsonifies datetimes to)
+// or YYYY-MM-DD. DATE columns serialize to UTC midnight, so we read UTC parts
+// to avoid the value drifting a day in IST.
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 export function formatDateShort(iso) {
   if (!iso) return '—';
-  const [y, m, d] = String(iso).slice(0, 10).split('-');
-  const mi = parseInt(m, 10) - 1;
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  if (!y || !d || mi < 0 || mi > 11) return String(iso).slice(0, 10);
-  return `${d} ${months[mi]} ${y}`;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso);
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${day} ${MONTHS_SHORT[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
 export function formatDateRel(iso) {
