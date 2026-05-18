@@ -24,11 +24,17 @@ Normalization quirks worth knowing:
 CP DB connection is read-only; failure to reach it is non-fatal.
 
 Two entry points:
-  - annotate_cp_match(rows) — mutate in-memory rows (used by the list endpoint
-    as a fallback for rows that haven't been scanned yet).
-  - backfill_one_chunk(conn, cursor) — admin-triggered: scan ONE chunk of
-    inventory rows starting after `cursor`; frontend loops until done. Keeps
-    each HTTP request well under any proxy/gateway timeout.
+  - annotate_cp_match(rows) — Python-side classifier used by the list endpoint
+    as a fallback for individual rows that haven't been scanned yet (e.g.
+    just inserted, or invalidated by a recent PATCH). One CP-DB query per
+    list page; cheap.
+  - backfill_one_chunk(conn, cursor) / backfill_all_fdw(conn) — admin-
+    triggered full scan. Runs as a single SQL pipeline via postgres_fdw
+    (see migration 012_cp_fdw.sql): one materialized read of the CP
+    `submissions` foreign table, a join against unscanned inventory rows,
+    aggregated verdict per row, one UPDATE. No chunking, no Python loop.
+    backfill_one_chunk wraps backfill_all_fdw to keep the existing
+    cursor-based endpoint API stable for the frontend.
 """
 from __future__ import annotations
 
@@ -234,104 +240,171 @@ def annotate_cp_match(rows: list[dict]) -> None:
         r["cp_match"] = _classify(r, index) or "none"
 
 
+_SCAN_SQL = """
+WITH cp_snapshot AS MATERIALIZED (
+    -- Pull CP rows across the FDW wire ONCE, into a local materialization
+    -- the planner will reuse. Filter out rows that can't match anyway.
+    SELECT
+        LOWER(TRIM(society_name)) AS s,
+        SUBSTRING(bhk FROM '^[0-9]+') AS b,
+        LOWER(TRIM(COALESCE(floor, ''))) AS f,
+        LOWER(TRIM(COALESCE(tower, ''))) AS t,
+        LOWER(TRIM(COALESCE(unit_no, ''))) AS u,
+        sqft::NUMERIC AS a,
+        (
+            LOWER(TRIM(COALESCE(floor, ''))) = 'top'
+            OR (
+                LOWER(TRIM(COALESCE(floor, ''))) ~ '^[0-9]+$'
+                AND LOWER(TRIM(COALESCE(floor, '')))::INT BETWEEN 1 AND 50
+            )
+        ) AS f_ok
+    FROM cp_submissions
+    WHERE society_name IS NOT NULL
+      AND SUBSTRING(bhk FROM '^[0-9]+') IS NOT NULL
+),
+direct_rows AS (
+    -- Unscanned, classifiable Direct rows. NULL society/bedrooms can't match.
+    SELECT
+        id,
+        LOWER(TRIM(society)) AS s,
+        bedrooms::TEXT AS b,
+        LOWER(TRIM(COALESCE(floor, ''))) AS f,
+        LOWER(TRIM(COALESCE(tower, ''))) AS t,
+        LOWER(TRIM(COALESCE(unit_no, ''))) AS u,
+        area_sqft AS a,
+        (
+            LOWER(TRIM(COALESCE(floor, ''))) = 'top'
+            OR (
+                LOWER(TRIM(COALESCE(floor, ''))) ~ '^[0-9]+$'
+                AND LOWER(TRIM(COALESCE(floor, '')))::INT BETWEEN 1 AND 50
+            )
+        ) AS f_ok
+    FROM inventory
+    WHERE cp_match IS NULL
+      AND society IS NOT NULL
+      AND TRIM(society) <> ''
+      AND bedrooms IS NOT NULL
+),
+pairs AS (
+    -- Cross join is gated on society+bhk so the candidate set per Direct
+    -- row is small. floor_ok and tu_perfect mirror _unit_compatible /
+    -- the perfect-match check in the Python implementation.
+    SELECT
+        d.id,
+        CASE
+            WHEN d.f_ok AND c.f_ok THEN (d.f = c.f)
+            ELSE (d.a IS NULL OR c.a IS NULL OR ABS(d.a - c.a) <= 25)
+        END AS floor_ok,
+        (d.t <> '' AND d.u <> '' AND d.t = c.t AND d.u = c.u) AS tu_perfect
+    FROM direct_rows d
+    INNER JOIN cp_snapshot c ON c.s = d.s AND c.b = d.b
+),
+verdicts AS (
+    SELECT
+        id,
+        CASE
+            WHEN BOOL_OR(floor_ok AND tu_perfect) THEN 'perfect'
+            WHEN BOOL_OR(floor_ok) THEN 'partial'
+            ELSE 'none'
+        END AS verdict
+    FROM pairs
+    GROUP BY id
+),
+updated AS (
+    -- Update each scanned Direct row. Rows in direct_rows with no candidate
+    -- (no society+bhk match) come through via the LEFT JOIN with verdict=NULL
+    -- → COALESCE pins them to 'none'.
+    UPDATE inventory i
+    SET cp_match = COALESCE(v.verdict, 'none')
+    FROM direct_rows d
+    LEFT JOIN verdicts v ON v.id = d.id
+    WHERE i.id = d.id
+    RETURNING i.cp_match
+)
+SELECT cp_match, count(*) AS cnt FROM updated GROUP BY cp_match;
+"""
+
+
+def backfill_all_fdw(conn) -> dict:
+    """Run the full cp_match scan as one SQL pipeline via postgres_fdw.
+
+    Requires migration 012_cp_fdw.sql to have been applied — that creates
+    the foreign table `cp_submissions` pointing at the CP DB. With that in
+    place the entire scan is a single SQL statement: pull CP across the
+    wire once (materialized), join with unscanned inventory rows on
+    (society, bhk), aggregate verdicts, UPDATE inventory. No Python loop,
+    no chunking, no per-chunk CP round-trip.
+
+    Rows where Direct's society or bedrooms is NULL are handled separately
+    by a follow-up UPDATE — they can never match by definition, so they
+    land at 'none'.
+
+    Returns counts: { perfect, partial, no_match, processed }.
+    """
+    perfect = partial = none = 0
+    with conn.cursor() as cur:
+        cur.execute(_SCAN_SQL)
+        for row in cur.fetchall():
+            v, cnt = row["cp_match"], row["cnt"]
+            if v == "perfect": perfect = cnt
+            elif v == "partial": partial = cnt
+            elif v == "none": none = cnt
+
+        # Direct rows that the CTE excluded (NULL society / bedrooms) are
+        # still cp_match=NULL. Settle them to 'none' so the column is no
+        # longer "unscanned" and they don't reappear next click.
+        cur.execute(
+            "UPDATE inventory SET cp_match = 'none' WHERE cp_match IS NULL"
+        )
+        none += cur.rowcount
+    conn.commit()
+
+    processed = perfect + partial + none
+    log.info("cp_match FDW scan: processed=%d perfect=%d partial=%d none=%d",
+             processed, perfect, partial, none)
+    return {"perfect": perfect, "partial": partial, "no_match": none, "processed": processed}
+
+
 def backfill_one_chunk(conn, cursor: str) -> dict:
-    """Scan ONE chunk of UNSCANNED inventory rows (cp_match IS NULL), classify,
-    persist.
+    """Single-shot cp_match scan via postgres_fdw, packaged to keep the
+    chunked-endpoint API stable.
 
-    Only rows whose verdict isn't set yet are processed; rows already labeled
-    'perfect'/'partial'/'none' are left alone. A PATCH on any match-input field
-    (see MATCH_INPUT_FIELDS) sets cp_match back to NULL, so edited rows get
-    re-evaluated on the next scan. To force a full rescan, run
-    `UPDATE inventory SET cp_match = NULL` first.
+    First call (cursor=='') does ALL the work: oh_id backfill + FDW-driven
+    cp_match scan + 'none' settle. Returns done=true with full totals.
+    Subsequent calls return done=true with zero totals — kept for API
+    compatibility with the frontend loop, which still terminates correctly.
 
-    Returns:
-      { done, next_cursor, perfect, partial, no_match, processed }
-
-    `done` is True when this chunk had fewer than BATCH_SIZE rows (i.e. no
-    more NULL rows past `cursor`). The frontend loops, passing back
-    `next_cursor` each time, until `done` is True — this keeps every HTTP
-    request small enough to survive any proxy/gateway timeout regardless of
-    table size.
-
-    Raises if CP_DB_URL is unset.
+    To force a full rescan, run `UPDATE inventory SET cp_match = NULL` first.
+    Raises if CP_DB_URL is unset (CP DB unreachable would surface as a
+    Postgres error from the FDW query, which propagates up).
     """
     if not config.CP_DB_URL:
         raise RuntimeError("CP_DB_URL is not set — cannot run scan")
 
-    # First-chunk-only: backfill any rows missing an oh_id. Has to run BEFORE
-    # the cp_match work below because that loop paginates on `oh_id > cursor`
-    # — rows with NULL/empty oh_id are invisible to it otherwise.
-    oh_id_fill = {"filled": 0, "skipped": 0}
-    if cursor == "":
-        oh_id_fill = backfill_missing_oh_ids(conn)
-        if oh_id_fill["filled"] or oh_id_fill["skipped"]:
-            log.info("oh_id backfill: filled=%d skipped=%d",
-                     oh_id_fill["filled"], oh_id_fill["skipped"])
-        conn.commit()
+    if cursor != "":
+        # Compatibility no-op: legacy chunked frontend may call again with
+        # next_cursor; one-shot has already finished.
+        return {"done": True, "next_cursor": cursor,
+                "perfect": 0, "partial": 0, "no_match": 0, "processed": 0,
+                "oh_ids_filled": 0, "oh_ids_skipped": 0}
 
-    perfect = partial = none = 0
-
-    with conn.cursor() as cur:
-        # Only re-scan rows whose verdict hasn't been set yet (NULL means
-        # "never scanned" or "invalidated by a recent PATCH to a match-input
-        # field"). Rows already labeled 'perfect'/'partial'/'none' are left
-        # alone — a PATCH on society/bedrooms/floor/tower/unit_no sets the
-        # column back to NULL, so they'll get picked up on the next run.
-        cur.execute(
-            "SELECT oh_id, society, bedrooms, floor, tower, unit_no, area_sqft "
-            "FROM inventory WHERE oh_id > %s AND cp_match IS NULL "
-            "ORDER BY oh_id LIMIT %s",
-            (cursor, BATCH_SIZE),
-        )
-        rows = cur.fetchall()
-        if not rows:
-            return {"done": True, "next_cursor": cursor,
-                    "perfect": 0, "partial": 0, "no_match": 0, "processed": 0,
-                    "oh_ids_filled": oh_id_fill["filled"],
-                    "oh_ids_skipped": oh_id_fill["skipped"]}
-
-        keys = set()
-        for r in rows:
-            s = _norm(r.get("society"))
-            b = _norm_bhk(r.get("bedrooms"))
-            if s and b is not None:
-                keys.add((s, b))
-        cp_index = _query_cp(keys)
-
-        verdicts = []
-        for r in rows:
-            # 'none' (not NULL) — distinguishes "scanned and no match found"
-            # from "never scanned yet". NULL is reserved for the latter
-            # (set by PATCH when a match-input field changes).
-            verdict = _classify(r, cp_index) or "none"
-            verdicts.append((r["oh_id"], verdict))
-            if verdict == "perfect": perfect += 1
-            elif verdict == "partial": partial += 1
-            else: none += 1
-
-        # Single bulk UPDATE — one round-trip instead of BATCH_SIZE.
-        execute_values(
-            cur,
-            "UPDATE inventory AS i SET cp_match = v.verdict "
-            "FROM (VALUES %s) AS v(oh_id, verdict) "
-            "WHERE i.oh_id = v.oh_id",
-            verdicts, page_size=BATCH_SIZE,
-        )
-
-        last_oh_id = rows[-1]["oh_id"]
+    # Backfill any rows missing an oh_id first. Doesn't depend on CP and
+    # has to run regardless — the cp_match column update keys on inventory.id
+    # but downstream features (visibility / activity / forms) need oh_id.
+    oh_id_fill = backfill_missing_oh_ids(conn)
+    if oh_id_fill["filled"] or oh_id_fill["skipped"]:
+        log.info("oh_id backfill: filled=%d skipped=%d",
+                 oh_id_fill["filled"], oh_id_fill["skipped"])
     conn.commit()
 
-    done = len(rows) < BATCH_SIZE
-    log.info("cp_match chunk: cursor<=%s processed=%d perfect=%d partial=%d no_match=%d done=%s",
-             last_oh_id, len(rows), perfect, partial, none, done)
-
+    result = backfill_all_fdw(conn)
     return {
-        "done": done,
-        "next_cursor": last_oh_id,
-        "perfect": perfect,
-        "partial": partial,
-        "no_match": none,
-        "processed": len(rows),
+        "done": True,
+        "next_cursor": "",
+        "perfect": result["perfect"],
+        "partial": result["partial"],
+        "no_match": result["no_match"],
+        "processed": result["processed"],
         "oh_ids_filled": oh_id_fill["filled"],
         "oh_ids_skipped": oh_id_fill["skipped"],
     }
