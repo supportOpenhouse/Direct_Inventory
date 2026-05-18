@@ -82,8 +82,8 @@ BULK_ALLOWED_FIELDS = {
     "priority",
 }
 
-# Only admin/manager can flag a lead as Priority.
-PRIORITY_ROLES = {"admin", "manager"}
+# Roles allowed to flag a lead as Priority / set star_color.
+PRIORITY_ROLES = {"admin", "manager", "rm"}
 
 
 def _expand_cities(cities: list[str]) -> list[str]:

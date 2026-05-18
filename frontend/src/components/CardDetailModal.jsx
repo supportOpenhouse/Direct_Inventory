@@ -29,7 +29,7 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
   const colorPickerRef = useRef(null);
 
   const canEdit = ['admin', 'manager', 'rm'].includes(role);
-  const canSetPriority = ['admin', 'manager'].includes(role);
+  const canSetPriority = ['admin', 'manager', 'rm'].includes(role);
   const v = variation(item.price, item.oh_price);
   const isNearest = item.oh_price_match === 'nearest';
   const matchTag = isNearest ? '~' : '';

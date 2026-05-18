@@ -15,7 +15,7 @@ export default function BulkActionBar({ selected, role, onCleared, onDone }) {
   const [followUp, setFollowUp] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  const canSetPriority = ['admin', 'manager'].includes(role);
+  const canSetPriority = ['admin', 'manager', 'rm'].includes(role);
 
   useEffect(() => {
     api.get('/api/users?role=rm').then((r) => setRms(r.items || [])).catch(() => setRms([]));

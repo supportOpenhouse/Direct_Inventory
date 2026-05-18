@@ -33,7 +33,7 @@ export default function InventoryTable({
   selectMode = false, selected, onToggleSelect,
   showStageColumn = true,
 }) {
-  const canSetPriority = ['admin', 'manager'].includes(role);
+  const canSetPriority = ['admin', 'manager', 'rm'].includes(role);
   // 16 base columns; +1 if selectMode, -1 if Stage hidden.
   const colCount = 16 + (selectMode ? 1 : 0) - (showStageColumn ? 0 : 1);
 
