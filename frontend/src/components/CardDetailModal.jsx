@@ -144,31 +144,35 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
                     <div className="color-picker" role="menu">
                       <button
                         type="button"
-                        className="color-picker-swatch"
-                        onClick={() => pickColor('red')}
-                        title="Partial Match"
-                        aria-label="Partial match"
-                      ><span className="prio-star cp-partial">★</span></button>
-                      <button
-                        type="button"
-                        className="color-picker-swatch"
-                        onClick={() => pickColor('green')}
-                        title="Perfect Match"
-                        aria-label="Perfect match"
-                      ><span className="prio-star cp-perfect">★</span></button>
-                      <button
-                        type="button"
-                        className="color-picker-swatch"
+                        className={`color-picker-swatch ${color === 'yellow' ? 'color-picker-swatch-active' : ''}`}
                         onClick={() => pickColor('yellow')}
                         title="Yellow (priority)"
                         aria-label="Yellow star"
+                        aria-current={color === 'yellow' ? 'true' : undefined}
                       ><span className="prio-star prio-on">★</span></button>
                       <button
                         type="button"
-                        className="color-picker-swatch"
+                        className={`color-picker-swatch ${color === 'green' ? 'color-picker-swatch-active' : ''}`}
+                        onClick={() => pickColor('green')}
+                        title="Perfect Match"
+                        aria-label="Perfect match"
+                        aria-current={color === 'green' ? 'true' : undefined}
+                      ><span className="prio-star cp-perfect">★</span></button>
+                      <button
+                        type="button"
+                        className={`color-picker-swatch ${color === 'red' ? 'color-picker-swatch-active' : ''}`}
+                        onClick={() => pickColor('red')}
+                        title="Partial Match"
+                        aria-label="Partial match"
+                        aria-current={color === 'red' ? 'true' : undefined}
+                      ><span className="prio-star cp-partial">★</span></button>
+                      <button
+                        type="button"
+                        className={`color-picker-swatch ${color === null ? 'color-picker-swatch-active' : ''}`}
                         onClick={() => pickColor('none')}
                         title="Blank"
                         aria-label="Blank star"
+                        aria-current={color === null ? 'true' : undefined}
                       ><span className="prio-star prio-off">★</span></button>
                     </div>
                   )}

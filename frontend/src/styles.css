@@ -170,6 +170,8 @@ a { color: inherit; }
   padding: 4px 6px; cursor: pointer; line-height: 1;
 }
 .color-picker-swatch:hover { background: #f1f5f9; border-color: #cbd5e1; }
+.color-picker-swatch-active { background: #eef2ff; border-color: #6366f1; }
+.color-picker-swatch-active:hover { background: #e0e7ff; border-color: #6366f1; }
 .color-picker-swatch .prio-star { font-size: 20px; cursor: pointer; }
 .color-picker-swatch .prio-star.prio-off { color: #cbd5e1; }
 
