@@ -156,7 +156,7 @@ def schedule_visit():
             field_exec_name = fx["name"]
 
             # Adapt Direct columns to Forms' canonical schema.
-            #   lead_id      — inventory.id (numeric) as string; Forms keys on this.
+            #   lead_id      — oh_id (e.g. OHLGD0123); Forms keys on this.
             #   first_name   — full seller name; Forms has no last_name field.
             #   area_sqft    — string in Forms' schema.
             #   demand_price — numeric.
@@ -165,7 +165,7 @@ def schedule_visit():
             )
 
             payload = {
-                "lead_id":        str(inv["id"]),
+                "lead_id":        oh_id,
                 "city":           inv.get("city") or "",
                 # Forms accepts {"CP", "Direct", "CP Listing"}; rows scheduled
                 # from this portal are by definition Direct.
