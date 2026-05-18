@@ -146,15 +146,15 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
                         type="button"
                         className="color-picker-swatch"
                         onClick={() => pickColor('red')}
-                        title="Red"
-                        aria-label="Red star"
+                        title="Partial Match"
+                        aria-label="Partial match"
                       ><span className="prio-star cp-partial">★</span></button>
                       <button
                         type="button"
                         className="color-picker-swatch"
                         onClick={() => pickColor('green')}
-                        title="Green"
-                        aria-label="Green star"
+                        title="Perfect Match"
+                        aria-label="Perfect match"
                       ><span className="prio-star cp-perfect">★</span></button>
                       <button
                         type="button"
