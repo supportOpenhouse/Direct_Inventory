@@ -12,10 +12,14 @@ LEFT JOIN against users so we can show actor name alongside email.
 """
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 from flask import Blueprint, g, jsonify, request
 
 from ..db import get_conn
 from .auth import require_auth
+
+IST = timezone(timedelta(hours=5, minutes=30))
 
 bp = Blueprint("activity", __name__, url_prefix="/api/activity")
 
@@ -165,3 +169,113 @@ def filter_options():
         return jsonify({"actions": actions, "entity_types": entity_types, "actors": actors})
     finally:
         conn.close()
+
+
+@bp.get("/daily-report")
+@require_auth("admin")
+def daily_report():
+    """Per-user summary of inventory stage moves for one IST day.
+
+    For each (actor, oh_id) touched on the selected day, keep only the LATEST
+    stage_change — that's the stage the actor *left* the lead in. Apps-Script
+    sync and the Forms webhook are excluded; they're not human actions.
+
+    Query: ?date=YYYY-MM-DD (defaults to today IST).
+    Response: { date, users: [{ actor_email, actor_name, total, counts, leads:[...] }] }
+    """
+    date_str = (request.args.get("date") or "").strip()
+    if date_str:
+        try:
+            day_ist = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            return jsonify({"error": "invalid date; expected YYYY-MM-DD"}), 400
+    else:
+        day_ist = datetime.now(IST).date()
+
+    # IST day window expressed as UTC bounds. activity_log.created_at is UTC,
+    # so we compare against the same zone.
+    start_ist = datetime(day_ist.year, day_ist.month, day_ist.day, tzinfo=IST)
+    end_ist = start_ist + timedelta(days=1)
+    start_utc = start_ist.astimezone(timezone.utc)
+    end_utc = end_ist.astimezone(timezone.utc)
+
+    sql = """
+        WITH latest_per_actor_lead AS (
+            SELECT DISTINCT ON (a.actor_email, a.entity_id)
+                a.actor_email,
+                a.entity_id          AS oh_id,
+                a.before_value       AS from_stage,
+                a.after_value        AS final_stage,
+                a.created_at         AS last_change_at
+            FROM activity_log a
+            WHERE a.action = 'stage_change'
+              AND a.entity_type = 'inventory'
+              AND a.created_at >= %s
+              AND a.created_at <  %s
+              AND a.actor_email IS NOT NULL
+              AND a.actor_email NOT LIKE 'apps-script:%%'
+              AND a.actor_email <> 'system:forms-webhook'
+            ORDER BY a.actor_email, a.entity_id, a.created_at DESC
+        )
+        SELECT l.actor_email,
+               u.name           AS actor_name,
+               u.role           AS actor_role,
+               l.oh_id,
+               l.from_stage,
+               l.final_stage,
+               l.last_change_at,
+               i.society,
+               i.city,
+               i.stage          AS current_stage,
+               i.seller_name
+        FROM latest_per_actor_lead l
+        LEFT JOIN users     u ON u.email = l.actor_email
+        LEFT JOIN inventory i ON i.oh_id = l.oh_id
+        ORDER BY l.actor_email, l.last_change_at DESC
+    """
+
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(sql, (start_utc, end_utc))
+            rows = cur.fetchall()
+    finally:
+        conn.close()
+
+    # Group by actor in Python — simpler than two SQL passes and the result set
+    # is bounded by stage_change volume per day (small).
+    users: dict[str, dict] = {}
+    for r in rows:
+        key = r["actor_email"]
+        bucket = users.get(key)
+        if bucket is None:
+            bucket = {
+                "actor_email": key,
+                "actor_name": r.get("actor_name"),
+                "actor_role": r.get("actor_role"),
+                "total": 0,
+                "counts": {},
+                "leads": [],
+            }
+            users[key] = bucket
+        bucket["total"] += 1
+        stage = r["final_stage"] or "(none)"
+        bucket["counts"][stage] = bucket["counts"].get(stage, 0) + 1
+        bucket["leads"].append({
+            "oh_id": r["oh_id"],
+            "society": r.get("society"),
+            "city": r.get("city"),
+            "from_stage": r.get("from_stage"),
+            "final_stage": r.get("final_stage"),
+            "current_stage": r.get("current_stage"),
+            "seller_name": r.get("seller_name"),
+            "last_change_at": r["last_change_at"],
+        })
+
+    # Sort users: most active first, then by display name / email.
+    ordered = sorted(
+        users.values(),
+        key=lambda u: (-u["total"], (u["actor_name"] or u["actor_email"]).lower()),
+    )
+
+    return jsonify({"date": day_ist.isoformat(), "users": ordered})
