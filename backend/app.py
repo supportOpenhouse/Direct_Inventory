@@ -24,6 +24,8 @@ from .db import get_conn, get_props_conn
 logging.basicConfig(level=getattr(logging, config.LOG_LEVEL, logging.INFO))
 
 
+
+
 def create_app() -> Flask:
     app = Flask(__name__)
     CORS(app, origins=[config.FRONTEND_ORIGIN], supports_credentials=False)
