@@ -1,6 +1,6 @@
 import { api } from '../api/client.js';
 import {
-  displayCity, formatDateRel, formatDateShort, formatPrice, isManualSource, starColor,
+  displayCity, formatDateRel, formatDateShort, formatPrice, starColor,
   STAGE_DOT_COLOR, stageLabel, variation,
 } from '../utils/format.js';
 
@@ -96,7 +96,6 @@ export default function InventoryTable({
             const color = starColor(item);
             const rowClasses = [
               'inv-row',
-              isManualSource(item.source) ? 'inv-row-manual' : '',
               color === 'yellow' ? 'inv-row-priority' : '',
               isSel ? 'inv-row-selected' : '',
             ].filter(Boolean).join(' ');
