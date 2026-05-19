@@ -403,7 +403,8 @@ def user_report_leads():
     sql = (
         _WINNERS_CTE.format(extra_where="AND a.actor_email = %s") +
         " SELECT w.oh_id, w.from_stage, w.final_stage, w.last_change_at, "
-        "        i.society, i.city, i.seller_name, i.stage AS current_stage "
+        "        i.society, i.city, i.seller_name, "
+        "        i.stage AS current_stage, i.reject_reason "
         " FROM winners w LEFT JOIN inventory i ON i.oh_id = w.oh_id "
         " ORDER BY w.last_change_at DESC"
     )

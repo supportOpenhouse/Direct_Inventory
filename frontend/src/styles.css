@@ -461,6 +461,7 @@ a { color: inherit; }
 .dr-time { color: #475569; font-family: ui-monospace, Menlo, monospace; font-size: 12px; white-space: nowrap; }
 .dr-id   { color: #2563eb; font-family: ui-monospace, Menlo, monospace; font-weight: 600; }
 .stage-inline { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.stage-reason { color: #64748b; font-size: 12px; }
 
 /* User Report — filter row */
 .ur-filters {

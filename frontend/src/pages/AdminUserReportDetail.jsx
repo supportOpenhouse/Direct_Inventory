@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api/client.js';
-import { formatDateShort, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
+import { formatDateShort, REJECT_REASONS, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
 import { PRESETS, PRESET_LABELS, downloadCSV, todayIST } from '../utils/reportFilters.js';
 
 function StageCountPills({ counts }) {
@@ -13,12 +13,19 @@ function StageCountPills({ counts }) {
   ));
 }
 
-function StagePill({ stage }) {
+function rejectReasonLabel(code) {
+  if (!code) return '';
+  return REJECT_REASONS.find((r) => r.value === code)?.label || code;
+}
+
+function StagePill({ stage, rejectReason }) {
   if (!stage) return <span className="muted">—</span>;
+  const reasonLabel = stage === 'rejected' ? rejectReasonLabel(rejectReason) : '';
   return (
     <span className="stage-inline">
       <span className="stage-dot" style={{ background: STAGE_DOT_COLOR[stage] || '#94a3b8' }} />
       {stageLabel(stage)}
+      {reasonLabel && <span className="stage-reason"> ({reasonLabel})</span>}
     </span>
   );
 }
@@ -84,12 +91,12 @@ function DayLeadsModal({ email, date, onClose }) {
                   <td>{l.society || '—'}</td>
                   <td>{l.city || '—'}</td>
                   <td>{l.seller_name || '—'}</td>
-                  <td><StagePill stage={l.from_stage} /></td>
-                  <td><StagePill stage={l.final_stage} /></td>
+                  <td><StagePill stage={l.from_stage} rejectReason={l.reject_reason} /></td>
+                  <td><StagePill stage={l.final_stage} rejectReason={l.reject_reason} /></td>
                   <td>
                     {l.current_stage === l.final_stage
                       ? <span className="muted">same</span>
-                      : <StagePill stage={l.current_stage} />}
+                      : <StagePill stage={l.current_stage} rejectReason={l.reject_reason} />}
                   </td>
                 </tr>
               ))}
