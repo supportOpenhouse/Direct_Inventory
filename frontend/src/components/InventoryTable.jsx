@@ -40,13 +40,23 @@ export default function InventoryTable({
   async function togglePriority(e, item) {
     e.stopPropagation();
     if (!canSetPriority) return;
-    const next = !item.priority;
-    onUpdated({ ...item, priority: next });   // optimistic
+    // Star here doubles as "make yellow" / "clear yellow". Mirror the popup
+    // picker: write `star_color` alongside `priority` so a stale override
+    // (e.g. red/green/none picked earlier from the popup) doesn't keep
+    // winning over the new yellow state.
+    //   not yellow -> { star_color: 'yellow', priority: true }
+    //   yellow     -> { star_color: null,     priority: false }  (falls back to cp_match)
+    const wantYellow = starColor(item) !== 'yellow';
+    const body = wantYellow
+      ? { star_color: 'yellow', priority: true }
+      : { star_color: null, priority: false };
+    const optimistic = { ...item, ...body };
+    onUpdated(optimistic);
     try {
-      const r = await api.patch(`/api/inventory/${item.oh_id}`, { priority: next });
+      const r = await api.patch(`/api/inventory/${item.oh_id}`, body);
       if (r?.item) onUpdated(r.item);
     } catch (err) {
-      onUpdated({ ...item, priority: !next });
+      onUpdated(item);
       console.error('priority toggle failed', err);
     }
   }

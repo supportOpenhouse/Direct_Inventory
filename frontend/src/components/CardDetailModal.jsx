@@ -93,12 +93,17 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
   async function pickColor(picked) {
     if (!canSetPriority || savingField === 'star_color') return;
     setShowColorPicker(false);
-    // Map UI choice -> persisted value + side effects on `priority`.
-    // 'yellow' keeps the gold-star priority filter / sort working; the other
-    // colors clear `priority` so what you see is what gets sorted.
-    const body = { star_color: picked };
-    if (picked === 'yellow') body.priority = true;
-    else body.priority = false;
+    // Map UI choice -> persisted value + side effects.
+    //   yellow -> priority on, cp_match unchanged (yellow is about priority,
+    //             not match quality).
+    //   green  -> cp_match='perfect' so the manual pick reflects in scan data.
+    //   red    -> cp_match='partial', same idea.
+    //   none   -> wipe every trigger: star_color='none' suppresses display,
+    //             priority off, cp_match cleared.
+    const body = { star_color: picked, priority: picked === 'yellow' };
+    if (picked === 'green') body.cp_match = 'perfect';
+    else if (picked === 'red') body.cp_match = 'partial';
+    else if (picked === 'none') body.cp_match = null;
     const optimistic = { ...item, ...body };
     onUpdated(optimistic);
     setSavingField('star_color');

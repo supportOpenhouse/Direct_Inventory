@@ -714,7 +714,7 @@ def update_one(oh_id: str):
 
             allowed = EDITABLE_RAW_FIELDS | {
                 "stage", "reject_reason", "notes", "assigned_rm_id", "assigned_mgr_id",
-                "follow_up_at", "priority", "star_color",
+                "follow_up_at", "priority", "star_color", "cp_match",
             }
             for k, v in body.items():
                 if k not in allowed:
@@ -732,6 +732,15 @@ def update_one(oh_id: str):
                         v = None
                     elif v not in ("red", "green", "yellow", "none"):
                         return jsonify({"error": f"invalid star_color: {v}"}), 400
+                if k == "cp_match":
+                    # Manual override that mirrors the auto-scan verdict. Same role
+                    # gate as star_color since they're set together from the picker.
+                    if user["role"] not in PRIORITY_ROLES:
+                        return jsonify({"error": "only admin/manager can change cp_match"}), 403
+                    if v in ("", None):
+                        v = None
+                    elif v not in ("perfect", "partial", "none"):
+                        return jsonify({"error": f"invalid cp_match: {v}"}), 400
                 if k == "stage":
                     if v not in VALID_STAGES:
                         return jsonify({"error": f"invalid stage: {v}"}), 400
