@@ -5,7 +5,8 @@ import Board from './pages/Board.jsx';
 import AdminUsers from './pages/AdminUsers.jsx';
 import AdminMapping from './pages/AdminMapping.jsx';
 import AdminActivity from './pages/AdminActivity.jsx';
-import AdminDailyReport from './pages/AdminDailyReport.jsx';
+import AdminUserReport from './pages/AdminUserReport.jsx';
+import AdminUserReportDetail from './pages/AdminUserReportDetail.jsx';
 import Layout from './components/Layout.jsx';
 
 function RequireAuth({ children, role }) {
@@ -37,8 +38,12 @@ export default function App() {
           element={<RequireAuth role="admin"><AdminActivity /></RequireAuth>}
         />
         <Route
-          path="/admin/daily-report"
-          element={<RequireAuth role="admin"><AdminDailyReport /></RequireAuth>}
+          path="/admin/user-report"
+          element={<RequireAuth role="admin"><AdminUserReport /></RequireAuth>}
+        />
+        <Route
+          path="/admin/user-report/detail"
+          element={<RequireAuth role="admin"><AdminUserReportDetail /></RequireAuth>}
         />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
