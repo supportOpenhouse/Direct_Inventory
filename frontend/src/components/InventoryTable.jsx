@@ -1,6 +1,6 @@
 import { api } from '../api/client.js';
 import {
-  displayCity, formatDateRel, formatDateShort, formatPrice, starColor,
+  displayCity, formatDateRel, formatDateShort, formatPrice, isFollowUpOverdue, starColor,
   STAGE_DOT_COLOR, stageLabel, variation,
 } from '../utils/format.js';
 
@@ -147,7 +147,9 @@ export default function InventoryTable({
                 </td>
                 <td className="inv-td-id">{item.oh_id}</td>
                 <td><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></td>
-                <td className="inv-td-society">{item.society || '—'}</td>
+                <td className={`inv-td-society ${isFollowUpOverdue(item) ? 'inv-td-overdue' : ''}`.trim()}>
+                  {item.society || '—'}
+                </td>
                 <td>{item.bedrooms != null ? `${item.bedrooms} BHK` : '—'}</td>
                 <td>{item.floor != null && item.floor !== '' ? item.floor : '—'}</td>
                 <td>{item.area_sqft != null ? `${item.area_sqft} sqft` : '—'}</td>

@@ -232,6 +232,8 @@ a { color: inherit; }
 .inv-td-star { width: 30px; padding-left: 8px !important; padding-right: 0 !important; text-align: center; }
 .inv-td-id { font-family: ui-monospace, Menlo, monospace; color: #475569; font-size: 12px; }
 .inv-td-society { font-weight: 600; color: #0f1115; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+/* Overdue follow-up: stage is Follow Up and the follow-up date has passed. */
+.inv-td-society.inv-td-overdue { color: #dc2626; }
 .inv-td-num { text-align: right; font-variant-numeric: tabular-nums; }
 .inv-td-stage-lbl { margin-left: 6px; }
 .inv-td-seller { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }

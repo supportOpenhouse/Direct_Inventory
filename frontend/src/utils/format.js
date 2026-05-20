@@ -27,6 +27,18 @@ export function formatDateShort(iso) {
   return `${day} ${MONTHS_SHORT[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
+// True when a row is in the Follow Up stage AND its follow-up date is strictly
+// before today — i.e. an overdue follow-up. Today and future dates → false.
+// The stored value is UTC midnight of the date, so UTC parts give the date;
+// it's compared against the local (IST) today as YYYY-MM-DD strings.
+export function isFollowUpOverdue(item) {
+  if (!item || item.stage !== 'follow_up' || !item.follow_up_at) return false;
+  const d = new Date(item.follow_up_at);
+  if (Number.isNaN(d.getTime())) return false;
+  const fu = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+  return fu < todayISO();
+}
+
 export function formatDateRel(iso) {
   if (!iso) return '—';
   const then = new Date(iso);
