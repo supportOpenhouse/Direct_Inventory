@@ -68,9 +68,10 @@ function StageCountPills({ counts }) {
 }
 
 export default function AdminUserReport() {
-  const [from, setFrom] = useState(todayIST());
-  const [to, setTo] = useState(todayIST());
-  const [preset, setPreset] = useState('today');
+  // Default view is "All" — every user, all dates.
+  const [from, setFrom] = useState(() => PRESETS.all().from);
+  const [to, setTo] = useState(() => PRESETS.all().to);
+  const [preset, setPreset] = useState('all');
   const [users, setUsers] = useState([]);              // selected emails
   const [allUsers, setAllUsers] = useState([]);        // dropdown options
   const [data, setData] = useState({ from: '', to: '', users: [] });

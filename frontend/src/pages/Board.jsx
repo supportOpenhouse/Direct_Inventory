@@ -18,7 +18,10 @@ export default function Board() {
   const [city, setCity] = useState('');
   // Multi-select stage filter. Empty set = "All".
   const [stageSel, setStageSel] = useState(() => new Set());
-  const [sort, setSort] = useState({ field: 'follow_up_at', dir: 'desc' });
+  // 'smart' — follow-up triage default: today, then overdue (Follow Up >
+  // Lead > others), then future. Clicking a column header switches to a
+  // plain column sort. See inventory.list_inventory for the SQL.
+  const [sort, setSort] = useState({ field: 'smart', dir: 'desc' });
   const [page, setPage] = useState(0);
 
   // Extended filters from the FilterPanel modal.

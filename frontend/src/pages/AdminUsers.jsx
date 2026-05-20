@@ -21,6 +21,20 @@ function scopeSummary(u) {
   return '—';
 }
 
+// Sortable header cell for the users table.
+function SortTh({ field, label, sort, onSort }) {
+  const active = sort.field === field;
+  const arrow = active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕';
+  return (
+    <th
+      className={`data-th-sortable ${active ? 'data-th-active' : ''}`}
+      onClick={() => onSort({ field, dir: active && sort.dir === 'asc' ? 'desc' : 'asc' })}
+    >
+      {label} <span className="data-th-arrow">{arrow}</span>
+    </th>
+  );
+}
+
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
   const [areas, setAreas] = useState({ cities: [], micro_markets: [], societies: [] });
@@ -28,6 +42,8 @@ export default function AdminUsers() {
   const [draft, setDraft] = useState({ email: '', name: '', phone: '', role: 'rm', cities: [] });
   const [error, setError] = useState(null);
   const [editUser, setEditUser] = useState(null);
+  // null field = backend's default order (role, then email).
+  const [sort, setSort] = useState({ field: null, dir: 'asc' });
 
   // When role flips to admin, default-select all cities. Admin needs cross-city visibility.
   function setRole(role) {
@@ -59,6 +75,22 @@ export default function AdminUsers() {
     () => users.filter((u) => u.role === 'manager').map((u) => ({ id: u.id, name: u.name, email: u.email })),
     [users],
   );
+
+  // Client-side sort — the user list is small and fully loaded.
+  const sortedUsers = useMemo(() => {
+    if (!sort.field) return users;
+    const keyOf = (u) => {
+      if (sort.field === 'manager') return (u.manager_name || u.manager_email || '').toLowerCase();
+      return (u[sort.field] ?? '').toString().toLowerCase();
+    };
+    return [...users].sort((a, b) => {
+      const av = keyOf(a);
+      const bv = keyOf(b);
+      if (av < bv) return sort.dir === 'asc' ? -1 : 1;
+      if (av > bv) return sort.dir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [users, sort]);
 
   function toggleCity(c) {
     setDraft((p) => ({
@@ -121,12 +153,16 @@ export default function AdminUsers() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Email</th><th>Name</th><th>Phone</th><th>Role</th>
-                <th>Manager</th><th>Area scope</th><th></th>
+                <SortTh field="email" label="Email" sort={sort} onSort={setSort} />
+                <SortTh field="name" label="Name" sort={sort} onSort={setSort} />
+                <th>Phone</th>
+                <SortTh field="role" label="Role" sort={sort} onSort={setSort} />
+                <SortTh field="manager" label="Manager" sort={sort} onSort={setSort} />
+                <th>Area scope</th><th></th>
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
+              {sortedUsers.map((u) => (
                 <tr key={u.id} className={u.is_active ? '' : 'usr-inactive'}>
                   <td>{u.email}</td>
                   <td>{u.name || '—'}</td>

@@ -5,8 +5,9 @@ import {
 } from '../utils/format.js';
 
 const SORTABLE = new Set([
-  'city', 'bedrooms', 'floor',
-  'price', 'oh_price', 'variation', 'posting_date', 'follow_up_at',
+  'oh_id', 'city', 'society', 'bedrooms', 'floor', 'area_sqft',
+  'price', 'oh_price', 'variation', 'stage', 'seller_name', 'seller_phone',
+  'posting_date', 'follow_up_at', 'notes',
 ]);
 
 function SortableTh({ field, label, sort, onSort, align = 'left', className = '' }) {
@@ -68,21 +69,21 @@ export default function InventoryTable({
           <tr>
             {selectMode && <th className="inv-th inv-th-sel"></th>}
             <th className="inv-th inv-th-star"></th>
-            <th className="inv-th">OH-ID</th>
+            <SortableTh field="oh_id" label="OH-ID" sort={sort} onSort={onSort} />
             <SortableTh field="city" label="City" sort={sort} onSort={onSort} />
-            <th className="inv-th">Society</th>
+            <SortableTh field="society" label="Society" sort={sort} onSort={onSort} />
             <SortableTh field="bedrooms" label="BHK" sort={sort} onSort={onSort} />
             <SortableTh field="floor" label="Floor" sort={sort} onSort={onSort} />
-            <th className="inv-th">Area</th>
+            <SortableTh field="area_sqft" label="Area" sort={sort} onSort={onSort} />
             <SortableTh field="price" label="Asking" sort={sort} onSort={onSort} align="right" />
             <SortableTh field="oh_price" label="OH Price" sort={sort} onSort={onSort} align="right" />
             <SortableTh field="variation" label="Variation" sort={sort} onSort={onSort} align="right" />
-            {showStageColumn && <th className="inv-th">Stage</th>}
-            <th className="inv-th">Seller</th>
-            <th className="inv-th">Phone</th>
+            {showStageColumn && <SortableTh field="stage" label="Stage" sort={sort} onSort={onSort} />}
+            <SortableTh field="seller_name" label="Seller" sort={sort} onSort={onSort} />
+            <SortableTh field="seller_phone" label="Phone" sort={sort} onSort={onSort} />
             <SortableTh field="posting_date" label="Posted" sort={sort} onSort={onSort} />
             <SortableTh field="follow_up_at" label="Follow-up" sort={sort} onSort={onSort} className="inv-th-date" />
-            <th className="inv-th">Notes</th>
+            <SortableTh field="notes" label="Notes" sort={sort} onSort={onSort} />
           </tr>
         </thead>
         <tbody>

@@ -49,15 +49,25 @@ VALID_STAGES = {
 # Whitelist of fields the client can sort by. Maps the API name → SQL fragment.
 # Variation is computed (asking - oh_price) / oh_price; everything else is a column.
 SORTABLE_FIELDS = {
+    "oh_id":         "oh_id",
     "city":          "city",
+    "society":       "society",
     "bedrooms":      "bedrooms",
     "floor":         "floor",
+    "area_sqft":     "area_sqft",
     "price":         "price",
     "oh_price":      "oh_price",
     "variation":     "CASE WHEN oh_price IS NULL OR oh_price = 0 THEN NULL "
                      "ELSE (price::FLOAT - oh_price) / oh_price * 100 END",
+    # Stage sorts in pipeline order, not alphabetically.
+    "stage":         "CASE stage WHEN 'qualified' THEN 0 WHEN 'call_not_received' THEN 1 "
+                     "WHEN 'follow_up' THEN 2 WHEN 'visit_scheduled' THEN 3 "
+                     "WHEN 'rejected' THEN 4 ELSE 5 END",
+    "seller_name":   "seller_name",
+    "seller_phone":  "seller_phone",
     "posting_date":  "posting_date",
     "follow_up_at":  "follow_up_at",
+    "notes":         "notes",
     "updated_at":    "updated_at",
 }
 
@@ -356,20 +366,45 @@ def list_inventory():
     inner_where = f"WHERE TRUE {scope} {' '.join(base_filters)}"
     outer_where = f"WHERE TRUE {' '.join(post_filters)}"
 
-    # Sort: client picks a column; rejected rows are pinned to the bottom of
-    # the full result (regardless of the active sort or priority — once rejected,
-    # the row is "out"), then priority floats to the top, then the chosen sort,
-    # then updated_at DESC as a deterministic tie-break for pagination.
-    sort_field = (args.get("sort") or "updated_at").strip()
-    sort_dir = "ASC" if (args.get("dir") or "").strip().lower() == "asc" else "DESC"
-    sort_sql = SORTABLE_FIELDS.get(sort_field, SORTABLE_FIELDS["updated_at"])
-    nulls_clause = "NULLS LAST" if sort_dir == "DESC" else "NULLS FIRST"
-    order_clause = (
-        "(CASE WHEN stage = 'rejected' THEN 1 ELSE 0 END) ASC, "
-        "priority DESC, "
-        f"{sort_sql} {sort_dir} {nulls_clause}, "
-        "updated_at DESC"
-    )
+    # Sort. Default mode is 'smart' — a follow-up-driven triage order:
+    #   bucket 0: follow-up due today (IST)
+    #   bucket 1: overdue follow-up — Follow Up stage first, then Lead, then
+    #             others; most recent follow-up date first within each
+    #   bucket 2: future follow-up — nearest date first
+    #   bucket 3: no follow-up date
+    # 'smart' has no priority float / rejected sink. Any explicit column sort
+    # keeps the legacy behaviour: rejected pinned to the bottom, priority
+    # floated to the top, then the chosen column, then updated_at DESC.
+    sort_field = (args.get("sort") or "smart").strip()
+    if sort_field == "smart":
+        today_ist = "(NOW() AT TIME ZONE 'Asia/Kolkata')::DATE"
+        order_clause = (
+            f"CASE WHEN follow_up_at IS NULL THEN 3 "
+            f"     WHEN follow_up_at::DATE = {today_ist} THEN 0 "
+            f"     WHEN follow_up_at::DATE < {today_ist} THEN 1 "
+            f"     ELSE 2 END ASC, "
+            # Stage order applies only inside the overdue bucket.
+            f"CASE WHEN follow_up_at IS NOT NULL AND follow_up_at::DATE < {today_ist} "
+            f"     THEN CASE stage WHEN 'follow_up' THEN 0 WHEN 'qualified' THEN 1 ELSE 2 END "
+            f"     ELSE 0 END ASC, "
+            # Overdue: most recent follow-up date first.
+            f"CASE WHEN follow_up_at IS NOT NULL AND follow_up_at::DATE < {today_ist} "
+            f"     THEN follow_up_at END DESC NULLS LAST, "
+            # Future: nearest follow-up date first.
+            f"CASE WHEN follow_up_at IS NOT NULL AND follow_up_at::DATE > {today_ist} "
+            f"     THEN follow_up_at END ASC NULLS LAST, "
+            f"updated_at DESC"
+        )
+    else:
+        sort_dir = "ASC" if (args.get("dir") or "").strip().lower() == "asc" else "DESC"
+        sort_sql = SORTABLE_FIELDS.get(sort_field, SORTABLE_FIELDS["updated_at"])
+        nulls_clause = "NULLS LAST" if sort_dir == "DESC" else "NULLS FIRST"
+        order_clause = (
+            "(CASE WHEN stage = 'rejected' THEN 1 ELSE 0 END) ASC, "
+            "priority DESC, "
+            f"{sort_sql} {sort_dir} {nulls_clause}, "
+            "updated_at DESC"
+        )
 
     list_sql = f"""
         SELECT * FROM ({_INVENTORY_WITH_PRICING_SQL} {inner_where}) j
