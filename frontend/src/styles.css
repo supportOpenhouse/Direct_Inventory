@@ -150,6 +150,13 @@ a { color: inherit; }
 }
 .filtered-header .muted { color: #94a3b8; font-size: 12px; }
 .filtered-header .page-num { color: #64748b; font-size: 12px; padding: 0 6px; }
+.page-jump {
+  width: 48px; text-align: center; font-size: 12px;
+  padding: 3px 4px; margin: 0 2px;
+  border: 1px solid #cbd5e1; border-radius: 6px; color: #0f1115;
+  -moz-appearance: textfield;
+}
+.page-jump:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px #e0e7ff; }
 
 /* Value/colour utilities — shared between the table and the detail modal. */
 .val-orange { color: #ea580c; font-weight: 700; }

@@ -23,6 +23,9 @@ export default function Board() {
   // plain column sort. See inventory.list_inventory for the SQL.
   const [sort, setSort] = useState({ field: 'smart', dir: 'desc' });
   const [page, setPage] = useState(0);
+  // Mirrors `page + 1` (1-indexed) for the jump-to-page input. Kept as a
+  // string so the field can be cleared mid-typing.
+  const [pageInput, setPageInput] = useState('1');
 
   // Extended filters from the FilterPanel modal.
   const [filtersApplied, setFiltersApplied] = useState({});
@@ -90,6 +93,9 @@ export default function Board() {
     /* eslint-disable-next-line */
   }, [city, qApplied, stageSel, filtersApplied, sort.field, sort.dir]);
   useEffect(() => { refresh(page); /* eslint-disable-next-line */ }, [page]);
+  // Keep the jump-to-page field in sync whenever `page` changes elsewhere
+  // (Prev/Next, filter reset). Does not fire while the user is mid-typing.
+  useEffect(() => { setPageInput(String(page + 1)); }, [page]);
 
   function onSearch(e) {
     e?.preventDefault();
@@ -178,6 +184,19 @@ export default function Board() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const filterCount = Object.keys(filtersApplied).length;
 
+  // Commit the jump-to-page field: parse, clamp to [1, totalPages], jump.
+  // Empty / invalid input snaps back to the current page.
+  function commitPageInput() {
+    const n = parseInt(pageInput, 10);
+    if (Number.isNaN(n)) {
+      setPageInput(String(page + 1));
+      return;
+    }
+    const clamped = Math.min(Math.max(n, 1), totalPages);
+    setPageInput(String(clamped));
+    if (clamped - 1 !== page) setPage(clamped - 1);
+  }
+
   return (
     <div className="board-page">
       <div className="board-toolbar">
@@ -258,7 +277,20 @@ export default function Board() {
         </span>
         <span className="toolbar-spacer" />
         <button className="btn-ghost" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>← Prev</button>
-        <span className="page-num">Page {page + 1} / {totalPages}</span>
+        <span className="page-num">
+          Page{' '}
+          <input
+            className="page-jump"
+            type="text"
+            inputMode="numeric"
+            value={pageInput}
+            onChange={(e) => setPageInput(e.target.value.replace(/\D/g, ''))}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+            onBlur={commitPageInput}
+            aria-label="Go to page"
+          />
+          {' / '}{totalPages}
+        </span>
         <button className="btn-ghost" disabled={page + 1 >= totalPages} onClick={() => setPage((p) => p + 1)}>Next →</button>
       </div>
 
