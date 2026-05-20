@@ -535,6 +535,87 @@ a { color: inherit; }
   overflow: auto; padding: 14px 18px;
 }
 
+/* User edit modal */
+.modal-user-edit {
+  max-width: 860px; width: 92vw; max-height: 88vh;
+  overflow: visible; padding: 16px 20px;
+}
+.ue-section { margin-top: 16px; }
+.ue-label {
+  display: block; font-weight: 600; color: #0f1115; font-size: 13px;
+  margin-bottom: 6px;
+}
+.ue-hint { color: #64748b; font-size: 12px; margin: 0 0 10px; }
+.ue-manager-select { min-width: 240px; }
+.ue-scope-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+}
+.ue-scope-col {
+  border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;
+  background: #f8fafc;
+}
+.ue-scope-active { background: #eef2ff; border-color: #6366f1; }
+.ue-scope-head {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 600; font-size: 13px; color: #0f1115; margin-bottom: 10px;
+  cursor: pointer;
+}
+.ue-scope-count {
+  margin-left: auto; background: #6366f1; color: #fff;
+  border-radius: 999px; min-width: 20px; text-align: center;
+  font-size: 11px; padding: 1px 6px;
+}
+.ue-scope-count:empty { display: none; }
+.usr-scope { color: #475569; font-size: 12px; white-space: nowrap; }
+
+/* Searchable multiselect */
+.sms { position: relative; }
+.sms-btn {
+  width: 100%; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px;
+  padding: 7px 10px; cursor: pointer; font-size: 13px; text-align: left;
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+}
+.sms-btn:hover:not(:disabled) { border-color: #94a3b8; }
+.sms-disabled .sms-btn, .sms-btn:disabled {
+  background: #f1f5f9; color: #94a3b8; cursor: not-allowed;
+}
+.sms-placeholder { color: #94a3b8; }
+.sms-caret { color: #94a3b8; }
+.sms-menu {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 60;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12); padding: 8px;
+}
+.sms-search {
+  width: 100%; box-sizing: border-box; padding: 6px 8px;
+  border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px;
+  margin-bottom: 6px;
+}
+.sms-clear {
+  background: none; border: none; color: #2563eb; cursor: pointer;
+  font-size: 12px; padding: 2px 4px; margin-bottom: 4px;
+}
+.sms-list { max-height: 220px; overflow-y: auto; }
+.sms-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 6px; border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+.sms-item:hover { background: #f1f5f9; }
+.sms-empty, .sms-more { padding: 8px 6px; color: #94a3b8; font-size: 12px; }
+.sms-chips {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;
+  max-height: 132px; overflow-y: auto;
+}
+.sms-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #e0e7ff; color: #3730a3; border-radius: 6px;
+  padding: 2px 4px 2px 8px; font-size: 12px;
+}
+.sms-chip button {
+  background: none; border: none; color: #6366f1; cursor: pointer;
+  font-size: 14px; line-height: 1; padding: 0 2px;
+}
+
 /* Category pills */
 .cat-pill {
   display: inline-block; padding: 3px 10px; border-radius: 999px;

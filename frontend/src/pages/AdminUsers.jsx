@@ -1,13 +1,32 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
 import { CITIES } from '../utils/format.js';
+import UserEditModal from '../components/UserEditModal.jsx';
 
 const ROLES = ['admin', 'manager', 'rm'];
 
+// One-line summary of a user's area scope, mirroring resolution precedence:
+// society > micro-market > city.
+function scopeSummary(u) {
+  if ((u.society || []).length) {
+    return `Societies: ${u.society.length}`;
+  }
+  if ((u.micro_market || []).length) {
+    return `Micro-markets: ${u.micro_market.length}`;
+  }
+  if ((u.cities || []).length) {
+    return `Cities: ${u.cities.join(', ')}`;
+  }
+  return '—';
+}
+
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
+  const [areas, setAreas] = useState({ cities: [], micro_markets: [], societies: [] });
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState({ email: '', name: '', phone: '', role: 'rm', cities: [] });
+  const [error, setError] = useState(null);
+  const [editUser, setEditUser] = useState(null);
 
   // When role flips to admin, default-select all cities. Admin needs cross-city visibility.
   function setRole(role) {
@@ -17,7 +36,6 @@ export default function AdminUsers() {
       cities: role === 'admin' ? [...CITIES] : p.cities,
     }));
   }
-  const [error, setError] = useState(null);
 
   async function refresh() {
     setLoading(true);
@@ -26,7 +44,20 @@ export default function AdminUsers() {
       setUsers(r.items);
     } finally { setLoading(false); }
   }
-  useEffect(() => { refresh(); }, []);
+
+  async function loadAreas() {
+    try {
+      const r = await api.get('/api/users/master-areas');
+      setAreas(r);
+    } catch { /* non-blocking — modal pickers just stay empty */ }
+  }
+
+  useEffect(() => { refresh(); loadAreas(); }, []);
+
+  const managers = useMemo(
+    () => users.filter((u) => u.role === 'manager').map((u) => ({ id: u.id, name: u.name, email: u.email })),
+    [users],
+  );
 
   function toggleCity(c) {
     setDraft((p) => ({
@@ -80,13 +111,19 @@ export default function AdminUsers() {
         </div>
         {error && <div className="modal-error">{error}</div>}
         <div className="modal-actions"><button className="btn-primary" onClick={add}>Add user</button></div>
+        <p className="page-hint">After adding, click a user below to set their manager and area scope.</p>
       </div>
 
       <div className="card-block">
         <h3>All users</h3>
         {loading ? <div>Loading…</div> : (
           <table className="data-table">
-            <thead><tr><th>Email</th><th>Name</th><th>Phone</th><th>Role</th><th>Cities</th><th>Active</th><th></th></tr></thead>
+            <thead>
+              <tr>
+                <th>Email</th><th>Name</th><th>Phone</th><th>Role</th>
+                <th>Manager</th><th>Area scope</th><th>Active</th><th></th>
+              </tr>
+            </thead>
             <tbody>
               {users.map((u) => (
                 <tr key={u.id}>
@@ -98,18 +135,31 @@ export default function AdminUsers() {
                       {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                     </select>
                   </td>
-                  <td>{(u.cities || []).join(', ') || '—'}</td>
+                  <td>{u.manager_name || u.manager_email || <em className="muted">—</em>}</td>
+                  <td className="usr-scope">{scopeSummary(u)}</td>
                   <td>
                     <input type="checkbox" checked={!!u.is_active}
                       onChange={(e) => patch(u.id, { is_active: e.target.checked })} />
                   </td>
-                  <td></td>
+                  <td>
+                    <button className="btn-link" onClick={() => setEditUser(u)}>Edit</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      {editUser && (
+        <UserEditModal
+          user={editUser}
+          managers={managers}
+          areas={areas}
+          onClose={() => setEditUser(null)}
+          onSaved={() => { setEditUser(null); refresh(); }}
+        />
+      )}
     </div>
   );
 }

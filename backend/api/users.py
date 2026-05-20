@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from flask import Blueprint, g, jsonify, request
 
-from ..db import get_conn
+from ..db import get_conn, get_props_conn
 from ..services.activity import log as log_activity
 from .auth import require_auth
 
@@ -18,15 +18,23 @@ def list_users():
     role = request.args.get("role")
     city = request.args.get("city")
 
-    sql = "SELECT id, email, name, phone, role, cities, is_active, created_at FROM users WHERE TRUE"
+    sql = """
+        SELECT u.id, u.email, u.name, u.phone, u.role,
+               u.cities, u.society, u.micro_market, u.manager,
+               u.is_active, u.created_at,
+               m.name AS manager_name, m.email AS manager_email
+        FROM users u
+        LEFT JOIN users m ON m.id = u.manager
+        WHERE TRUE
+    """
     params: list = []
     if role:
-        sql += " AND role = %s"
+        sql += " AND u.role = %s"
         params.append(role)
     if city:
-        sql += " AND %s = ANY(cities)"
+        sql += " AND %s = ANY(u.cities)"
         params.append(city)
-    sql += " ORDER BY role, email"
+    sql += " ORDER BY u.role, u.email"
 
     conn = get_conn()
     try:
@@ -34,6 +42,40 @@ def list_users():
             cur.execute(sql, params)
             rows = cur.fetchall()
         return jsonify({"items": rows})
+    finally:
+        conn.close()
+
+
+@bp.get("/master-areas")
+@require_auth("admin")
+def master_areas():
+    """Distinct cities / micro-markets / societies from the read-only
+    PROPERTIES_DB.master_societies table. Populates the scope pickers on the
+    user edit modal.
+    """
+    conn = get_props_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT DISTINCT city FROM master_societies "
+                "WHERE city IS NOT NULL AND city <> '' ORDER BY city"
+            )
+            cities = [r["city"] for r in cur.fetchall()]
+            cur.execute(
+                "SELECT DISTINCT micro_market FROM master_societies "
+                "WHERE micro_market IS NOT NULL AND micro_market <> '' ORDER BY micro_market"
+            )
+            micro_markets = [r["micro_market"] for r in cur.fetchall()]
+            cur.execute(
+                "SELECT DISTINCT society_name FROM master_societies "
+                "WHERE society_name IS NOT NULL AND society_name <> '' ORDER BY society_name"
+            )
+            societies = [r["society_name"] for r in cur.fetchall()]
+        return jsonify({
+            "cities": cities,
+            "micro_markets": micro_markets,
+            "societies": societies,
+        })
     finally:
         conn.close()
 
@@ -81,10 +123,21 @@ def create_user():
 @require_auth("admin")
 def update_user(user_id: int):
     body = request.get_json(silent=True) or {}
-    allowed = {"name", "phone", "role", "cities", "is_active"}
+    allowed = {"name", "phone", "role", "cities", "is_active",
+               "society", "micro_market", "manager"}
     updates = {k: v for k, v in body.items() if k in allowed}
     if "role" in updates and updates["role"] not in VALID_ROLES:
-        return jsonify({"error": f"invalid role"}), 400
+        return jsonify({"error": "invalid role"}), 400
+    # manager: coerce to int or NULL; a user can't be their own manager.
+    if "manager" in updates:
+        mv = updates["manager"]
+        updates["manager"] = int(mv) if mv not in (None, "", 0) else None
+        if updates["manager"] == user_id:
+            return jsonify({"error": "a user cannot be their own manager"}), 400
+    # Array scope fields — normalise null -> empty array.
+    for arr_field in ("cities", "society", "micro_market"):
+        if arr_field in updates and updates[arr_field] is None:
+            updates[arr_field] = []
     if not updates:
         return jsonify({"error": "no editable fields"}), 400
 
