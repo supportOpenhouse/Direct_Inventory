@@ -23,6 +23,7 @@ export default function UserEditModal({ user, managers, areas, onClose, onSaved 
   const [microMarkets, setMicroMarkets] = useState(user.micro_market || []);
   const [societies, setSocieties] = useState(user.society || []);
   const [manager, setManager] = useState(user.manager || '');
+  const [isActive, setIsActive] = useState(!!user.is_active);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -41,6 +42,7 @@ export default function UserEditModal({ user, managers, areas, onClose, onSaved 
       // Only the active scope level is persisted with values; the other two
       // are explicitly cleared so the precedence logic stays unambiguous.
       const body = {
+        is_active: isActive,
         manager: manager ? Number(manager) : null,
         cities:       scope === 'city'         ? cities       : [],
         micro_market: scope === 'micro_market' ? microMarkets : [],
@@ -68,9 +70,21 @@ export default function UserEditModal({ user, managers, areas, onClose, onSaved 
         </div>
 
         <div className="ue-section">
+          <label className="ue-label">Status</label>
+          <label className="ue-toggle">
+            <input
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+            />
+            <span>{isActive ? 'Active' : 'Inactive'}</span>
+          </label>
+        </div>
+
+        <div className="ue-section">
           <label className="ue-label">Manager</label>
           <select
-            className="ue-manager-select"
+            className="ue-manager-select role-select"
             value={manager}
             onChange={(e) => setManager(e.target.value)}
           >

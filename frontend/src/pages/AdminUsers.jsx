@@ -4,6 +4,7 @@ import { CITIES } from '../utils/format.js';
 import UserEditModal from '../components/UserEditModal.jsx';
 
 const ROLES = ['admin', 'manager', 'rm'];
+const ROLE_LABELS = { admin: 'Admin', manager: 'Manager', rm: 'RM' };
 
 // One-line summary of a user's area scope, mirroring resolution precedence:
 // society > micro-market > city.
@@ -91,8 +92,8 @@ export default function AdminUsers() {
           <div><label>Name</label><input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></div>
           <div><label>Phone</label><input value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} /></div>
           <div><label>Role</label>
-            <select value={draft.role} onChange={(e) => setRole(e.target.value)}>
-              {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+            <select className="role-select" value={draft.role} onChange={(e) => setRole(e.target.value)}>
+              {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
             </select>
           </div>
           <div className="form-wide">
@@ -121,26 +122,26 @@ export default function AdminUsers() {
             <thead>
               <tr>
                 <th>Email</th><th>Name</th><th>Phone</th><th>Role</th>
-                <th>Manager</th><th>Area scope</th><th>Active</th><th></th>
+                <th>Manager</th><th>Area scope</th><th></th>
               </tr>
             </thead>
             <tbody>
               {users.map((u) => (
-                <tr key={u.id}>
+                <tr key={u.id} className={u.is_active ? '' : 'usr-inactive'}>
                   <td>{u.email}</td>
                   <td>{u.name || '—'}</td>
                   <td>{u.phone || '—'}</td>
                   <td>
-                    <select value={u.role} onChange={(e) => patch(u.id, { role: e.target.value })}>
-                      {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                    <select
+                      className="role-select"
+                      value={u.role}
+                      onChange={(e) => patch(u.id, { role: e.target.value })}
+                    >
+                      {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                     </select>
                   </td>
                   <td>{u.manager_name || u.manager_email || <em className="muted">—</em>}</td>
                   <td className="usr-scope">{scopeSummary(u)}</td>
-                  <td>
-                    <input type="checkbox" checked={!!u.is_active}
-                      onChange={(e) => patch(u.id, { is_active: e.target.checked })} />
-                  </td>
                   <td>
                     <button className="btn-edit" onClick={() => setEditUser(u)}>
                       <span aria-hidden="true">✎</span> Edit

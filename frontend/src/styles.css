@@ -72,6 +72,19 @@ a { color: inherit; }
 .btn-edit:hover { background: #eef2ff; border-color: #6366f1; color: #4338ca; }
 .btn-edit:active { background: #e0e7ff; }
 
+/* Compact styled select — used for the Role / Manager dropdowns. */
+.role-select {
+  appearance: none; -webkit-appearance: none;
+  border: 1px solid #cbd5e1; border-radius: 7px;
+  padding: 5px 26px 5px 10px; font-size: 12px; font-weight: 600;
+  color: #334155; cursor: pointer; background-color: #fff;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2012%2012'%3E%3Cpath%20fill='%2394a3b8'%20d='M6%208L2%204h8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center; background-size: 10px;
+}
+.role-select:hover { border-color: #94a3b8; }
+.role-select:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px #e0e7ff; }
+.ue-manager-select.role-select { min-width: 240px; font-size: 13px; padding: 7px 30px 7px 12px; }
+
 
 /* Bulk action bar — floating row above the kanban when ≥1 cards selected */
 .bulk-bar {
@@ -557,7 +570,11 @@ a { color: inherit; }
   margin-bottom: 6px;
 }
 .ue-hint { color: #64748b; font-size: 12px; margin: 0 0 10px; }
-.ue-manager-select { min-width: 240px; }
+.ue-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; color: #334155; cursor: pointer;
+}
+.ue-toggle input { width: 16px; height: 16px; cursor: pointer; }
 .ue-scope-grid {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
 }
@@ -578,6 +595,9 @@ a { color: inherit; }
 }
 .ue-scope-count:empty { display: none; }
 .usr-scope { color: #475569; font-size: 12px; white-space: nowrap; }
+/* Inactive users — dimmed in the table since the Active column was removed. */
+.usr-inactive { opacity: 0.5; }
+.usr-inactive:hover { opacity: 0.75; }
 
 /* Searchable multiselect */
 .sms { position: relative; }
