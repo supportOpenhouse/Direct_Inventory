@@ -142,7 +142,9 @@ export default function AdminUsers() {
                       onChange={(e) => patch(u.id, { is_active: e.target.checked })} />
                   </td>
                   <td>
-                    <button className="btn-link" onClick={() => setEditUser(u)}>Edit</button>
+                    <button className="btn-edit" onClick={() => setEditUser(u)}>
+                      <span aria-hidden="true">✎</span> Edit
+                    </button>
                   </td>
                 </tr>
               ))}

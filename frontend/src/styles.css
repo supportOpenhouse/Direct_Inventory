@@ -63,6 +63,14 @@ a { color: inherit; }
 .btn-ghost {
   background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 14px; font-weight: 600;
 }
+.btn-edit {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #fff; border: 1px solid #cbd5e1; border-radius: 7px;
+  padding: 5px 12px; font-size: 12px; font-weight: 600; color: #334155;
+  cursor: pointer; transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.btn-edit:hover { background: #eef2ff; border-color: #6366f1; color: #4338ca; }
+.btn-edit:active { background: #e0e7ff; }
 
 
 /* Bulk action bar — floating row above the kanban when ≥1 cards selected */
