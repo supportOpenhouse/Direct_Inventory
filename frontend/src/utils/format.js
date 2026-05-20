@@ -27,10 +27,10 @@ export function formatDateShort(iso) {
   return `${day} ${MONTHS_SHORT[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
-// A DATE-typed field (follow_up_at, posting_date) serializes to UTC midnight,
-// so UTC parts give the calendar date. True when it is strictly before the
+// A DATE column (follow_up_at) serializes to UTC midnight, so reading UTC
+// parts gives its calendar date. True when that date is strictly before the
 // local (IST) today; compared as YYYY-MM-DD strings.
-function isBeforeToday(iso) {
+function isDateBeforeToday(iso) {
   if (!iso) return false;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return false;
@@ -38,27 +38,40 @@ function isBeforeToday(iso) {
   return day < todayISO();
 }
 
+// Whole days between `iso` and now, floored. 0 means within the last 24h —
+// exactly when formatDateRel() labels it "Today". null on an unparseable date.
+function daysAgo(iso) {
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return null;
+  return Math.floor((Date.now() - then.getTime()) / 86400_000);
+}
+
 // Attention flag for a row's OH-ID / City / Society cells. Returns one of:
 //   'yellow' — Follow Up stage and the follow-up date has already passed.
-//   'red'    — Lead (qualified) stage and the listing was posted before today
-//              (a stale, unworked lead).
+//   'red'    — Lead (qualified) stage that came in before today (a stale,
+//              unworked lead). Driven by created_at via the same day-count as
+//              the "Posted" column, so a row showing "Posted: Today" is never
+//              red.
 //   null     — neither.
 // The two stages are disjoint, so the rules never conflict.
 export function rowFlag(item) {
   if (!item) return null;
-  if (item.stage === 'follow_up' && isBeforeToday(item.follow_up_at)) return 'yellow';
-  if (item.stage === 'qualified' && isBeforeToday(item.posting_date)) return 'red';
+  if (item.stage === 'follow_up' && isDateBeforeToday(item.follow_up_at)) return 'yellow';
+  if (item.stage === 'qualified') {
+    const d = daysAgo(item.created_at);
+    if (d != null && d >= 1) return 'red';
+  }
   return null;
 }
 
 export function formatDateRel(iso) {
   if (!iso) return '—';
-  const then = new Date(iso);
-  const days = Math.floor((Date.now() - then.getTime()) / 86400_000);
+  const days = daysAgo(iso);
+  if (days == null) return String(iso);
   if (days <= 0) return 'Today';
   if (days === 1) return 'Yesterday';
   if (days < 7) return `${days}d ago`;
-  return then.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
 export function stageLabel(s) {
