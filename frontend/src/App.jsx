@@ -8,11 +8,13 @@ import AdminUserReport from './pages/AdminUserReport.jsx';
 import AdminUserReportDetail from './pages/AdminUserReportDetail.jsx';
 import Layout from './components/Layout.jsx';
 
-function RequireAuth({ children, role }) {
+function RequireAuth({ children, role, roles }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="loading">Loading…</div>;
   if (!user) return <Navigate to="/login" replace />;
-  if (role && user.role !== role && user.role !== 'admin') {
+  // `role` = single allowed role; `roles` = list. Admin always passes.
+  const allowed = roles || (role ? [role] : null);
+  if (allowed && !allowed.includes(user.role) && user.role !== 'admin') {
     return <Navigate to="/" replace />;
   }
   return children;
@@ -34,13 +36,15 @@ export default function App() {
           path="/admin/activity"
           element={<RequireAuth role="admin"><AdminActivity /></RequireAuth>}
         />
+        {/* User Report — admin sees all users, manager sees only their RMs.
+            Page + backend both enforce the manager scope. */}
         <Route
           path="/admin/user-report"
-          element={<RequireAuth role="admin"><AdminUserReport /></RequireAuth>}
+          element={<RequireAuth roles={['admin', 'manager']}><AdminUserReport /></RequireAuth>}
         />
         <Route
           path="/admin/user-report/detail"
-          element={<RequireAuth role="admin"><AdminUserReportDetail /></RequireAuth>}
+          element={<RequireAuth roles={['admin', 'manager']}><AdminUserReportDetail /></RequireAuth>}
         />
         {/* Self-service report — any role. The component locks the email to
             the logged-in user for non-admins. */}

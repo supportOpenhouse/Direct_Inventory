@@ -112,12 +112,13 @@ function DayLeadsModal({ email, date, onClose }) {
 export default function AdminUserReportDetail() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
-  // Non-admins can only ever see their own report. The email query param is
-  // honoured only for admins; everyone else is forced to their own email.
-  // The backend enforces the same rule independently.
+  // Admins and managers may view another user via the email param; RMs are
+  // always forced to themselves. The backend independently enforces that a
+  // manager can only open their own RMs (and an RM only themselves).
   const paramEmail = (searchParams.get('email') || '').toLowerCase();
-  const email = (isAdmin && paramEmail) ? paramEmail : (user?.email || '').toLowerCase();
+  const email = (user?.role !== 'rm' && paramEmail)
+    ? paramEmail
+    : (user?.email || '').toLowerCase();
   const isOwnReport = email === (user?.email || '').toLowerCase();
   const initFrom = searchParams.get('from') || todayIST();
   const initTo = searchParams.get('to') || todayIST();

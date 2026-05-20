@@ -304,6 +304,27 @@ def _build_filters(user: dict, args, alias: str = ""):
         if truthy:
             base_filters.append(f"AND {p}priority = TRUE")
 
+    # Star filter (admin-only in the UI). Comma-separated list of effective
+    # star categories. The CASE mirrors the frontend starColor() resolution:
+    # explicit star_color override wins, then priority, then cp_match.
+    star = args.get("star")
+    if star:
+        valid_stars = {"partial", "perfect", "important", "blank"}
+        stars = [s for s in (x.strip().lower() for x in star.split(",")) if s in valid_stars]
+        if stars:
+            base_filters.append(
+                f"AND (CASE "
+                f"WHEN {p}star_color = 'yellow' THEN 'important' "
+                f"WHEN {p}star_color = 'green'  THEN 'perfect' "
+                f"WHEN {p}star_color = 'red'    THEN 'partial' "
+                f"WHEN {p}star_color = 'none'   THEN 'blank' "
+                f"WHEN {p}priority THEN 'important' "
+                f"WHEN {p}cp_match = 'perfect'  THEN 'perfect' "
+                f"WHEN {p}cp_match = 'partial'  THEN 'partial' "
+                f"ELSE 'blank' END) = ANY(%s)"
+            )
+            base_params.append(stars)
+
     # Variation = (asking - oh) / oh * 100. Requires oh_price from the LATERAL.
     post_filters: list[str] = []
     post_params: list = []
@@ -641,6 +662,88 @@ def get_one(oh_id: str):
         return jsonify(row)
     finally:
         conn.close()
+
+
+@bp.get("/<oh_id>/visible-rms")
+@require_auth("admin", "manager")
+def visible_rms(oh_id: str):
+    """Which RMs would see this property under the visibility rules.
+
+    Inverts the per-RM logic in _scope_clause: for each active RM, apply
+    their scope (society > micro_market > city/assignment) to this one row.
+    Admin/manager only.
+
+    Response: { oh_id, rms: [{ id, name, email, via }] }
+      via ∈ {'society','micro_market','city','assignment'}
+    """
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT oh_id, society, city, assigned_rm_id FROM inventory WHERE oh_id = %s",
+                (oh_id,),
+            )
+            inv = cur.fetchone()
+            if not inv:
+                return jsonify({"error": "not found"}), 404
+            cur.execute(
+                "SELECT id, name, email, society, micro_market, cities "
+                "FROM users WHERE role = 'rm' AND is_active = TRUE"
+            )
+            rms = cur.fetchall()
+    finally:
+        conn.close()
+
+    society = inv.get("society")
+    city = inv.get("city")
+    assigned_rm_id = inv.get("assigned_rm_id")
+
+    # Micro-markets that contain this property's society — an RM scoped by
+    # micro_market sees the row iff their micros intersect this set. This is
+    # the inverse of _rm_society_scope's micro_market -> societies resolution.
+    prop_micros: set = set()
+    if society:
+        try:
+            pconn = get_props_conn()
+            try:
+                with pconn.cursor() as pcur:
+                    pcur.execute(
+                        "SELECT DISTINCT micro_market FROM master_societies "
+                        "WHERE society_name = %s AND micro_market IS NOT NULL",
+                        (society,),
+                    )
+                    prop_micros = {r["micro_market"] for r in pcur.fetchall()}
+            finally:
+                pconn.close()
+        except Exception:
+            log.exception("master_societies lookup failed for visible-rms oh_id=%s", oh_id)
+
+    matched = []
+    for rm in rms:
+        rm_soc = rm.get("society") or []
+        rm_micro = rm.get("micro_market") or []
+        rm_cities = rm.get("cities") or []
+        via = None
+        if rm_soc:
+            if society and society in rm_soc:
+                via = "society"
+        elif rm_micro:
+            if prop_micros and set(rm_micro) & prop_micros:
+                via = "micro_market"
+        elif rm_cities:
+            if assigned_rm_id == rm["id"]:
+                via = "assignment"
+            elif city and city in _expand_cities(rm_cities):
+                via = "city"
+        elif assigned_rm_id == rm["id"]:
+            via = "assignment"
+        if via:
+            matched.append({
+                "id": rm["id"], "name": rm["name"], "email": rm["email"], "via": via,
+            })
+
+    matched.sort(key=lambda r: (r["name"] or r["email"] or "").lower())
+    return jsonify({"oh_id": oh_id, "rms": matched})
 
 
 @bp.post("")

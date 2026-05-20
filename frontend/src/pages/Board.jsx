@@ -335,6 +335,7 @@ export default function Board() {
         <FilterPanel
           initial={filterFormState}
           defaultCity={city}
+          role={user?.role}
           onClose={() => setShowFilters(false)}
           onApply={(applied, formState) => {
             setFiltersApplied(applied);

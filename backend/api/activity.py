@@ -253,13 +253,47 @@ def _parse_users_param():
     return [s.strip() for s in raw.split(",") if s.strip()]
 
 
+def _manager_rm_emails(cur, manager_id):
+    """Lowercased emails of the RMs that report to this manager."""
+    cur.execute("SELECT LOWER(email) AS email FROM users WHERE manager = %s", (manager_id,))
+    return {r["email"] for r in cur.fetchall() if r.get("email")}
+
+
+def _resolve_report_email(cur):
+    """Resolve the report subject email for the current user, enforcing access.
+
+    Returns (email, err) — exactly one is meaningful:
+      admin   -> requested email (or self if none); err is None
+      manager -> self, or one of their RMs; err set (403 tuple) otherwise
+      rm      -> always self; err is None
+    `err`, when set, is a (response, status) tuple the caller should return.
+    """
+    role = g.user["role"]
+    own = (g.user["email"] or "").strip().lower()
+    requested = (request.args.get("email") or "").strip().lower()
+    if role == "admin":
+        return (requested or own, None)
+    if role == "manager":
+        if not requested or requested == own:
+            return (own, None)
+        cur.execute(
+            "SELECT 1 FROM users WHERE LOWER(email) = %s AND manager = %s",
+            (requested, g.user["id"]),
+        )
+        if not cur.fetchone():
+            return (None, (jsonify({"error": "you can only view your own RMs' reports"}), 403))
+        return (requested, None)
+    return (own, None)  # rm — always self
+
+
 @bp.get("/user-report")
-@require_auth("admin")
+@require_auth("admin", "manager")
 def user_report():
     """Per-user summary across an IST date range.
 
     Query: from=YYYY-MM-DD, to=YYYY-MM-DD (both default to today IST),
            users=email1,email2 (optional filter).
+    Admin sees every user; a manager sees only their own RMs.
     Response: { from, to, users: [{ actor_email, actor_name, actor_role,
                 total, counts, days_active }] }
     """
@@ -269,20 +303,35 @@ def user_report():
         return jsonify({"error": str(e)}), 400
 
     emails = _parse_users_param()
-    extra_where = "AND a.actor_email = ANY(%s)" if emails else ""
-    sql = (
-        _WINNERS_CTE.format(extra_where=extra_where) +
-        " SELECT w.actor_email, w.day, w.final_stage, "
-        "        u.name AS actor_name, u.role AS actor_role "
-        " FROM winners w LEFT JOIN users u ON u.email = w.actor_email"
-    )
-    params: list = [start_utc, end_utc]
-    if emails:
-        params.append(emails)
 
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
+            if g.user["role"] == "manager":
+                # A manager only ever sees their RMs — intersect any explicit
+                # users= filter with that set.
+                rm_emails = _manager_rm_emails(cur, g.user["id"])
+                if emails:
+                    emails = [e for e in emails if e.strip().lower() in rm_emails]
+                else:
+                    emails = list(rm_emails)
+                if not emails:
+                    return jsonify({
+                        "from": date_from.isoformat(),
+                        "to": date_to.isoformat(),
+                        "users": [],
+                    })
+
+            extra_where = "AND a.actor_email = ANY(%s)" if emails else ""
+            sql = (
+                _WINNERS_CTE.format(extra_where=extra_where) +
+                " SELECT w.actor_email, w.day, w.final_stage, "
+                "        u.name AS actor_name, u.role AS actor_role "
+                " FROM winners w LEFT JOIN users u ON u.email = w.actor_email"
+            )
+            params: list = [start_utc, end_utc]
+            if emails:
+                params.append(emails)
             cur.execute(sql, params)
             rows = cur.fetchall()
     finally:
@@ -329,15 +378,9 @@ def user_report_days():
     Response: { email, actor_name, actor_role, from, to, days: [{ day,
                 total, counts }] }
 
-    Non-admins may only see their own report — the requested `email` is
-    forced to their own, so passing someone else's is silently ignored.
+    Access: admin → any user; manager → themselves or one of their RMs;
+    rm → only themselves.
     """
-    if g.user["role"] == "admin":
-        email = (request.args.get("email") or "").strip().lower()
-    else:
-        email = (g.user["email"] or "").strip().lower()
-    if not email:
-        return jsonify({"error": "email is required"}), 400
     try:
         date_from, date_to, start_utc, end_utc = _parse_ist_range()
     except ValueError as e:
@@ -352,6 +395,11 @@ def user_report_days():
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
+            email, err = _resolve_report_email(cur)
+            if err:
+                return err
+            if not email:
+                return jsonify({"error": "email is required"}), 400
             cur.execute(sql, (start_utc, end_utc, email))
             rows = cur.fetchall()
     finally:
@@ -393,14 +441,11 @@ def user_report_leads():
                 from_stage, final_stage, current_stage, reject_reason,
                 last_change_at }] }
 
-    Non-admins may only see their own report — `email` is forced to self.
+    Access: admin → any user; manager → themselves or one of their RMs;
+    rm → only themselves.
     """
-    if g.user["role"] == "admin":
-        email = (request.args.get("email") or "").strip().lower()
-    else:
-        email = (g.user["email"] or "").strip().lower()
     date_str = (request.args.get("date") or "").strip()
-    if not email or not date_str:
+    if not date_str:
         return jsonify({"error": "email and date are required"}), 400
     try:
         day_ist = datetime.strptime(date_str, "%Y-%m-%d").date()
@@ -423,6 +468,11 @@ def user_report_leads():
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
+            email, err = _resolve_report_email(cur)
+            if err:
+                return err
+            if not email:
+                return jsonify({"error": "email and date are required"}), 400
             cur.execute(sql, (start_utc, end_utc, email))
             rows = cur.fetchall()
     finally:

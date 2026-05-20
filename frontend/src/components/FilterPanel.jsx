@@ -56,7 +56,17 @@ const EMPTY = {
   follow_up_preset: '',
   follow_up_from: '', follow_up_to: '',
   priority: false,
+  star: [],
 };
+
+// Star filter options (admin-only). Keys match the backend `star` param;
+// colours mirror the rendered star.
+const STAR_OPTIONS = [
+  { key: 'partial',   label: 'Partial',   color: '#dc2626' },
+  { key: 'perfect',   label: 'Perfect',   color: '#16a34a' },
+  { key: 'important', label: 'Important', color: '#eab308' },
+  { key: 'blank',     label: 'Blank',     color: '#cbd5e1' },
+];
 
 // Normalize legacy single-string society values to arrays so saved filter
 // state from before the multi-select change still hydrates the panel.
@@ -119,7 +129,8 @@ function ChipMultiSelect({ id, values, options, onChange, placeholder, disabled 
   );
 }
 
-export default function FilterPanel({ initial, defaultCity = '', onApply, onClose }) {
+export default function FilterPanel({ initial, defaultCity = '', role, onApply, onClose }) {
+  const isAdmin = role === 'admin';
   const [f, setF] = useState(() => ({
     ...EMPTY,
     suggest_city: defaultCity,
@@ -127,6 +138,7 @@ export default function FilterPanel({ initial, defaultCity = '', onApply, onClos
     society:  toArray(initial?.society),
     locality: toArray(initial?.locality),
     bhk:      Array.isArray(initial?.bhk) ? initial.bhk : [],
+    star:     Array.isArray(initial?.star) ? initial.star : [],
   }));
   const [societies, setSocieties] = useState([]);
   const [loadingSocs, setLoadingSocs] = useState(false);
@@ -159,6 +171,13 @@ export default function FilterPanel({ initial, defaultCity = '', onApply, onClos
     setF((p) => ({
       ...p,
       bhk: p.bhk.includes(n) ? p.bhk.filter((x) => x !== n) : [...p.bhk, n],
+    }));
+  }
+
+  function toggleStar(key) {
+    setF((p) => ({
+      ...p,
+      star: p.star.includes(key) ? p.star.filter((x) => x !== key) : [...p.star, key],
     }));
   }
 
@@ -201,6 +220,9 @@ export default function FilterPanel({ initial, defaultCity = '', onApply, onClos
     if (f.follow_up_from) out.follow_up_from = f.follow_up_from;
     if (f.follow_up_to)   out.follow_up_to   = f.follow_up_to;
     if (f.priority) out.priority = 1;
+    // Star filter is admin-only — don't emit it for non-admins even if stale
+    // state somehow carries a selection.
+    if (isAdmin && f.star.length) out.star = f.star.join(',');
     onApply(out, f);  // raw form state preserved so panel reopens with same selection
   }
 
@@ -387,6 +409,24 @@ export default function FilterPanel({ initial, defaultCity = '', onApply, onClos
             </span>
           </label>
         </div>
+
+        {isAdmin && (
+          <div className="filter-block">
+            <label>Star</label>
+            <div className="bhk-pills">
+              {STAR_OPTIONS.map((s) => (
+                <button
+                  key={s.key}
+                  type="button"
+                  className={f.star.includes(s.key) ? 'pill pill-on' : 'pill'}
+                  onClick={() => toggleStar(s.key)}
+                >
+                  <span style={{ color: s.color, marginRight: 4 }}>★</span>{s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="modal-actions">
           <button className="btn-ghost" onClick={reset}>Reset</button>

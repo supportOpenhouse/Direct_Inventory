@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api/client.js';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
 import { PRESETS, PRESET_LABELS, downloadCSV, todayIST } from '../utils/reportFilters.js';
 
@@ -68,6 +69,8 @@ function StageCountPills({ counts }) {
 }
 
 export default function AdminUserReport() {
+  const { user } = useAuth();
+  const isManager = user?.role === 'manager';
   // Default view is "All" — every user, all dates.
   const [from, setFrom] = useState(() => PRESETS.all().from);
   const [to, setTo] = useState(() => PRESETS.all().to);
@@ -81,10 +84,10 @@ export default function AdminUserReport() {
   async function loadUserOptions() {
     try {
       const r = await api.get('/api/users');
-      const opts = (r.items || [])
-        .filter((u) => u.is_active)
-        .map((u) => ({ email: u.email, name: u.name, role: u.role }));
-      setAllUsers(opts);
+      let items = (r.items || []).filter((u) => u.is_active);
+      // A manager filters/drills only within their own RMs.
+      if (isManager) items = items.filter((u) => u.manager === user?.id);
+      setAllUsers(items.map((u) => ({ email: u.email, name: u.name, role: u.role })));
     } catch { /* non-blocking */ }
   }
 
@@ -154,7 +157,8 @@ export default function AdminUserReport() {
         <div>
           <h2 className="al-title">User Report</h2>
           <div className="al-subtitle">
-            Per-user summary of stage moves. Click a user to drill down by day.
+            {isManager ? 'Your RMs — per-user' : 'Per-user'} summary of stage moves.
+            Click a user to drill down by day.
           </div>
         </div>
         <div className="al-result-count">

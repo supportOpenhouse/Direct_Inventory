@@ -27,9 +27,13 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
   const [showReject, setShowReject] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const colorPickerRef = useRef(null);
+  // Visibility audit — which RMs see this property (admin/manager only).
+  const [visibleRms, setVisibleRms] = useState(null);   // null = not loaded yet
+  const [loadingRms, setLoadingRms] = useState(false);
 
   const canEdit = ['admin', 'manager', 'rm'].includes(role);
   const canSetPriority = ['admin', 'manager', 'rm'].includes(role);
+  const canSeeVisibleRms = ['admin', 'manager'].includes(role);
   const v = variation(item.price, item.oh_price);
   const isNearest = item.oh_price_match === 'nearest';
   const matchTag = isNearest ? '~' : '';
@@ -45,6 +49,17 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [showColorPicker]);
+
+  useEffect(() => {
+    if (!canSeeVisibleRms) return undefined;
+    let alive = true;
+    setLoadingRms(true);
+    api.get(`/api/inventory/${item.oh_id}/visible-rms`)
+      .then((r) => { if (alive) setVisibleRms(r.rms || []); })
+      .catch(() => { if (alive) setVisibleRms([]); })
+      .finally(() => { if (alive) setLoadingRms(false); });
+    return () => { alive = false; };
+  }, [item.oh_id, canSeeVisibleRms]);
 
   async function applyStage(newStage, extraBody = {}) {
     try {
@@ -286,6 +301,26 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
               {savingField === 'follow_up_at' && <span className="exp-saving"> saving…</span>}
             </div>
           </div>
+
+          {canSeeVisibleRms && (
+            <div className="exp-visible-rms">
+              <span className="exp-lbl">Visible to RMs</span>
+              {loadingRms ? (
+                <span className="muted"> loading…</span>
+              ) : !visibleRms || visibleRms.length === 0 ? (
+                <span className="muted"> No RM currently sees this property</span>
+              ) : (
+                <div className="vrm-chips">
+                  {visibleRms.map((rm) => (
+                    <span key={rm.id} className="vrm-chip" title={`Visible via ${rm.via}`}>
+                      {rm.name || rm.email}
+                      <span className="vrm-via">{rm.via}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {canEdit && (
             <div className="exp-actions">
