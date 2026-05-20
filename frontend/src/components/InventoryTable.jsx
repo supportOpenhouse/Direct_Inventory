@@ -1,6 +1,6 @@
 import { api } from '../api/client.js';
 import {
-  displayCity, formatDateRel, formatDateShort, formatPrice, isFollowUpOverdue, starColor,
+  displayCity, formatDateRel, formatDateShort, formatPrice, rowFlag, starColor,
   STAGE_DOT_COLOR, stageLabel, variation,
 } from '../utils/format.js';
 
@@ -95,6 +95,10 @@ export default function InventoryTable({
             const isNearest = item.oh_price_match === 'nearest';
             const isSel = selected?.has?.(item.oh_id);
             const color = starColor(item);
+            // Overdue follow-up (yellow) / stale Lead (red) — colours the
+            // OH-ID, City and Society cells. See rowFlag() in format.js.
+            const flag = rowFlag(item);
+            const flagCls = flag ? `inv-td-flag-${flag}` : '';
             const rowClasses = [
               'inv-row',
               color === 'yellow' ? 'inv-row-priority' : '',
@@ -146,9 +150,9 @@ export default function InventoryTable({
                     >★</button>
                   )}
                 </td>
-                <td className="inv-td-id">{item.oh_id}</td>
-                <td><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></td>
-                <td className={`inv-td-society ${isFollowUpOverdue(item) ? 'inv-td-overdue' : ''}`.trim()}>
+                <td className={`inv-td-id ${flagCls}`.trim()}>{item.oh_id}</td>
+                <td className={flagCls}><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></td>
+                <td className={`inv-td-society ${flagCls}`.trim()}>
                   {item.society || '—'}
                 </td>
                 <td>{item.bedrooms != null ? `${item.bedrooms} BHK` : '—'}</td>

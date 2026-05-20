@@ -27,16 +27,28 @@ export function formatDateShort(iso) {
   return `${day} ${MONTHS_SHORT[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
-// True when a row is in the Follow Up stage AND its follow-up date is strictly
-// before today — i.e. an overdue follow-up. Today and future dates → false.
-// The stored value is UTC midnight of the date, so UTC parts give the date;
-// it's compared against the local (IST) today as YYYY-MM-DD strings.
-export function isFollowUpOverdue(item) {
-  if (!item || item.stage !== 'follow_up' || !item.follow_up_at) return false;
-  const d = new Date(item.follow_up_at);
+// A DATE-typed field (follow_up_at, posting_date) serializes to UTC midnight,
+// so UTC parts give the calendar date. True when it is strictly before the
+// local (IST) today; compared as YYYY-MM-DD strings.
+function isBeforeToday(iso) {
+  if (!iso) return false;
+  const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return false;
-  const fu = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-  return fu < todayISO();
+  const day = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+  return day < todayISO();
+}
+
+// Attention flag for a row's OH-ID / City / Society cells. Returns one of:
+//   'yellow' — Follow Up stage and the follow-up date has already passed.
+//   'red'    — Lead (qualified) stage and the listing was posted before today
+//              (a stale, unworked lead).
+//   null     — neither.
+// The two stages are disjoint, so the rules never conflict.
+export function rowFlag(item) {
+  if (!item) return null;
+  if (item.stage === 'follow_up' && isBeforeToday(item.follow_up_at)) return 'yellow';
+  if (item.stage === 'qualified' && isBeforeToday(item.posting_date)) return 'red';
+  return null;
 }
 
 export function formatDateRel(iso) {
