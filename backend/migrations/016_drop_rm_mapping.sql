@@ -4,26 +4,30 @@
 --   users.cities[]       — cities a user (RM or manager) covers
 --   users.society[]      — societies an RM is scoped to  (most specific)
 --   users.micro_market[] — micro-markets an RM is scoped to
+--   users.manager        — FK to users(id): the RM's reporting manager
 --
--- Step 1 folds every existing rm_mapping row into those arrays (best effort),
--- Step 2 drops the table. backend/services/assignment.py:resolve_assignment()
--- now reads the users table instead of rm_mapping.
+-- Step 1 folds every existing rm_mapping row into those columns, Step 2 drops
+-- the table. backend/services/assignment.py:resolve_assignment() now reads the
+-- users table instead of rm_mapping.
 --
 -- Mapping carried over:
---   society-level row   -> RM.society[]
---   locality-only row   -> RM.micro_market[]   (locality ~= micro-market)
---   city of every row   -> RM.cities[] and (if set) manager.cities[]
--- NOT carried over: the explicit per-row manager link is collapsed to a
--- city-level association; rebuild finer mapping with the new page.
+--   society-level row     -> RM.society[]
+--   locality-only row     -> RM.micro_market[]   (locality ~= micro-market)
+--   city of every row     -> RM.cities[] and (if set) manager.cities[]
+--   rm -> manager link    -> RM.manager  (most frequent manager if an RM had
+--                                         several mapping rows)
 --
 -- Idempotent: safe to run once; re-running after the table is gone is a no-op.
 
 BEGIN;
 
--- Guard: the app already references these columns, but make sure they exist
--- (and are non-null arrays) for any environment where they were never added.
+-- New columns on users. Guarded with IF NOT EXISTS — society/micro_market are
+-- already referenced by the app; manager is new here.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS society      TEXT[] NOT NULL DEFAULT '{}';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS micro_market TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS manager      INT REFERENCES users(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_users_manager ON users(manager);
 
 DO $$
 DECLARE r RECORD;
@@ -33,8 +37,8 @@ BEGIN
         RETURN;
     END IF;
 
+    -- City / society / micro-market arrays.
     FOR r IN SELECT * FROM rm_mapping LOOP
-        -- City goes to the RM (and the manager, if one was linked).
         UPDATE users
            SET cities = ARRAY(SELECT DISTINCT e
                               FROM unnest(COALESCE(cities, '{}') || r.city) e)
@@ -46,7 +50,6 @@ BEGIN
              WHERE id = r.manager_user_id;
         END IF;
 
-        -- Society-level mapping -> RM.society[]; locality-only -> micro_market[].
         IF r.society IS NOT NULL THEN
             UPDATE users
                SET society = ARRAY(SELECT DISTINCT e
@@ -59,6 +62,23 @@ BEGIN
              WHERE id = r.rm_user_id;
         END IF;
     END LOOP;
+
+    -- RM -> manager link. If an RM had several mapping rows, the most frequent
+    -- manager wins (manager_user_id as a stable tie-break).
+    UPDATE users u
+       SET manager = ranked.manager_user_id
+      FROM (
+          SELECT rm_user_id, manager_user_id,
+                 ROW_NUMBER() OVER (
+                     PARTITION BY rm_user_id
+                     ORDER BY COUNT(*) DESC, manager_user_id
+                 ) AS rn
+          FROM rm_mapping
+          WHERE manager_user_id IS NOT NULL
+          GROUP BY rm_user_id, manager_user_id
+      ) ranked
+     WHERE u.id = ranked.rm_user_id
+       AND ranked.rn = 1;
 END $$;
 
 -- Drop the table and its updated_at trigger.
