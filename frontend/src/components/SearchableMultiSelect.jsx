@@ -6,11 +6,11 @@ import { createPortal } from 'react-dom';
  * lists (hundreds/thousands of societies).
  *
  * The popup is rendered in a portal with fixed positioning so it is never
- * clipped by the narrow grid column it lives in, stays inside the viewport,
- * and flips above the button when there isn't room below.
+ * clipped by the narrow grid column it lives in. It always opens downward;
+ * its height is capped to the space available below so it stays on-screen.
+ * (The host modal is pinned near the top of the viewport to leave room.)
  */
 const MENU_MIN_WIDTH = 380;   // px — wide enough for long society names
-const MENU_MAX_HEIGHT = 380;  // px — popup height budget for flip decision
 const LIST_CAP = 200;         // max rows rendered at once
 
 export default function SearchableMultiSelect({
@@ -33,16 +33,12 @@ export default function SearchableMultiSelect({
     let left = r.left;
     if (left + width > vw - 8) left = Math.max(8, vw - 8 - width);
 
-    // Flip up when there's more room above than the popup needs below.
-    const spaceBelow = vh - r.bottom;
-    const openUp = spaceBelow < MENU_MAX_HEIGHT && r.top > spaceBelow;
+    // Always open downward; cap the height to whatever room is below the
+    // button so the popup never runs off the bottom of the screen.
+    const top = r.bottom + 4;
+    const maxHeight = Math.max(180, vh - top - 12);
 
-    setPos({
-      left,
-      width,
-      top: openUp ? undefined : r.bottom + 4,
-      bottom: openUp ? vh - r.top + 4 : undefined,
-    });
+    setPos({ left, width, top, maxHeight });
   }, []);
 
   useLayoutEffect(() => {
@@ -95,8 +91,8 @@ export default function SearchableMultiSelect({
             position: 'fixed',
             left: pos.left,
             top: pos.top,
-            bottom: pos.bottom,
             width: pos.width,
+            maxHeight: pos.maxHeight,
           }}
         >
           <input
