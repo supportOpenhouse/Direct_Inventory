@@ -251,8 +251,21 @@ def _build_filters(user: dict, args, alias: str = ""):
         base_filters.append(f"AND {p}assigned_rm_id = %s")
         base_params.append(rm_id)
     if q:
-        base_filters.append(f"AND {p}search_tsv @@ plainto_tsquery('simple', %s)")
-        base_params.append(q)
+        # Substring ("half") search: each whitespace-separated token must
+        # appear case-insensitively, anywhere, in at least one searchable
+        # column. Mirrors the old full-text AND-of-words behaviour but also
+        # matches partial words — e.g. "par" finds "Park". LIKE wildcards
+        # (% _ \) in the token are escaped so they match literally.
+        search_cols = [
+            "oh_id", "society", "seller_name", "locality",
+            "city", "source", "notes", "listing_link",
+        ]
+        for tok in q.split():
+            esc = tok.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            like = f"%{esc}%"
+            ored = " OR ".join(f"{p}{c} ILIKE %s" for c in search_cols)
+            base_filters.append(f"AND ({ored})")
+            base_params.extend([like] * len(search_cols))
     if society:
         # Comma-separated list of canonical society names from the filter UI.
         # Match case-insensitively to absorb minor casing/whitespace drift.
@@ -393,9 +406,9 @@ def list_inventory():
     #             others; most recent follow-up date first within each
     #   bucket 2: future follow-up — nearest date first
     #   bucket 3: no follow-up date
-    # 'smart' has no priority float / rejected sink. Any explicit column sort
-    # keeps the legacy behaviour: rejected pinned to the bottom, priority
-    # floated to the top, then the chosen column, then updated_at DESC.
+    # 'smart' has no priority float / rejected sink. An explicit column-header
+    # sort is a pure column sort — no rejected sink, no priority float — with
+    # updated_at DESC only as the final tiebreaker.
     sort_field = (args.get("sort") or "smart").strip()
     if sort_field == "smart":
         today_ist = "(NOW() AT TIME ZONE 'Asia/Kolkata')::DATE"
@@ -421,8 +434,6 @@ def list_inventory():
         sort_sql = SORTABLE_FIELDS.get(sort_field, SORTABLE_FIELDS["updated_at"])
         nulls_clause = "NULLS LAST" if sort_dir == "DESC" else "NULLS FIRST"
         order_clause = (
-            "(CASE WHEN stage = 'rejected' THEN 1 ELSE 0 END) ASC, "
-            "priority DESC, "
             f"{sort_sql} {sort_dir} {nulls_clause}, "
             "updated_at DESC"
         )

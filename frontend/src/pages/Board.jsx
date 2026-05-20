@@ -294,22 +294,19 @@ export default function Board() {
         <button className="btn-ghost" disabled={page + 1 >= totalPages} onClick={() => setPage((p) => p + 1)}>Next →</button>
       </div>
 
-      {loading ? (
-        <div className="loading">Loading…</div>
-      ) : (
-        <InventoryTable
-          items={items}
-          role={user?.role}
-          sort={sort}
-          onSort={setSort}
-          onRowClick={(it) => setOpenItem(it)}
-          onUpdated={patchItemInState}
-          selectMode={selectMode}
-          selected={selected}
-          onToggleSelect={toggleSelect}
-          showStageColumn={stageSel.size === 0}
-        />
-      )}
+      <InventoryTable
+        items={items}
+        loading={loading}
+        role={user?.role}
+        sort={sort}
+        onSort={setSort}
+        onRowClick={(it) => setOpenItem(it)}
+        onUpdated={patchItemInState}
+        selectMode={selectMode}
+        selected={selected}
+        onToggleSelect={toggleSelect}
+        showStageColumn={stageSel.size === 0}
+      />
 
       {openItem && (
         <CardDetailModal

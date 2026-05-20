@@ -10,6 +10,10 @@ const SORTABLE = new Set([
   'posting_date', 'follow_up_at', 'notes',
 ]);
 
+// Placeholder rows shown while a page is loading — keeps the table (and its
+// header) on screen instead of swapping in a "Loading…" message.
+const SKELETON_ROWS = 10;
+
 function SortableTh({ field, label, sort, onSort, align = 'left', className = '' }) {
   const active = sort?.field === field;
   const arrow = active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕';
@@ -32,7 +36,7 @@ function SortableTh({ field, label, sort, onSort, align = 'left', className = ''
 export default function InventoryTable({
   items, role, sort, onSort, onRowClick, onUpdated,
   selectMode = false, selected, onToggleSelect,
-  showStageColumn = true,
+  showStageColumn = true, loading = false,
 }) {
   const canSetPriority = ['admin', 'manager', 'rm'].includes(role);
   // 16 base columns; +1 if selectMode, -1 if Stage hidden.
@@ -87,10 +91,17 @@ export default function InventoryTable({
           </tr>
         </thead>
         <tbody>
-          {items.length === 0 && (
+          {loading && Array.from({ length: SKELETON_ROWS }).map((_, r) => (
+            <tr className="inv-row inv-row-skeleton" key={`skel-${r}`}>
+              {Array.from({ length: colCount }).map((_, c) => (
+                <td key={c}><span className="inv-skel" /></td>
+              ))}
+            </tr>
+          ))}
+          {!loading && items.length === 0 && (
             <tr><td className="inv-empty" colSpan={colCount}>No matching rows.</td></tr>
           )}
-          {items.map((item) => {
+          {!loading && items.map((item) => {
             const v = variation(item.price, item.oh_price);
             const isNearest = item.oh_price_match === 'nearest';
             const isSel = selected?.has?.(item.oh_id);

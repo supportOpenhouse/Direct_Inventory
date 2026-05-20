@@ -259,6 +259,20 @@ a { color: inherit; }
 }
 .inv-empty { padding: 28px; text-align: center; color: #94a3b8; }
 
+/* Skeleton placeholder rows — shown while a page loads so the table and its
+   header stay on screen, with empty pulsing fields instead of data. */
+.inv-row-skeleton { cursor: default; }
+.inv-row-skeleton:hover { background: transparent; }
+.inv-skel {
+  display: block; height: 12px; border-radius: 4px;
+  background: #e2e8f0;
+  animation: inv-skel-pulse 1.2s ease-in-out infinite;
+}
+@keyframes inv-skel-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
 /* Notification bell */
 .bell-wrap { position: relative; }
 .bell-btn {
