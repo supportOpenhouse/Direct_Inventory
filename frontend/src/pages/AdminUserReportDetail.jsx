@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api/client.js';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { formatDateShort, REJECT_REASONS, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
 import { PRESETS, PRESET_LABELS, downloadCSV, todayIST } from '../utils/reportFilters.js';
 
@@ -110,7 +111,14 @@ function DayLeadsModal({ email, date, onClose }) {
 
 export default function AdminUserReportDetail() {
   const [searchParams] = useSearchParams();
-  const email = searchParams.get('email') || '';
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  // Non-admins can only ever see their own report. The email query param is
+  // honoured only for admins; everyone else is forced to their own email.
+  // The backend enforces the same rule independently.
+  const paramEmail = (searchParams.get('email') || '').toLowerCase();
+  const email = (isAdmin && paramEmail) ? paramEmail : (user?.email || '').toLowerCase();
+  const isOwnReport = email === (user?.email || '').toLowerCase();
   const initFrom = searchParams.get('from') || todayIST();
   const initTo = searchParams.get('to') || todayIST();
 
@@ -140,9 +148,9 @@ export default function AdminUserReportDetail() {
   useEffect(() => { refresh(); /* eslint-disable-next-line */ }, []);
 
   useEffect(() => {
-    const title = data.actor_name ? `${data.actor_name} — User Report` : 'User Report';
-    document.title = title;
-  }, [data.actor_name]);
+    if (isOwnReport) document.title = 'My Report';
+    else document.title = data.actor_name ? `${data.actor_name} — User Report` : 'User Report';
+  }, [data.actor_name, isOwnReport]);
 
   function applyPreset(name) {
     const { from: f, to: t } = PRESETS[name]();
@@ -182,10 +190,14 @@ export default function AdminUserReportDetail() {
       <div className="al-head">
         <div>
           <h2 className="al-title">
-            {data.actor_name || email}
+            {isOwnReport ? 'My Report' : (data.actor_name || email)}
             {data.actor_role && <span className="role-chip dr-role">{data.actor_role}</span>}
           </h2>
-          <div className="al-subtitle">{email}</div>
+          <div className="al-subtitle">
+            {isOwnReport
+              ? `${data.actor_name ? data.actor_name + ' · ' : ''}${email}`
+              : email}
+          </div>
         </div>
         <div className="al-result-count">
           {totals.days} day{totals.days === 1 ? '' : 's'} · {totals.leads} lead{totals.leads === 1 ? '' : 's'}

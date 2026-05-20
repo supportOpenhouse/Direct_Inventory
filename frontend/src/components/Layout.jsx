@@ -24,6 +24,7 @@ export default function Layout() {
           {user?.role === 'admin' && <NavLink to="/admin/users">Users</NavLink>}
           {user?.role === 'admin' && <NavLink to="/admin/activity">Activity</NavLink>}
           {user?.role === 'admin' && <NavLink to="/admin/user-report">User Report</NavLink>}
+          {user?.role !== 'admin' && <NavLink to="/my-report">My Report</NavLink>}
         </nav>
         <div className="user-pill">
           <NotificationBell role={user?.role} />

@@ -321,15 +321,21 @@ def user_report():
 
 
 @bp.get("/user-report/days")
-@require_auth("admin")
+@require_auth("admin", "manager", "rm")
 def user_report_days():
     """Per-day summary for a single user across an IST date range.
 
     Query: email (required), from, to (both default to today IST).
     Response: { email, actor_name, actor_role, from, to, days: [{ day,
                 total, counts }] }
+
+    Non-admins may only see their own report — the requested `email` is
+    forced to their own, so passing someone else's is silently ignored.
     """
-    email = (request.args.get("email") or "").strip().lower()
+    if g.user["role"] == "admin":
+        email = (request.args.get("email") or "").strip().lower()
+    else:
+        email = (g.user["email"] or "").strip().lower()
     if not email:
         return jsonify({"error": "email is required"}), 400
     try:
@@ -378,15 +384,21 @@ def user_report_days():
 
 
 @bp.get("/user-report/leads")
-@require_auth("admin")
+@require_auth("admin", "manager", "rm")
 def user_report_leads():
     """Full lead detail for one user on one IST day. Powers the drill-down modal.
 
     Query: email (required), date=YYYY-MM-DD (required).
     Response: { email, date, leads: [{ oh_id, society, city, seller_name,
-                from_stage, final_stage, current_stage, last_change_at }] }
+                from_stage, final_stage, current_stage, reject_reason,
+                last_change_at }] }
+
+    Non-admins may only see their own report — `email` is forced to self.
     """
-    email = (request.args.get("email") or "").strip().lower()
+    if g.user["role"] == "admin":
+        email = (request.args.get("email") or "").strip().lower()
+    else:
+        email = (g.user["email"] or "").strip().lower()
     date_str = (request.args.get("date") or "").strip()
     if not email or not date_str:
         return jsonify({"error": "email and date are required"}), 400

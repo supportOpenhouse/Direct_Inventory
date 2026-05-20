@@ -45,6 +45,12 @@ export default function App() {
           path="/admin/user-report/detail"
           element={<RequireAuth role="admin"><AdminUserReportDetail /></RequireAuth>}
         />
+        {/* Self-service report — any role. The component locks the email to
+            the logged-in user for non-admins. */}
+        <Route
+          path="/my-report"
+          element={<RequireAuth><AdminUserReportDetail /></RequireAuth>}
+        />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
