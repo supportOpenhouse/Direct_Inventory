@@ -15,7 +15,6 @@ from . import config
 from .api import activity as activity_api
 from .api import auth as auth_api
 from .api import inventory as inventory_api
-from .api import rm_mapping as rm_mapping_api
 from .api import sync as sync_api
 from .api import users as users_api
 from .api import visits as visits_api
@@ -55,7 +54,6 @@ def create_app() -> Flask:
 
     app.register_blueprint(auth_api.bp)
     app.register_blueprint(inventory_api.bp)
-    app.register_blueprint(rm_mapping_api.bp)
     app.register_blueprint(users_api.bp)
     app.register_blueprint(sync_api.bp)
     app.register_blueprint(visits_api.bp)

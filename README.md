@@ -29,7 +29,7 @@ plus `Unreachable` and `Rejected` (with sub-reasons: Not Interested, Invalid/Dup
 | `manager` | rows in their assigned cities | same |
 | `rm` | rows assigned to them | same |
 
-RM/manager assignment uses the `rm_mapping` table — resolution order **society > locality > city**. Admins manage mappings in-app at `/admin/mapping`. Unknown emails who log in get auto-provisioned as `rm` with no city; an admin must activate them.
+RM/manager assignment is resolved from the `users` table — an RM's `society[]` (most specific) then `cities[]` (fallback), and a manager's `cities[]`. See `backend/services/assignment.py`. Unknown emails who log in get auto-provisioned as `rm` with no city; an admin must activate them.
 
 ## Local dev
 
@@ -102,14 +102,13 @@ backend/                     # Render Root Directory points here
   api/
     auth.py                  # Google OAuth + JWT issuer + require_auth decorator
     inventory.py             # list/get/create/patch + visibility scoping
-    rm_mapping.py            # admin RM/locality CRUD
     users.py                 # user management
     sync.py                  # POST /api/sync/sheet — Apps Script push receiver
     visits.py                # Forms app schedule + webhook
     activity.py              # activity log read
   services/
     oh_id.py                 # OH-ID generator (per-city counter, suffix rollover)
-    assignment.py            # resolve_assignment(city, locality, society)
+    assignment.py            # resolve_assignment — RM/manager from users table
     sheet_sync.py            # row normalization + upsert from pushed payload
     activity.py              # log() helper
   migrations/
@@ -134,7 +133,6 @@ frontend/                    # Vercel Root Directory points here
       Login.jsx              # Google sign-in
       Board.jsx              # Kanban + counts + search
       AdminUsers.jsx
-      AdminMapping.jsx
       AdminActivity.jsx
 apps_script/
   sync_direct_inventory.gs   # daily 11:30 IST trigger; POSTs sheet rows to backend

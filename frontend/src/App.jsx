@@ -3,7 +3,6 @@ import { useAuth } from './contexts/AuthContext.jsx';
 import Login from './pages/Login.jsx';
 import Board from './pages/Board.jsx';
 import AdminUsers from './pages/AdminUsers.jsx';
-import AdminMapping from './pages/AdminMapping.jsx';
 import AdminActivity from './pages/AdminActivity.jsx';
 import AdminUserReport from './pages/AdminUserReport.jsx';
 import AdminUserReportDetail from './pages/AdminUserReportDetail.jsx';
@@ -29,10 +28,8 @@ export default function App() {
           path="/admin/users"
           element={<RequireAuth role="admin"><AdminUsers /></RequireAuth>}
         />
-        <Route
-          path="/admin/mapping"
-          element={<RequireAuth role="admin"><AdminMapping /></RequireAuth>}
-        />
+        {/* RM Mapping page removed — rm_mapping table retired (migration 016).
+            To be rebuilt against the users table. */}
         <Route
           path="/admin/activity"
           element={<RequireAuth role="admin"><AdminActivity /></RequireAuth>}

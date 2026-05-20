@@ -20,7 +20,6 @@ export default function Layout() {
         </div>
         <nav className="topnav">
           <NavLink to="/" end>Board</NavLink>
-          {user?.role === 'admin' && <NavLink to="/admin/mapping">RM Mapping</NavLink>}
           {user?.role === 'admin' && <NavLink to="/admin/users">Users</NavLink>}
           {user?.role === 'admin' && <NavLink to="/admin/activity">Activity</NavLink>}
           {user?.role === 'admin' && <NavLink to="/admin/user-report">User Report</NavLink>}

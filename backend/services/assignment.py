@@ -1,34 +1,61 @@
 """Resolve which RM (and manager) should own a given inventory row.
 
-Resolution order, first match wins:
-  1. exact (city, locality, society)
-  2. (city, locality, society IS NULL)
-  3. (city, locality IS NULL, society IS NULL)   -- city-wide fallback
+Mapping lives on the users table (the standalone rm_mapping table was retired
+in migration 016):
+  users.society[] — societies an RM is scoped to  (most specific)
+  users.cities[]  — cities an RM / manager covers (fallback)
+
+Resolution, first match wins:
+  RM      — active rm whose society[] contains the lead's society;
+            else active rm whose cities[] contains the lead's city.
+  Manager — active manager whose cities[] contains the lead's city.
+
+When several users qualify, the lowest id wins (stable, arbitrary). Rebuild
+finer-grained tie-breaking with the new mapping page if needed.
 """
 from __future__ import annotations
 
 
-def resolve_assignment(cur, *, city: str, locality: str | None, society: str | None):
-    """Return (rm_user_id, manager_user_id) or (None, None) if no mapping found."""
-    cur.execute(
-        """
-        SELECT rm_user_id, manager_user_id
-        FROM rm_mapping
-        WHERE city = %s
-          AND (
-                (society IS NOT NULL AND society = %s AND locality IS NOT DISTINCT FROM %s)
-             OR (society IS NULL AND locality = %s)
-             OR (society IS NULL AND locality IS NULL)
-          )
-        ORDER BY
-            (society IS NOT NULL AND society = %s) DESC,
-            (locality = %s) DESC NULLS LAST,
-            id ASC
-        LIMIT 1
-        """,
-        (city, society, locality, locality, society, locality),
-    )
-    row = cur.fetchone()
-    if not row:
-        return (None, None)
-    return (row["rm_user_id"], row["manager_user_id"])
+def resolve_assignment(cur, *, city: str, locality: str | None = None, society: str | None = None):
+    """Return (rm_user_id, manager_user_id); either may be None if unmatched.
+
+    `locality` is still accepted so existing call sites need no change, but it
+    is no longer used — locality-level scoping was not carried into the users
+    model (locality folds into users.micro_market, which isn't matched here).
+    """
+    rm_id = None
+    if society:
+        cur.execute(
+            """SELECT id FROM users
+               WHERE role = 'rm' AND is_active = TRUE AND %s = ANY(society)
+               ORDER BY id LIMIT 1""",
+            (society,),
+        )
+        row = cur.fetchone()
+        if row:
+            rm_id = row["id"]
+
+    if rm_id is None and city:
+        cur.execute(
+            """SELECT id FROM users
+               WHERE role = 'rm' AND is_active = TRUE AND %s = ANY(cities)
+               ORDER BY id LIMIT 1""",
+            (city,),
+        )
+        row = cur.fetchone()
+        if row:
+            rm_id = row["id"]
+
+    mgr_id = None
+    if city:
+        cur.execute(
+            """SELECT id FROM users
+               WHERE role = 'manager' AND is_active = TRUE AND %s = ANY(cities)
+               ORDER BY id LIMIT 1""",
+            (city,),
+        )
+        row = cur.fetchone()
+        if row:
+            mgr_id = row["id"]
+
+    return (rm_id, mgr_id)
