@@ -38,6 +38,12 @@ function formatTime(iso) {
   });
 }
 
+// Final-stage order for the day's summary line; unknown stages sort last.
+const SUMMARY_STAGE_ORDER = [
+  'qualified', 'call_not_received', 'follow_up', 'visit_scheduled',
+  'visit_completed', 'offer_given', 'unreachable', 'rejected',
+];
+
 // Drill-down: leads list for one (user, day). Fetched lazily when the modal
 // opens — the day list endpoint only returns counts, not full lead rows.
 function DayLeadsModal({ email, date, onClose }) {
@@ -55,6 +61,29 @@ function DayLeadsModal({ email, date, onClose }) {
     return () => { alive = false; };
   }, [email, date]);
 
+  // Final-stage totals for this day. Rejected is further broken down by
+  // reject reason (e.g. "Rejected 23 [10 Invalid / Duplicate, 13 …]").
+  const summary = useMemo(() => {
+    const byStage = {};
+    const rejectByReason = {};
+    for (const l of leads) {
+      const s = l.final_stage || '(none)';
+      byStage[s] = (byStage[s] || 0) + 1;
+      if (s === 'rejected') {
+        const r = l.reject_reason || 'unspecified';
+        rejectByReason[r] = (rejectByReason[r] || 0) + 1;
+      }
+    }
+    const ord = (s) => {
+      const i = SUMMARY_STAGE_ORDER.indexOf(s);
+      return i === -1 ? 99 : i;
+    };
+    return {
+      stages: Object.entries(byStage).sort((a, b) => ord(a[0]) - ord(b[0])),
+      rejectByReason,
+    };
+  }, [leads]);
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal modal-day-leads" onClick={(e) => e.stopPropagation()}>
@@ -65,6 +94,23 @@ function DayLeadsModal({ email, date, onClose }) {
           </div>
           <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
         </div>
+        {!loading && !error && leads.length > 0 && (
+          <div className="dr-summary">
+            {summary.stages.map(([s, n]) => (
+              <span key={s} className="dr-count-pill">
+                <span className="stage-dot" style={{ background: STAGE_DOT_COLOR[s] || '#94a3b8' }} />
+                {stageLabel(s)} <strong>{n}</strong>
+                {s === 'rejected' && Object.keys(summary.rejectByReason).length > 0 && (
+                  <span className="dr-reject-breakdown">
+                    [{Object.entries(summary.rejectByReason)
+                        .map(([r, rn]) => `${rn} ${rejectReasonLabel(r) || 'Unspecified'}`)
+                        .join(', ')}]
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+        )}
         {loading && <div className="al-empty">Loading…</div>}
         {error && <div className="modal-error">{error}</div>}
         {!loading && !error && leads.length === 0 && (
@@ -82,6 +128,7 @@ function DayLeadsModal({ email, date, onClose }) {
                 <th>From</th>
                 <th>Final (set by user)</th>
                 <th>Current</th>
+                <th>Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -99,6 +146,7 @@ function DayLeadsModal({ email, date, onClose }) {
                       ? <span className="muted">same</span>
                       : <StagePill stage={l.current_stage} rejectReason={l.reject_reason} />}
                   </td>
+                  <td className="dr-notes" title={l.notes || ''}>{l.notes || '—'}</td>
                 </tr>
               ))}
             </tbody>

@@ -607,6 +607,16 @@ a { color: inherit; }
   max-width: 1100px; width: 95vw; max-height: 86vh;
   overflow: auto; padding: 14px 18px;
 }
+/* Final-stage summary line at the top of the expanded day view. */
+.dr-summary {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  margin: 2px 0 12px;
+}
+.dr-reject-breakdown { color: #64748b; font-size: 11px; margin-left: 2px; }
+.dr-notes {
+  max-width: 240px; color: #475569;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 
 /* User edit modal */
 .modal-user-edit {
