@@ -179,15 +179,24 @@ def _scope_clause(user: dict, alias: str = "") -> tuple[str, list]:
         return (f"AND {p}city = ANY(%s)", [_expand_cities(cities)])
 
     # rm — strict society overlay if configured, else city/assignment fallback.
+    # Society matching is case/whitespace-insensitive: the data has casing
+    # drift (e.g. 'ROF' / 'Rof' / 'rof'), so both sides go through
+    # LOWER(TRIM()).
     societies = user.get("society") or []
     if societies:
-        return (f"AND {p}society = ANY(%s)", [list(societies)])
+        return (
+            f"AND LOWER(TRIM({p}society)) = ANY(%s)",
+            [[s.strip().lower() for s in societies]],
+        )
 
     micros = user.get("micro_market") or []
     if micros:
         resolved = _rm_society_scope(user)  # cached master_societies lookup
         if resolved:
-            return (f"AND {p}society = ANY(%s)", [resolved])
+            return (
+                f"AND LOWER(TRIM({p}society)) = ANY(%s)",
+                [[s.strip().lower() for s in resolved]],
+            )
         # Micromarket set but the master_societies lookup returned nothing
         # (or failed). Strict scoping → no rows visible.
         return ("AND FALSE", [])
@@ -267,8 +276,9 @@ def _rm_filter_clause(conn, rm_id: str, alias: str = "") -> tuple[str, list]:
     parts: list[str] = []
     params: list = []
     if cover_societies:
-        parts.append(f"COALESCE({p}society = ANY(%s), FALSE)")
-        params.append(list(cover_societies))
+        # Case/whitespace-insensitive — society casing drifts in the data.
+        parts.append(f"COALESCE(LOWER(TRIM({p}society)) = ANY(%s), FALSE)")
+        params.append([s.strip().lower() for s in cover_societies])
     if cover_cities:
         parts.append(f"{p}city = ANY(%s)")
         params.append(list(cover_cities))
@@ -797,6 +807,8 @@ def visible_rms(oh_id: str):
         conn.close()
 
     society = inv.get("society")
+    # Society casing drifts in the data ('ROF' / 'Rof' / 'rof') — normalise.
+    society_norm = (society or "").strip().lower()
     city = inv.get("city")
     assigned_rm_id = inv.get("assigned_rm_id")
 
@@ -811,7 +823,8 @@ def visible_rms(oh_id: str):
                 with pconn.cursor() as pcur:
                     pcur.execute(
                         "SELECT DISTINCT micro_market FROM master_societies "
-                        "WHERE society_name = %s AND micro_market IS NOT NULL",
+                        "WHERE LOWER(TRIM(society_name)) = LOWER(TRIM(%s)) "
+                        "  AND micro_market IS NOT NULL",
                         (society,),
                     )
                     prop_micros = {r["micro_market"] for r in pcur.fetchall()}
@@ -827,7 +840,7 @@ def visible_rms(oh_id: str):
         rm_cities = rm.get("cities") or []
         via = None
         if rm_soc:
-            if society and society in rm_soc:
+            if society_norm and society_norm in {s.strip().lower() for s in rm_soc}:
                 via = "society"
         elif rm_micro:
             if prop_micros and set(rm_micro) & prop_micros:
