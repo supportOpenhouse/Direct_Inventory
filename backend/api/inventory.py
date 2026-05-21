@@ -202,6 +202,83 @@ def _scope_clause(user: dict, alias: str = "") -> tuple[str, list]:
     return (f"AND {p}assigned_rm_id = %s", [user["id"]])
 
 
+def _rm_filter_clause(conn, rm_id: str, alias: str = "") -> tuple[str, list]:
+    """WHERE fragment for the board's RM filter.
+
+    There is no real per-row RM assignment — `assigned_rm_id` is unused. An RM
+    "has" a property iff the visibility rules (see _scope_clause) would surface
+    it: users.society, else users.micro_market (resolved to societies via
+    PROPERTIES_DB.master_societies), else users.cities.
+
+    rm_id:
+      '<int>' — rows the visibility rules give to that one RM.
+      'none'  — rows no active RM can see at all.
+
+    All active RMs collapse once into two sets — covered societies and covered
+    cities — so the per-row test is a single ANY() check. No per-RM or per-row
+    work, and at most two small lookups (users, then master_societies).
+    """
+    p = f"{alias}." if alias else ""
+    with conn.cursor() as cur:
+        if rm_id == "none":
+            cur.execute(
+                "SELECT society, micro_market, cities FROM users "
+                "WHERE role = 'rm' AND is_active = TRUE"
+            )
+        else:
+            cur.execute(
+                "SELECT society, micro_market, cities FROM users "
+                "WHERE role = 'rm' AND is_active = TRUE AND id = %s",
+                (int(rm_id),),
+            )
+        rms = cur.fetchall()
+
+    cover_societies: set = set()
+    cover_cities: set = set()
+    micros_to_resolve: set = set()
+    for rm in rms:
+        soc = rm.get("society") or []
+        mic = rm.get("micro_market") or []
+        cit = rm.get("cities") or []
+        # Narrowest-wins, mirroring _scope_clause: society > micro_market > city.
+        if soc:
+            cover_societies.update(soc)
+        elif mic:
+            micros_to_resolve.update(mic)
+        elif cit:
+            cover_cities.update(_expand_cities(cit))
+
+    if micros_to_resolve:
+        try:
+            pconn = get_props_conn()
+            try:
+                with pconn.cursor() as pcur:
+                    pcur.execute(
+                        "SELECT DISTINCT society_name FROM master_societies "
+                        "WHERE micro_market = ANY(%s) AND society_name IS NOT NULL",
+                        (list(micros_to_resolve),),
+                    )
+                    cover_societies.update(r["society_name"] for r in pcur.fetchall())
+            finally:
+                pconn.close()
+        except Exception:
+            log.exception("master_societies lookup failed for RM filter")
+
+    parts: list[str] = []
+    params: list = []
+    if cover_societies:
+        parts.append(f"COALESCE({p}society = ANY(%s), FALSE)")
+        params.append(list(cover_societies))
+    if cover_cities:
+        parts.append(f"{p}city = ANY(%s)")
+        params.append(list(cover_cities))
+    covered = "(" + " OR ".join(parts) + ")" if parts else "FALSE"
+
+    if rm_id == "none":
+        return (f"AND NOT {covered}", params)
+    return (f"AND {covered}", params)
+
+
 def _build_filters(user: dict, args, alias: str = ""):
     """Parse query string into:
        (scope_sql, scope_params, base_filters, base_params, post_filters, post_params)
@@ -220,8 +297,6 @@ def _build_filters(user: dict, args, alias: str = ""):
 
     stage    = args.get("stage")
     city     = args.get("city")
-    # rm_id: an integer user id, or the sentinel 'none' for unassigned rows.
-    rm_id    = (args.get("rm_id") or "").strip()
     q        = (args.get("q") or "").strip()
     society  = (args.get("society") or "").strip()
     locality = (args.get("locality") or "").strip()
@@ -248,16 +323,6 @@ def _build_filters(user: dict, args, alias: str = ""):
         else:
             base_filters.append(f"AND {p}city = %s")
             base_params.append(city)
-    if rm_id == "none":
-        base_filters.append(f"AND {p}assigned_rm_id IS NULL")
-    elif rm_id:
-        try:
-            rm_id_int = int(rm_id)
-        except ValueError:
-            rm_id_int = None
-        if rm_id_int is not None:
-            base_filters.append(f"AND {p}assigned_rm_id = %s")
-            base_params.append(rm_id_int)
     if q:
         # Substring ("half") search: each whitespace-separated token must
         # appear case-insensitively, anywhere, in at least one searchable
@@ -405,62 +470,71 @@ def list_inventory():
     scope, scope_params, base_filters, base_params, post_filters, post_params = \
         _build_filters(user, args, alias="i")
 
-    inner_where = f"WHERE TRUE {scope} {' '.join(base_filters)}"
-    outer_where = f"WHERE TRUE {' '.join(post_filters)}"
-
-    # Sort. Default mode is 'smart' — a follow-up-driven triage order:
-    #   bucket 0: follow-up due today (IST)
-    #   bucket 1: overdue follow-up — Follow Up stage first, then Lead, then
-    #             others; most recent follow-up date first within each
-    #   bucket 2: future follow-up — nearest date first
-    #   bucket 3: no follow-up date
-    # 'smart' has no priority float / rejected sink. An explicit column-header
-    # sort is a pure column sort — no rejected sink, no priority float — with
-    # updated_at DESC only as the final tiebreaker.
-    sort_field = (args.get("sort") or "smart").strip()
-    if sort_field == "smart":
-        today_ist = "(NOW() AT TIME ZONE 'Asia/Kolkata')::DATE"
-        order_clause = (
-            f"CASE WHEN follow_up_at IS NULL THEN 3 "
-            f"     WHEN follow_up_at::DATE = {today_ist} THEN 0 "
-            f"     WHEN follow_up_at::DATE < {today_ist} THEN 1 "
-            f"     ELSE 2 END ASC, "
-            # Stage order applies only inside the overdue bucket.
-            f"CASE WHEN follow_up_at IS NOT NULL AND follow_up_at::DATE < {today_ist} "
-            f"     THEN CASE stage WHEN 'follow_up' THEN 0 WHEN 'qualified' THEN 1 ELSE 2 END "
-            f"     ELSE 0 END ASC, "
-            # Overdue: most recent follow-up date first.
-            f"CASE WHEN follow_up_at IS NOT NULL AND follow_up_at::DATE < {today_ist} "
-            f"     THEN follow_up_at END DESC NULLS LAST, "
-            # Future: nearest follow-up date first.
-            f"CASE WHEN follow_up_at IS NOT NULL AND follow_up_at::DATE > {today_ist} "
-            f"     THEN follow_up_at END ASC NULLS LAST, "
-            f"updated_at DESC"
-        )
-    else:
-        sort_dir = "ASC" if (args.get("dir") or "").strip().lower() == "asc" else "DESC"
-        sort_sql = SORTABLE_FIELDS.get(sort_field, SORTABLE_FIELDS["updated_at"])
-        nulls_clause = "NULLS LAST" if sort_dir == "DESC" else "NULLS FIRST"
-        order_clause = (
-            f"{sort_sql} {sort_dir} {nulls_clause}, "
-            "updated_at DESC"
-        )
-
-    list_sql = f"""
-        SELECT * FROM ({_INVENTORY_WITH_PRICING_SQL} {inner_where}) j
-        {outer_where}
-        ORDER BY {order_clause}
-        LIMIT %s OFFSET %s
-    """
-    count_sql = f"""
-        SELECT COUNT(*) AS n FROM ({_INVENTORY_WITH_PRICING_SQL} {inner_where}) j
-        {outer_where}
-    """
-    final_params = [*scope_params, *base_params, *post_params, limit, offset]
-    count_params = [*scope_params, *base_params, *post_params]
-
     conn = get_conn()
     try:
+        # RM filter — visibility-based (assigned_rm_id is unused; an RM "has" a
+        # property only via the _scope_clause rules). Needs a DB lookup, so it
+        # is resolved here rather than inside the pure _build_filters.
+        rm_id = (args.get("rm_id") or "").strip()
+        if rm_id == "none" or rm_id.isdigit():
+            rm_sql, rm_params = _rm_filter_clause(conn, rm_id, alias="i")
+            base_filters.append(rm_sql)
+            base_params.extend(rm_params)
+
+        inner_where = f"WHERE TRUE {scope} {' '.join(base_filters)}"
+        outer_where = f"WHERE TRUE {' '.join(post_filters)}"
+
+        # Sort. Default mode is 'smart' — a follow-up-driven triage order:
+        #   bucket 0: follow-up due today (IST)
+        #   bucket 1: overdue follow-up — Follow Up stage first, then Lead, then
+        #             others; most recent follow-up date first within each
+        #   bucket 2: future follow-up — nearest date first
+        #   bucket 3: no follow-up date
+        # 'smart' has no priority float / rejected sink. An explicit column-header
+        # sort is a pure column sort — no rejected sink, no priority float — with
+        # updated_at DESC only as the final tiebreaker.
+        sort_field = (args.get("sort") or "smart").strip()
+        if sort_field == "smart":
+            today_ist = "(NOW() AT TIME ZONE 'Asia/Kolkata')::DATE"
+            order_clause = (
+                f"CASE WHEN follow_up_at IS NULL THEN 3 "
+                f"     WHEN follow_up_at::DATE = {today_ist} THEN 0 "
+                f"     WHEN follow_up_at::DATE < {today_ist} THEN 1 "
+                f"     ELSE 2 END ASC, "
+                # Stage order applies only inside the overdue bucket.
+                f"CASE WHEN follow_up_at IS NOT NULL AND follow_up_at::DATE < {today_ist} "
+                f"     THEN CASE stage WHEN 'follow_up' THEN 0 WHEN 'qualified' THEN 1 ELSE 2 END "
+                f"     ELSE 0 END ASC, "
+                # Overdue: most recent follow-up date first.
+                f"CASE WHEN follow_up_at IS NOT NULL AND follow_up_at::DATE < {today_ist} "
+                f"     THEN follow_up_at END DESC NULLS LAST, "
+                # Future: nearest follow-up date first.
+                f"CASE WHEN follow_up_at IS NOT NULL AND follow_up_at::DATE > {today_ist} "
+                f"     THEN follow_up_at END ASC NULLS LAST, "
+                f"updated_at DESC"
+            )
+        else:
+            sort_dir = "ASC" if (args.get("dir") or "").strip().lower() == "asc" else "DESC"
+            sort_sql = SORTABLE_FIELDS.get(sort_field, SORTABLE_FIELDS["updated_at"])
+            nulls_clause = "NULLS LAST" if sort_dir == "DESC" else "NULLS FIRST"
+            order_clause = (
+                f"{sort_sql} {sort_dir} {nulls_clause}, "
+                "updated_at DESC"
+            )
+
+        list_sql = f"""
+            SELECT * FROM ({_INVENTORY_WITH_PRICING_SQL} {inner_where}) j
+            {outer_where}
+            ORDER BY {order_clause}
+            LIMIT %s OFFSET %s
+        """
+        count_sql = f"""
+            SELECT COUNT(*) AS n FROM ({_INVENTORY_WITH_PRICING_SQL} {inner_where}) j
+            {outer_where}
+        """
+        final_params = [*scope_params, *base_params, *post_params, limit, offset]
+        count_params = [*scope_params, *base_params, *post_params]
+
         with conn, conn.cursor() as cur:
             cur.execute(list_sql, final_params)
             rows = cur.fetchall()
@@ -532,8 +606,6 @@ def inventory_counts():
 
     scope, scope_params, base_filters, base_params, post_filters, post_params = \
         _build_filters(user, args_proxy, alias="i")
-    inner_where = f"WHERE TRUE {scope} {' '.join(base_filters)}"
-    outer_where = f"WHERE TRUE {' '.join(post_filters)}"
 
     # Board-visible stages only. Counts for legacy stages are intentionally
     # omitted from the response (the chips for them no longer exist).
@@ -543,6 +615,17 @@ def inventory_counts():
 
     conn = get_conn()
     try:
+        # RM filter — visibility-based (assigned_rm_id is unused); see
+        # _rm_filter_clause. Needs a DB lookup, hence resolved here.
+        rm_id = (request.args.get("rm_id") or "").strip()
+        if rm_id == "none" or rm_id.isdigit():
+            rm_sql, rm_params = _rm_filter_clause(conn, rm_id, alias="i")
+            base_filters.append(rm_sql)
+            base_params.extend(rm_params)
+
+        inner_where = f"WHERE TRUE {scope} {' '.join(base_filters)}"
+        outer_where = f"WHERE TRUE {' '.join(post_filters)}"
+
         with conn, conn.cursor() as cur:
             cur.execute(
                 f"""SELECT stage, COUNT(*) AS n FROM (
