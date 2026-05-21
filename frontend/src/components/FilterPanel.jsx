@@ -51,6 +51,7 @@ const EMPTY = {
   price_min: '', price_max: '',
   variation_min: '', variation_max: '',
   source: '',
+  rm_id: '',
   date_preset: '',
   posting_from: '', posting_to: '',
   follow_up_preset: '',
@@ -131,6 +132,8 @@ function ChipMultiSelect({ id, values, options, onChange, placeholder, disabled 
 
 export default function FilterPanel({ initial, defaultCity = '', role, onApply, onClose }) {
   const isAdmin = role === 'admin';
+  // Admin + manager can filter by RM; an RM only ever sees their own rows.
+  const canFilterRm = role === 'admin' || role === 'manager';
   const [f, setF] = useState(() => ({
     ...EMPTY,
     suggest_city: defaultCity,
@@ -139,9 +142,26 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
     locality: toArray(initial?.locality),
     bhk:      Array.isArray(initial?.bhk) ? initial.bhk : [],
     star:     Array.isArray(initial?.star) ? initial.star : [],
+    rm_id:    initial?.rm_id != null && initial?.rm_id !== '' ? String(initial.rm_id) : '',
   }));
   const [societies, setSocieties] = useState([]);
   const [loadingSocs, setLoadingSocs] = useState(false);
+  const [rms, setRms] = useState([]);
+
+  // RM list for the assignment filter dropdown (admin/manager only).
+  useEffect(() => {
+    if (!canFilterRm) return;
+    let alive = true;
+    api.get('/api/users?role=rm')
+      .then((r) => {
+        if (!alive) return;
+        const active = (r.items || []).filter((u) => u.is_active);
+        active.sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+        setRms(active);
+      })
+      .catch(() => { if (alive) setRms([]); });
+    return () => { alive = false; };
+  }, [canFilterRm]);
 
   const societyOptions = useMemo(
     () => [...new Set(societies.map((s) => s.society).filter(Boolean))].sort(),
@@ -215,6 +235,7 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
     if (f.variation_min !== '') out.variation_min = Number(f.variation_min);
     if (f.variation_max !== '') out.variation_max = Number(f.variation_max);
     if (f.source) out.source = f.source;
+    if (canFilterRm && f.rm_id) out.rm_id = Number(f.rm_id);
     if (f.posting_from) out.posting_from = f.posting_from;
     if (f.posting_to)   out.posting_to   = f.posting_to;
     if (f.follow_up_from) out.follow_up_from = f.follow_up_from;
@@ -394,6 +415,18 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
           <input value={f.source} onChange={(e) => set('source', e.target.value)}
                  placeholder="e.g. 99acres, Website" />
         </div>
+
+        {canFilterRm && (
+          <div className="filter-block">
+            <label>RM</label>
+            <select value={f.rm_id} onChange={(e) => set('rm_id', e.target.value)}>
+              <option value="">— All RMs —</option>
+              {rms.map((u) => (
+                <option key={u.id} value={String(u.id)}>{u.name || u.email}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="filter-block">
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
