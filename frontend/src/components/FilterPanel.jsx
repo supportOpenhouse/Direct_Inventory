@@ -235,7 +235,7 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
     if (f.variation_min !== '') out.variation_min = Number(f.variation_min);
     if (f.variation_max !== '') out.variation_max = Number(f.variation_max);
     if (f.source) out.source = f.source;
-    if (canFilterRm && f.rm_id) out.rm_id = Number(f.rm_id);
+    if (canFilterRm && f.rm_id) out.rm_id = f.rm_id === 'none' ? 'none' : Number(f.rm_id);
     if (f.posting_from) out.posting_from = f.posting_from;
     if (f.posting_to)   out.posting_to   = f.posting_to;
     if (f.follow_up_from) out.follow_up_from = f.follow_up_from;
@@ -419,6 +419,7 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
             <label>RM</label>
             <select value={f.rm_id} onChange={(e) => set('rm_id', e.target.value)}>
               <option value="">— All RMs —</option>
+              <option value="none">No RM assigned</option>
               {rms.map((u) => (
                 <option key={u.id} value={String(u.id)}>{u.name || u.email}</option>
               ))}

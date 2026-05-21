@@ -220,7 +220,8 @@ def _build_filters(user: dict, args, alias: str = ""):
 
     stage    = args.get("stage")
     city     = args.get("city")
-    rm_id    = args.get("rm_id", type=int)
+    # rm_id: an integer user id, or the sentinel 'none' for unassigned rows.
+    rm_id    = (args.get("rm_id") or "").strip()
     q        = (args.get("q") or "").strip()
     society  = (args.get("society") or "").strip()
     locality = (args.get("locality") or "").strip()
@@ -247,9 +248,16 @@ def _build_filters(user: dict, args, alias: str = ""):
         else:
             base_filters.append(f"AND {p}city = %s")
             base_params.append(city)
-    if rm_id:
-        base_filters.append(f"AND {p}assigned_rm_id = %s")
-        base_params.append(rm_id)
+    if rm_id == "none":
+        base_filters.append(f"AND {p}assigned_rm_id IS NULL")
+    elif rm_id:
+        try:
+            rm_id_int = int(rm_id)
+        except ValueError:
+            rm_id_int = None
+        if rm_id_int is not None:
+            base_filters.append(f"AND {p}assigned_rm_id = %s")
+            base_params.append(rm_id_int)
     if q:
         # Substring ("half") search: each whitespace-separated token must
         # appear case-insensitively, anywhere, in at least one searchable
