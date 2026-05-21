@@ -319,9 +319,6 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
             <input type="number" placeholder="max" value={f.price_max}
                    onChange={(e) => set('price_max', e.target.value)} />
           </div>
-          <div className="muted" style={{ fontSize: 11 }}>
-            Tip: 1 Cr = 10000000 · 50 L = 5000000
-          </div>
         </div>
 
         <div className="filter-block">
