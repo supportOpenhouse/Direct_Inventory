@@ -249,10 +249,11 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
+      <div className="modal filter-modal" onClick={(e) => e.stopPropagation()}>
         <h3>Filters</h3>
 
-        <div className="filter-block">
+        <div className="filter-grid">
+        <div className="filter-block filter-span-2">
           <div className="society-row">
             <div className="society-city">
               <label>City <span className="muted">(scopes suggestions)</span></label>
@@ -460,6 +461,8 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
             </div>
           </div>
         )}
+
+        </div>
 
         <div className="modal-actions">
           <button className="btn-ghost" onClick={reset}>Reset</button>

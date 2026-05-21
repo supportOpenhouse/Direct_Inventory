@@ -390,6 +390,11 @@ a { color: inherit; }
   background: #fff; border-radius: 16px; padding: 22px; min-width: 360px; max-width: 92vw;
 }
 .modal-wide { min-width: 640px; }
+/* Filters panel — wider, height-capped, two-column block layout. */
+.filter-modal { width: 780px; max-width: 94vw; max-height: 88vh; overflow-y: auto; }
+.filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; }
+.filter-grid .filter-block { margin-bottom: 10px; }
+.filter-grid .filter-span-2 { grid-column: 1 / -1; }
 .modal h3 { margin: 0 0 4px; }
 .modal-sub { color: #64748b; margin: 0 0 14px; font-size: 13px; }
 .modal label { display: block; font-size: 11px; color: #64748b; letter-spacing: 1px; margin-bottom: 4px; }
