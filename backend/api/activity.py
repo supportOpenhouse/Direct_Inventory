@@ -219,28 +219,39 @@ def _parse_ist_range(default_to_today: bool = True):
 
 # Base SELECT — picks the latest stage_change per (actor, IST day, lead).
 # Joins are done in the outer query so each endpoint can pull what it needs.
+#
+# Lead-days whose LATEST action was moving to 'qualified' are dropped
+# entirely. Moving a lead back to qualified (from rejected, follow_up,
+# etc.) is not "work done" on the lead — the user shouldn't be credited
+# with that lead for that day. Filtering here, AFTER the DISTINCT ON,
+# means we don't silently fall back to an earlier non-qualified action;
+# we simply omit the lead-day. The filter is in the CTE so every endpoint
+# (per-user summary, per-day, leads detail, analytics) stays consistent.
 _WINNERS_CTE = """
     WITH winners AS (
-        SELECT DISTINCT ON (a.actor_email, (a.created_at AT TIME ZONE 'Asia/Kolkata')::DATE, a.entity_id)
-            a.actor_email,
-            (a.created_at AT TIME ZONE 'Asia/Kolkata')::DATE AS day,
-            a.entity_id          AS oh_id,
-            a.before_value       AS from_stage,
-            a.after_value        AS final_stage,
-            a.created_at         AS last_change_at
-        FROM activity_log a
-        WHERE a.action = 'stage_change'
-          AND a.entity_type = 'inventory'
-          AND a.created_at >= %s
-          AND a.created_at <  %s
-          AND a.actor_email IS NOT NULL
-          AND a.actor_email NOT LIKE 'apps-script:%%'
-          AND a.actor_email <> 'system:forms-webhook'
-          {extra_where}
-        ORDER BY a.actor_email,
-                 (a.created_at AT TIME ZONE 'Asia/Kolkata')::DATE,
-                 a.entity_id,
-                 a.created_at DESC
+        SELECT * FROM (
+            SELECT DISTINCT ON (a.actor_email, (a.created_at AT TIME ZONE 'Asia/Kolkata')::DATE, a.entity_id)
+                a.actor_email,
+                (a.created_at AT TIME ZONE 'Asia/Kolkata')::DATE AS day,
+                a.entity_id          AS oh_id,
+                a.before_value       AS from_stage,
+                a.after_value        AS final_stage,
+                a.created_at         AS last_change_at
+            FROM activity_log a
+            WHERE a.action = 'stage_change'
+              AND a.entity_type = 'inventory'
+              AND a.created_at >= %s
+              AND a.created_at <  %s
+              AND a.actor_email IS NOT NULL
+              AND a.actor_email NOT LIKE 'apps-script:%%'
+              AND a.actor_email <> 'system:forms-webhook'
+              {extra_where}
+            ORDER BY a.actor_email,
+                     (a.created_at AT TIME ZONE 'Asia/Kolkata')::DATE,
+                     a.entity_id,
+                     a.created_at DESC
+        ) latest
+        WHERE latest.final_stage IS DISTINCT FROM 'qualified'
     )
 """
 
