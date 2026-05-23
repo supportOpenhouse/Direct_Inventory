@@ -72,6 +72,7 @@ function StageCountPills({ counts }) {
 export default function AdminUserReport() {
   const { user } = useAuth();
   const isManager = user?.role === 'manager';
+  const isRm = user?.role === 'rm';
   // Default view is "All" — every user, all dates.
   const [from, setFrom] = useState(() => PRESETS.all().from);
   const [to, setTo] = useState(() => PRESETS.all().to);
@@ -84,6 +85,8 @@ export default function AdminUserReport() {
   const [tab, setTab] = useState('users');  // 'users' | 'analytics'
 
   async function loadUserOptions() {
+    // RMs can't hit /api/users and don't need the dropdown anyway.
+    if (isRm) return;
     try {
       const r = await api.get('/api/users');
       let items = (r.items || []).filter((u) => u.is_active);
@@ -159,8 +162,11 @@ export default function AdminUserReport() {
         <div>
           <h2 className="al-title">User Report</h2>
           <div className="al-subtitle">
-            {isManager ? 'Your RMs — per-user' : 'Per-user'} summary of stage moves.
-            Click a user to drill down by day.
+            {isRm
+              ? 'Your stage activity. Click your row to drill down by day.'
+              : isManager
+                ? 'Your RMs — per-user summary of stage moves. Click a user to drill down by day.'
+                : 'Per-user summary of stage moves. Click a user to drill down by day.'}
           </div>
         </div>
         <div className="al-result-count">
@@ -185,7 +191,9 @@ export default function AdminUserReport() {
           <span className="al-date-sep">to</span>
           <input type="date" className="al-date" value={to} onChange={(e) => onDateChange('to', e.target.value)} max={todayIST()} />
         </div>
-        <UserMultiSelect options={allUsers} value={users} onChange={setUsers} />
+        {!isRm && (
+          <UserMultiSelect options={allUsers} value={users} onChange={setUsers} />
+        )}
         <button className="btn-primary" onClick={refresh} disabled={loading}>
           {loading ? 'Loading…' : 'Apply'}
         </button>

@@ -810,11 +810,21 @@ a { color: inherit; }
 .ura-legend-pct { color: #64748b; font-size: 11px; }
 .ura-legend-val { color: #0f1115; }
 
-/* Leaderboard */
-.ura-leaderboard { display: flex; flex-direction: column; gap: 10px; }
+/* Leaderboard — RM-only, sorted by % visit-scheduled */
+.ura-leaderboard { display: flex; flex-direction: column; gap: 8px; }
+.ura-lb-head {
+  display: grid;
+  grid-template-columns: 24px minmax(140px, 220px) 1fr 60px 90px;
+  gap: 12px; align-items: center;
+  font-size: 10px; color: #94a3b8; text-transform: uppercase;
+  letter-spacing: 0.04em; padding-bottom: 4px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.ura-lb-col-h { font-weight: 700; }
+.ura-lb-col-num { text-align: right; }
 .ura-lb-row {
   display: grid;
-  grid-template-columns: 24px minmax(140px, 220px) 1fr 40px;
+  grid-template-columns: 24px minmax(140px, 220px) 1fr 60px 90px;
   gap: 12px; align-items: center;
 }
 .ura-lb-rank {
@@ -833,8 +843,9 @@ a { color: inherit; }
   color: #94a3b8; font-size: 11px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+/* Square ends — rounded pills distorted small segment widths. */
 .ura-lb-bar-wrap {
-  background: #f8fafc; border-radius: 999px; height: 18px; overflow: hidden;
+  background: #f8fafc; border-radius: 2px; height: 18px; overflow: hidden;
 }
 .ura-lb-bar {
   height: 100%; display: flex; min-width: 4px;
@@ -844,16 +855,69 @@ a { color: inherit; }
 .ura-lb-total {
   font-weight: 700; color: #0f1115; font-size: 13px; text-align: right;
 }
+.ura-lb-pct {
+  font-weight: 700; color: #1D9E75; font-size: 14px; text-align: right;
+}
 
-/* Funnel — trapezoidal SVG */
-.ura-funnel-wrap { display: flex; flex-direction: column; gap: 10px; }
-.ura-funnel-svg { display: block; max-width: 100%; }
+/* Funnel — stepped stage table */
+.ura-funnel-wrap { display: flex; flex-direction: column; gap: 8px; }
+.ura-ft-head, .ura-ft-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.2fr) 2fr 70px minmax(110px, 130px);
+  gap: 12px; align-items: center;
+}
+.ura-ft-head {
+  font-size: 10px; color: #94a3b8; text-transform: uppercase;
+  letter-spacing: 0.04em; font-weight: 700; padding-bottom: 4px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.ura-ft-row { padding: 8px 0; border-bottom: 1px solid #f8fafc; }
+.ura-ft-row:last-of-type { border-bottom: none; }
+.ura-ft-col-stage {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; color: #0f1115;
+}
+.ura-ft-cohort-tag {
+  font-size: 9px; font-weight: 700; color: #64748b;
+  background: #f1f5f9; padding: 2px 6px; border-radius: 4px;
+  letter-spacing: 0.04em; text-transform: uppercase; margin-left: 4px;
+}
+.ura-ft-col-bar { display: flex; flex-direction: column; gap: 4px; }
+.ura-ft-bar-track {
+  background: #f8fafc; border-radius: 2px; height: 12px; overflow: hidden;
+}
+.ura-ft-bar-fill {
+  height: 100%; min-width: 2px; transition: width 0.2s;
+}
+.ura-ft-bar-pct { font-size: 11px; color: #64748b; }
+.ura-ft-col-count {
+  text-align: right; font-size: 14px; color: #0f1115;
+}
+.ura-ft-col-conv {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+}
+.ura-ft-conv { font-size: 14px; font-weight: 700; }
+.ura-ft-conv-good { color: #1D9E75; }
+.ura-ft-conv-mid  { color: #d97706; }
+.ura-ft-conv-bad  { color: #dc2626; }
+/* tiny-base = not statistically meaningful — muted, not red/green. */
+.ura-ft-conv-tiny { color: #94a3b8; font-weight: 600; }
+.ura-ft-note { font-size: 10px; color: #94a3b8; }
 .ura-funnel-foot {
   font-size: 12px; color: #64748b; text-align: center;
-  padding-top: 6px; border-top: 1px solid #f1f5f9;
+  padding-top: 8px; border-top: 1px solid #f1f5f9;
 }
 .ura-funnel-foot strong { color: #0f1115; }
 
 @media (max-width: 900px) {
   .ura-grid { grid-template-columns: 1fr; }
+  .ura-lb-head, .ura-lb-row {
+    grid-template-columns: 24px 1fr 50px 80px;
+  }
+  .ura-lb-head .ura-lb-col-h:nth-child(3),
+  .ura-lb-row .ura-lb-bar-wrap { display: none; }
+  .ura-ft-head, .ura-ft-row {
+    grid-template-columns: minmax(120px, 1fr) 50px minmax(90px, 110px);
+  }
+  .ura-ft-col-bar { display: none; }
 }

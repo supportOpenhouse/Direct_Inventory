@@ -36,15 +36,15 @@ export default function App() {
           path="/admin/activity"
           element={<RequireAuth role="admin"><AdminActivity /></RequireAuth>}
         />
-        {/* User Report — admin sees all users, manager sees only their RMs.
-            Page + backend both enforce the manager scope. */}
+        {/* User Report — admin sees all users, manager sees only their RMs,
+            RM sees only themselves. Backend enforces scope independently. */}
         <Route
           path="/admin/user-report"
-          element={<RequireAuth roles={['admin', 'manager']}><AdminUserReport /></RequireAuth>}
+          element={<RequireAuth><AdminUserReport /></RequireAuth>}
         />
         <Route
           path="/admin/user-report/detail"
-          element={<RequireAuth roles={['admin', 'manager']}><AdminUserReportDetail /></RequireAuth>}
+          element={<RequireAuth><AdminUserReportDetail /></RequireAuth>}
         />
         {/* Self-service report — any role. The component locks the email to
             the logged-in user for non-admins. */}

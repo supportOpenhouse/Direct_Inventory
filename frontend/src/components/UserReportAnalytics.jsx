@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
-import { STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
+import { stageLabel } from '../utils/format.js';
 
 // Stages in the order we want to show them across charts. Anything outside
 // this list (legacy stages, "(none)") is appended in insertion order.
@@ -20,6 +20,21 @@ const STAGE_ORDER = [
 // the UI.
 const FUNNEL_STAGES = ['qualified', 'visit_scheduled', 'visit_completed', 'offer_given'];
 
+// Analytics palette — locally scoped so we don't repaint the rest of the
+// app's stage dots. "Rejected" is intentionally the most recessive
+// (muted grey) even though it's usually the largest segment — the eye
+// should land on live pipeline, not failures.
+const ANALYTICS_STAGE_COLOR = {
+  qualified:         '#7F77DD',
+  call_not_received: '#EF9F27',
+  follow_up:         '#378ADD',
+  visit_scheduled:   '#1D9E75',
+  visit_completed:   '#639922',
+  offer_given:       '#BA7517',
+  unreachable:       '#94a3b8',
+  rejected:          '#D3D1C7',
+};
+
 function sortStages(keys) {
   return [...keys].sort((a, b) => {
     const ia = STAGE_ORDER.indexOf(a);
@@ -32,7 +47,27 @@ function sortStages(keys) {
 }
 
 function stageColor(s) {
-  return STAGE_DOT_COLOR[s] || '#94a3b8';
+  return ANALYTICS_STAGE_COLOR[s] || '#94a3b8';
+}
+
+// Pick a "nice" axis upper bound + tick interval for a given raw max.
+// Round to 1/2/5 * 10^n so ticks land on clean values (0/100/200/300/400,
+// not 0/100/201/301/401 — the previous code used Math.round() on
+// fractions, which produced the off-by-one ticks seen in the screenshots).
+function niceTicks(rawMax, tickCount = 4) {
+  if (rawMax <= 0) return { ticks: [0, 1], niceMax: 1 };
+  const rough = rawMax / tickCount;
+  const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+  const norm = rough / mag;
+  let step;
+  if (norm <= 1) step = 1 * mag;
+  else if (norm <= 2) step = 2 * mag;
+  else if (norm <= 5) step = 5 * mag;
+  else step = 10 * mag;
+  const niceMax = Math.ceil(rawMax / step) * step;
+  const ticks = [];
+  for (let t = 0; t <= niceMax + 1e-9; t += step) ticks.push(Math.round(t));
+  return { ticks, niceMax };
 }
 
 // Stacked bar chart of stage activity per day. Pure SVG — no chart lib.
@@ -45,25 +80,24 @@ function DailyTrendChart({ days }) {
     return sortStages(Array.from(set));
   }, [days]);
 
-  const max = useMemo(
+  const rawMax = useMemo(
     () => days.reduce((m, d) => Math.max(m, d.total || 0), 0) || 1,
     [days],
   );
+  const { ticks, niceMax } = useMemo(() => niceTicks(rawMax, 4), [rawMax]);
 
   if (days.length === 0) {
     return <div className="ura-empty">No daily activity in this range.</div>;
   }
 
   const W = 880;
-  const H = 280;
-  const PAD = { top: 16, right: 16, bottom: 36, left: 40 };
+  const H = 300;
+  // Extra top padding so the +/- % delta labels above each bar have room.
+  const PAD = { top: 28, right: 16, bottom: 36, left: 40 };
   const innerW = W - PAD.left - PAD.right;
   const innerH = H - PAD.top - PAD.bottom;
   const slot = innerW / days.length;
   const barW = Math.max(4, Math.min(28, slot * 0.7));
-
-  // y-axis ticks — 4 evenly spaced.
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(max * f));
 
   // Show ~8 x-axis labels max so they don't overlap.
   const xLabelEvery = Math.max(1, Math.ceil(days.length / 8));
@@ -72,7 +106,7 @@ function DailyTrendChart({ days }) {
     <div className="ura-chart-wrap">
       <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="ura-chart">
         {ticks.map((t, i) => {
-          const y = PAD.top + innerH - (t / max) * innerH;
+          const y = PAD.top + innerH - (t / niceMax) * innerH;
           return (
             <g key={i}>
               <line x1={PAD.left} y1={y} x2={W - PAD.right} y2={y}
@@ -89,7 +123,7 @@ function DailyTrendChart({ days }) {
           for (const s of stages) {
             const v = d.counts?.[s] || 0;
             if (v === 0) continue;
-            const h = (v / max) * innerH;
+            const h = (v / niceMax) * innerH;
             yCursor -= h;
             segments.push(
               <rect key={s} x={x} y={yCursor} width={barW} height={h}
@@ -98,14 +132,31 @@ function DailyTrendChart({ days }) {
           }
           const dayLabel = d.day.slice(5); // MM-DD
           const showLabel = i % xLabelEvery === 0 || i === days.length - 1;
+          // Day-over-day % change. Skip on day 0 and skip when previous
+          // day was zero (division-by-zero / "infinite increase" is not
+          // a useful number to surface).
+          const prev = i > 0 ? days[i - 1].total || 0 : null;
+          const deltaPct = (prev != null && prev > 0)
+            ? ((d.total - prev) / prev) * 100
+            : null;
+          // Place the delta label above the top of the bar; clamp into
+          // the top padding band so it never overlaps the bar segments.
+          const deltaY = Math.max(PAD.top - 8, yCursor - 6);
           return (
             <g key={d.day}
-               onMouseEnter={() => setHover({ x: x + barW / 2, y: yCursor, ...d })}
+               onMouseEnter={() => setHover({ x: x + barW / 2, y: yCursor, ...d, deltaPct })}
                onMouseLeave={() => setHover(null)}>
               {/* invisible hit-area covers the entire column */}
               <rect x={PAD.left + slot * i} y={PAD.top}
                     width={slot} height={innerH} fill="transparent" />
               {segments}
+              {deltaPct !== null && d.total !== prev && (
+                <text x={x + barW / 2} y={deltaY}
+                      fontSize="10" fontWeight="700" textAnchor="middle"
+                      fill={deltaPct > 0 ? '#16a34a' : '#dc2626'}>
+                  {deltaPct > 0 ? '▲' : '▼'} {Math.abs(deltaPct).toFixed(0)}%
+                </text>
+              )}
               {showLabel && (
                 <text x={x + barW / 2} y={H - PAD.bottom + 14}
                       fontSize="10" fill="#64748b" textAnchor="middle">
@@ -218,26 +269,43 @@ function StageDistribution({ totals }) {
   );
 }
 
-// Horizontal bar chart — top users by total leads, with stage breakdown.
+// RM leaderboard. Primary rank = % of activity that reached
+// visit_scheduled (the most useful performance signal we can compute
+// from the user-report response without a new endpoint). Volume is
+// shown alongside as context, and is the tiebreaker.
 function UserLeaderboard({ users }) {
-  const sorted = useMemo(
-    () => [...users].sort((a, b) => b.total - a.total).slice(0, 15),
-    [users],
-  );
+  const ranked = useMemo(() => {
+    const enriched = users.map((u) => {
+      const vs = (u.counts && u.counts.visit_scheduled) || 0;
+      const vsPct = u.total > 0 ? (vs / u.total) * 100 : 0;
+      return { ...u, vs, vsPct };
+    });
+    return enriched
+      .sort((a, b) => (b.vsPct - a.vsPct) || (b.total - a.total))
+      .slice(0, 15);
+  }, [users]);
+
   const stages = useMemo(() => {
     const set = new Set();
-    for (const u of sorted) for (const k of Object.keys(u.counts || {})) set.add(k);
+    for (const u of ranked) for (const k of Object.keys(u.counts || {})) set.add(k);
     return sortStages(Array.from(set));
-  }, [sorted]);
-  const max = sorted.reduce((m, u) => Math.max(m, u.total), 0) || 1;
+  }, [ranked]);
+  const maxTotal = ranked.reduce((m, u) => Math.max(m, u.total), 0) || 1;
 
-  if (sorted.length === 0) {
-    return <div className="ura-empty">No users to rank.</div>;
+  if (ranked.length === 0) {
+    return <div className="ura-empty">No RMs to rank.</div>;
   }
 
   return (
     <div className="ura-leaderboard">
-      {sorted.map((u, idx) => (
+      <div className="ura-lb-head">
+        <div />
+        <div />
+        <div className="ura-lb-col-h">Activity mix</div>
+        <div className="ura-lb-col-h ura-lb-col-num">Volume</div>
+        <div className="ura-lb-col-h ura-lb-col-num">% Visit Scheduled</div>
+      </div>
+      {ranked.map((u, idx) => (
         <div key={u.actor_email} className="ura-lb-row">
           <div className="ura-lb-rank">{idx + 1}</div>
           <div className="ura-lb-name">
@@ -248,7 +316,7 @@ function UserLeaderboard({ users }) {
             <div className="ura-lb-email">{u.actor_email}</div>
           </div>
           <div className="ura-lb-bar-wrap">
-            <div className="ura-lb-bar" style={{ width: `${(u.total / max) * 100}%` }}>
+            <div className="ura-lb-bar" style={{ width: `${(u.total / maxTotal) * 100}%` }}>
               {stages.map((s) => {
                 const v = u.counts?.[s] || 0;
                 if (v === 0) return null;
@@ -265,6 +333,7 @@ function UserLeaderboard({ users }) {
             </div>
           </div>
           <div className="ura-lb-total">{u.total}</div>
+          <div className="ura-lb-pct">{u.vsPct.toFixed(1)}%</div>
         </div>
       ))}
       <div className="ura-legend">
@@ -279,10 +348,19 @@ function UserLeaderboard({ users }) {
   );
 }
 
-// Trapezoidal funnel — each step is drawn as a centered trapezoid that
-// narrows from the previous step's width to the current step's width, so
-// the drop-off between stages is visible at a glance. Steps are also
-// labeled with their count, step-over-step %, and % of top.
+// Threshold below which a step-over-step % is just noise on a tiny
+// base — we still show the number, but in muted "n=X, not meaningful"
+// styling instead of bold/red/green that suggests a real performance
+// signal.
+const TINY_BASE = 5;
+
+// Stepped stage table. Replaces the prior trapezoidal SVG funnel: at
+// real cohort ratios (e.g. 18k → 5 → 1 → 1) a funnel shape cannot draw
+// segments both proportional and visible without visually lying, so we
+// switched to a tabular layout per Ashish's call. Each row carries a
+// proportional mini-bar (linear, capped at the cohort top so widths can
+// only ever shrink down the funnel), the count, and the conversion
+// from the previous step.
 function FunnelChart({ funnel }) {
   const steps = FUNNEL_STAGES.map((key) => ({
     key,
@@ -290,7 +368,6 @@ function FunnelChart({ funnel }) {
     value: funnel?.[key] || 0,
   }));
   const top = steps[0].value;
-  const max = Math.max(top, 1);
   const anyData = steps.some((s) => s.value > 0);
 
   if (!anyData) {
@@ -301,86 +378,84 @@ function FunnelChart({ funnel }) {
     );
   }
 
-  // SVG geometry — vertical stack of trapezoids.
-  const W = 520;
-  const ROW_H = 64;          // height of each funnel slice
-  const GAP = 4;             // small visual gap between slices
-  const H = steps.length * (ROW_H + GAP);
-  const cx = W / 2;
-  // Each step's half-width, in px. Floor at a few px so even a zero-count
-  // step is still visible as a sliver — otherwise the funnel "ends" early.
-  const halfW = (v) => Math.max(((v / max) * (W - 80)) / 2, 4);
-
   return (
     <div className="ura-funnel-wrap">
-      <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="ura-funnel-svg">
-        {steps.map((s, i) => {
-          const prev = i === 0 ? top : steps[i - 1].value;
-          const wTop = halfW(prev);
-          const wBot = halfW(s.value);
-          const y0 = i * (ROW_H + GAP);
-          const y1 = y0 + ROW_H;
-          // Trapezoid: top edge = previous step's width, bottom edge =
-          // this step's width. Visually shows the drop.
-          const path = [
-            `M ${cx - wTop} ${y0}`,
-            `L ${cx + wTop} ${y0}`,
-            `L ${cx + wBot} ${y1}`,
-            `L ${cx - wBot} ${y1}`,
-            'Z',
-          ].join(' ');
-          const conversion = i === 0
-            ? null
-            : prev > 0
-              ? ((s.value / prev) * 100).toFixed(1)
-              : '0.0';
-          return (
-            <g key={s.key}>
-              <path d={path} fill={stageColor(s.key)} opacity="0.92" />
-              {/* Stage label + count, centered inside the trapezoid. Plain
-                  black — readable on both the colored fill and the white
-                  card background, regardless of trapezoid width. */}
-              <text x={cx} y={y0 + ROW_H / 2 - 2}
-                    textAnchor="middle" fontSize="13"
-                    fontWeight="700" fill="#000">
-                {s.label}
-              </text>
-              <text x={cx} y={y0 + ROW_H / 2 + 14}
-                    textAnchor="middle" fontSize="12" fill="#000">
-                {s.value.toLocaleString()}
-                {top > 0 && (
-                  <tspan dx="6" fillOpacity="0.7">
-                    ({((s.value / top) * 100).toFixed(0)}% of top)
-                  </tspan>
-                )}
-              </text>
-              {/* Step-over-step conversion, on the right edge */}
-              {conversion !== null && (
-                <g>
-                  <text x={W - 6} y={y0 + 4}
-                        textAnchor="end" fontSize="10" fill="#94a3b8">
-                    Conversion
-                  </text>
-                  <text x={W - 6} y={y0 + 20}
-                        textAnchor="end" fontSize="15" fontWeight="700"
-                        fill={conversion < 30 ? '#dc2626' : conversion < 60 ? '#d97706' : '#16a34a'}>
-                    {conversion}%
-                  </text>
-                  <text x={W - 6} y={y0 + 34}
-                        textAnchor="end" fontSize="10" fill="#94a3b8">
-                    {prev - s.value} dropped
-                  </text>
-                </g>
+      <div className="ura-ft-head">
+        <div className="ura-ft-col-stage">Stage</div>
+        <div className="ura-ft-col-bar">Share of cohort</div>
+        <div className="ura-ft-col-count">Leads</div>
+        <div className="ura-ft-col-conv">vs previous</div>
+      </div>
+      {steps.map((s, i) => {
+        const prev = i === 0 ? top : steps[i - 1].value;
+        const widthPct = top > 0 ? Math.max((s.value / top) * 100, 1) : 0;
+        const conversion = i === 0
+          ? null
+          : prev > 0
+            ? (s.value / prev) * 100
+            : 0;
+        // Guardrail: a conversion computed on n ≤ 5 isn't statistically
+        // meaningful — render it muted instead of green/red so the eye
+        // doesn't read it as a real signal.
+        const tinyBase = i > 0 && prev <= TINY_BASE;
+        const convClass = conversion === null
+          ? ''
+          : tinyBase
+            ? 'ura-ft-conv ura-ft-conv-tiny'
+            : conversion < 30
+              ? 'ura-ft-conv ura-ft-conv-bad'
+              : conversion < 60
+                ? 'ura-ft-conv ura-ft-conv-mid'
+                : 'ura-ft-conv ura-ft-conv-good';
+        return (
+          <div key={s.key} className="ura-ft-row">
+            <div className="ura-ft-col-stage">
+              <span className="stage-dot" style={{ background: stageColor(s.key) }} />
+              <strong>{s.label}</strong>
+              {i === 0 && <span className="ura-ft-cohort-tag">cohort</span>}
+            </div>
+            <div className="ura-ft-col-bar">
+              <div className="ura-ft-bar-track">
+                <div
+                  className="ura-ft-bar-fill"
+                  style={{
+                    width: `${widthPct}%`,
+                    background: stageColor(s.key),
+                  }}
+                />
+              </div>
+              <div className="ura-ft-bar-pct">
+                {top > 0 ? ((s.value / top) * 100).toFixed(1) : '0.0'}% of cohort
+              </div>
+            </div>
+            <div className="ura-ft-col-count">
+              <strong>{s.value.toLocaleString()}</strong>
+            </div>
+            <div className="ura-ft-col-conv">
+              {conversion === null ? (
+                <span className="muted">—</span>
+              ) : (
+                <>
+                  <span className={convClass}>{conversion.toFixed(1)}%</span>
+                  {tinyBase ? (
+                    <span className="ura-ft-note">n={prev}, not meaningful</span>
+                  ) : (
+                    <span className="ura-ft-note">{prev - s.value} dropped</span>
+                  )}
+                </>
               )}
-            </g>
-          );
-        })}
-      </svg>
+            </div>
+          </div>
+        );
+      })}
       <div className="ura-funnel-foot">
         Cohort = leads assigned in this period. Subsequent stages count
         cohort leads that have ever reached that stage.{' '}
-        Overall: <strong>{top > 0 ? ((steps[steps.length - 1].value / top) * 100).toFixed(1) : '0.0'}%</strong>
-        {' '}top-to-bottom conversion.
+        Overall:{' '}
+        <strong>
+          {top > 0 ? ((steps[steps.length - 1].value / top) * 100).toFixed(1) : '0.0'}%
+        </strong>{' '}
+        top-to-bottom conversion.
       </div>
     </div>
   );
@@ -418,32 +493,50 @@ export default function UserReportAnalytics({ from, to, users, reportData }) {
   if (loading) return <div className="al-empty">Loading analytics…</div>;
   if (error) return <div className="modal-error">{error}</div>;
 
+  // RM leaderboard: drop admin-role users (they're noise on a sales-perf
+  // view) and rank by % of activity that resulted in "visit scheduled".
+  // Falls back to volume as the tiebreaker.
+  const rmRows = useMemo(() => {
+    const all = reportData.users || [];
+    return all.filter((u) => (u.actor_role || '').toLowerCase() !== 'admin');
+  }, [reportData]);
+
   return (
     <div className="ura-grid">
       <section className="ura-card ura-card-wide">
         <h3 className="ura-title">Daily activity</h3>
-        <div className="ura-subtitle">Stage changes per day, stacked by final stage.</div>
+        <div className="ura-subtitle">
+          Number of stage changes recorded per day, stacked by the final
+          stage each action moved a lead to. Compared with the previous day.
+        </div>
         <DailyTrendChart days={analytics.daily_trend || []} />
       </section>
 
       <section className="ura-card">
-        <h3 className="ura-title">Stage distribution</h3>
-        <div className="ura-subtitle">Share of leads by final stage.</div>
+        <h3 className="ura-title">Activity by stage</h3>
+        <div className="ura-subtitle">
+          Each user-day-lead action grouped by the stage it ended at. NOT
+          a count of leads — same lead worked on two days counts twice.
+        </div>
         <StageDistribution totals={totals} />
       </section>
 
       <section className="ura-card">
         <h3 className="ura-title">Conversion funnel</h3>
         <div className="ura-subtitle">
-          Of leads assigned in this period, how many have ever reached each stage.
+          Of leads assigned in this period, how many have ever reached
+          each stage. Counts distinct leads (one lead = one count).
         </div>
         <FunnelChart funnel={analytics.funnel || {}} />
       </section>
 
       <section className="ura-card ura-card-wide">
-        <h3 className="ura-title">User leaderboard</h3>
-        <div className="ura-subtitle">Top {Math.min((reportData.users || []).length, 15)} users by lead volume.</div>
-        <UserLeaderboard users={reportData.users || []} />
+        <h3 className="ura-title">RM leaderboard</h3>
+        <div className="ura-subtitle">
+          Top {Math.min(rmRows.length, 15)} RMs by % of their activity
+          that moved a lead to Visit Scheduled. Admins excluded.
+        </div>
+        <UserLeaderboard users={rmRows} />
       </section>
     </div>
   );

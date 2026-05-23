@@ -298,13 +298,14 @@ def _resolve_report_email(cur):
 
 
 @bp.get("/user-report")
-@require_auth("admin", "manager")
+@require_auth("admin", "manager", "rm")
 def user_report():
     """Per-user summary across an IST date range.
 
     Query: from=YYYY-MM-DD, to=YYYY-MM-DD (both default to today IST),
            users=email1,email2 (optional filter).
-    Admin sees every user; a manager sees only their own RMs.
+    Admin sees every user; a manager sees only their own RMs; an RM
+    sees only themselves.
     Response: { from, to, users: [{ actor_email, actor_name, actor_role,
                 total, counts, days_active }] }
     """
@@ -332,6 +333,10 @@ def user_report():
                         "to": date_to.isoformat(),
                         "users": [],
                     })
+            elif g.user["role"] == "rm":
+                # An RM can only ever see themselves — ignore any users=
+                # filter the client sent and force self.
+                emails = [(g.user["email"] or "").strip().lower()]
 
             extra_where = "AND a.actor_email = ANY(%s)" if emails else ""
             sql = (
@@ -381,7 +386,7 @@ def user_report():
 
 
 @bp.get("/user-report/analytics")
-@require_auth("admin", "manager")
+@require_auth("admin", "manager", "rm")
 def user_report_analytics():
     """Daily trend aggregated across all selected users (or all users in scope).
 
@@ -425,6 +430,8 @@ def user_report_analytics():
                         "daily_trend": [],
                         "funnel": {},
                     })
+            elif g.user["role"] == "rm":
+                emails = [(g.user["email"] or "").strip().lower()]
 
             extra_where = "AND a.actor_email = ANY(%s)" if emails else ""
             sql = (
