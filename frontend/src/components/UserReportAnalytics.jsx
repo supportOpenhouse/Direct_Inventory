@@ -334,20 +334,32 @@ function FunnelChart({ funnel }) {
             : prev > 0
               ? ((s.value / prev) * 100).toFixed(1)
               : '0.0';
+          // For very narrow trapezoids the centered text spills past the
+          // colored fill onto the card's white background — white text on
+                // white = invisible. Render dark text with a white halo
+          // (paint-order stroke) so it's readable on both the trapezoid
+          // and the white background regardless of bar width.
+          const textProps = {
+            paintOrder: 'stroke',
+            stroke: '#fff',
+            strokeWidth: 3,
+            strokeLinejoin: 'round',
+            fill: '#0f1115',
+          };
           return (
             <g key={s.key}>
               <path d={path} fill={stageColor(s.key)} opacity="0.92" />
               {/* Stage label + count, centered inside the trapezoid */}
               <text x={cx} y={y0 + ROW_H / 2 - 2}
                     textAnchor="middle" fontSize="13"
-                    fontWeight="700" fill="#fff">
+                    fontWeight="700" {...textProps}>
                 {s.label}
               </text>
               <text x={cx} y={y0 + ROW_H / 2 + 14}
-                    textAnchor="middle" fontSize="12" fill="#fff" opacity="0.95">
+                    textAnchor="middle" fontSize="12" {...textProps}>
                 {s.value.toLocaleString()}
                 {top > 0 && (
-                  <tspan dx="6" opacity="0.85">
+                  <tspan dx="6" fillOpacity="0.7">
                     ({((s.value / top) * 100).toFixed(0)}% of top)
                   </tspan>
                 )}
