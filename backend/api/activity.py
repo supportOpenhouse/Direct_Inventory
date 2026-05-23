@@ -426,6 +426,39 @@ def user_report_analytics():
             cur.execute(sql, params)
             rows = cur.fetchall()
 
+            # Funnel — distinct leads that reached each pipeline stage.
+            #
+            # The "qualified" top-of-funnel count CANNOT come from
+            # activity_log.after_value='qualified' — a user moving a lead
+            # back to qualified (e.g. from rejected) would be wrongly
+            # counted as a new lead. New leads are inventory rows created
+            # in the period, full stop. The remaining funnel stages
+            # (visit_scheduled, visit_completed, offer_given) are still
+            # derived from activity_log: distinct leads that any in-scope
+            # user moved INTO that stage during the period.
+            qualified_sql = (
+                "SELECT COUNT(*) AS leads FROM inventory i "
+                "WHERE i.created_at >= %s AND i.created_at < %s "
+                "  {qual_user_clause}"
+            )
+            if emails:
+                qualified_sql = qualified_sql.format(
+                    qual_user_clause=(
+                        "AND i.assigned_rm_id IN ("
+                        "  SELECT id FROM users WHERE LOWER(email) = ANY(%s)"
+                        ")"
+                    ),
+                )
+                qual_params: list = [
+                    start_utc, end_utc,
+                    [e.lower() for e in emails],
+                ]
+            else:
+                qualified_sql = qualified_sql.format(qual_user_clause="")
+                qual_params = [start_utc, end_utc]
+            cur.execute(qualified_sql, qual_params)
+            qualified_count = cur.fetchone()["leads"]
+
             funnel_sql = (
                 "SELECT a.after_value AS stage, COUNT(DISTINCT a.entity_id) AS leads "
                 "FROM activity_log a "
@@ -436,7 +469,7 @@ def user_report_analytics():
                 "  AND a.actor_email IS NOT NULL "
                 "  AND a.actor_email NOT LIKE 'apps-script:%%' "
                 "  AND a.actor_email <> 'system:forms-webhook' "
-                "  AND a.after_value IN ('qualified', 'visit_scheduled', 'visit_completed', 'offer_given') "
+                "  AND a.after_value IN ('visit_scheduled', 'visit_completed', 'offer_given') "
                 f"  {extra_where} "
                 "GROUP BY a.after_value"
             )
@@ -458,6 +491,7 @@ def user_report_analytics():
 
     ordered = sorted(days.values(), key=lambda d: d["day"])
     funnel = {r["stage"]: r["leads"] for r in funnel_rows}
+    funnel["qualified"] = qualified_count
     return jsonify({
         "from": date_from.isoformat(),
         "to": date_to.isoformat(),
