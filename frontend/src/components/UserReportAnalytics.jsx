@@ -15,8 +15,15 @@ const STAGE_ORDER = [
   'rejected',
 ];
 
-// Funnel order — what we care about as the conversion sequence.
-const FUNNEL_STAGES = ['qualified', 'visit_scheduled', 'visit_completed', 'offer_given'];
+// Funnel order — canonical pipeline progression. Labels here override the
+// generic `stageLabel` mapping ("qualified" is "Lead" everywhere else in
+// the UI, which is confusing as a funnel-stage name).
+const FUNNEL_STAGES = [
+  { key: 'qualified',       label: 'Qualified' },
+  { key: 'visit_scheduled', label: 'Visit Scheduled' },
+  { key: 'visit_completed', label: 'Visit Completed' },
+  { key: 'offer_given',     label: 'Offer Given' },
+];
 
 function sortStages(keys) {
   return [...keys].sort((a, b) => {
@@ -277,63 +284,112 @@ function UserLeaderboard({ users }) {
   );
 }
 
-// Funnel: qualified → visit_scheduled → visit_completed → offer_given.
-// Each step shows count, % of previous step, and % of top of funnel.
-function FunnelChart({ totals }) {
+// Trapezoidal funnel — each step is drawn as a centered trapezoid that
+// narrows from the previous step's width to the current step's width, so
+// the drop-off between stages is visible at a glance. Steps are also
+// labeled with their count, step-over-step %, and % of top.
+function FunnelChart({ funnel }) {
   const steps = FUNNEL_STAGES.map((s) => ({
-    stage: s,
-    value: totals[s] || 0,
+    key: s.key,
+    label: s.label,
+    value: funnel?.[s.key] || 0,
   }));
-  const top = steps[0].value || 1;
-  const max = Math.max(...steps.map((s) => s.value), 1);
-
+  const top = steps[0].value;
+  const max = Math.max(top, 1);
   const anyData = steps.some((s) => s.value > 0);
+
   if (!anyData) {
-    return <div className="ura-empty">No funnel data — none of the funnel stages were reached.</div>;
+    return (
+      <div className="ura-empty">
+        No leads reached any funnel stage in this period.
+      </div>
+    );
   }
 
+  // SVG geometry — vertical stack of trapezoids.
+  const W = 520;
+  const ROW_H = 64;          // height of each funnel slice
+  const GAP = 4;             // small visual gap between slices
+  const H = steps.length * (ROW_H + GAP);
+  const cx = W / 2;
+  // Each step's half-width, in px. Floor at a few px so even a zero-count
+  // step is still visible as a sliver — otherwise the funnel "ends" early.
+  const halfW = (v) => Math.max(((v / max) * (W - 80)) / 2, 4);
+
   return (
-    <div className="ura-funnel">
-      {steps.map((s, i) => {
-        const widthPct = (s.value / max) * 100;
-        const overallPct = top > 0 ? ((s.value / top) * 100).toFixed(1) : '0.0';
-        const stepPct = i === 0
-          ? null
-          : (steps[i - 1].value > 0
-              ? ((s.value / steps[i - 1].value) * 100).toFixed(1)
-              : '0.0');
-        return (
-          <div key={s.stage} className="ura-funnel-row">
-            <div className="ura-funnel-label">
-              <span className="stage-dot" style={{ background: stageColor(s.stage) }} />
-              {stageLabel(s.stage)}
-            </div>
-            <div className="ura-funnel-bar-wrap">
-              <div
-                className="ura-funnel-bar"
-                style={{
-                  width: `${widthPct}%`,
-                  background: stageColor(s.stage),
-                }}
-              >
-                <span className="ura-funnel-val">{s.value}</span>
-              </div>
-            </div>
-            <div className="ura-funnel-pct">
-              {stepPct !== null && (
-                <span className="ura-funnel-step">{stepPct}% <span className="muted">vs prev</span></span>
+    <div className="ura-funnel-wrap">
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="ura-funnel-svg">
+        {steps.map((s, i) => {
+          const prev = i === 0 ? top : steps[i - 1].value;
+          const wTop = halfW(prev);
+          const wBot = halfW(s.value);
+          const y0 = i * (ROW_H + GAP);
+          const y1 = y0 + ROW_H;
+          // Trapezoid: top edge = previous step's width, bottom edge =
+          // this step's width. Visually shows the drop.
+          const path = [
+            `M ${cx - wTop} ${y0}`,
+            `L ${cx + wTop} ${y0}`,
+            `L ${cx + wBot} ${y1}`,
+            `L ${cx - wBot} ${y1}`,
+            'Z',
+          ].join(' ');
+          const conversion = i === 0
+            ? null
+            : prev > 0
+              ? ((s.value / prev) * 100).toFixed(1)
+              : '0.0';
+          return (
+            <g key={s.key}>
+              <path d={path} fill={stageColor(s.key)} opacity="0.92" />
+              {/* Stage label + count, centered inside the trapezoid */}
+              <text x={cx} y={y0 + ROW_H / 2 - 2}
+                    textAnchor="middle" fontSize="13"
+                    fontWeight="700" fill="#fff">
+                {s.label}
+              </text>
+              <text x={cx} y={y0 + ROW_H / 2 + 14}
+                    textAnchor="middle" fontSize="12" fill="#fff" opacity="0.95">
+                {s.value.toLocaleString()}
+                {top > 0 && (
+                  <tspan dx="6" opacity="0.85">
+                    ({((s.value / top) * 100).toFixed(0)}% of top)
+                  </tspan>
+                )}
+              </text>
+              {/* Step-over-step conversion, on the right edge */}
+              {conversion !== null && (
+                <g>
+                  <text x={W - 6} y={y0 + 4}
+                        textAnchor="end" fontSize="10" fill="#94a3b8">
+                    Conversion
+                  </text>
+                  <text x={W - 6} y={y0 + 20}
+                        textAnchor="end" fontSize="15" fontWeight="700"
+                        fill={conversion < 30 ? '#dc2626' : conversion < 60 ? '#d97706' : '#16a34a'}>
+                    {conversion}%
+                  </text>
+                  <text x={W - 6} y={y0 + 34}
+                        textAnchor="end" fontSize="10" fill="#94a3b8">
+                    {prev - s.value} dropped
+                  </text>
+                </g>
               )}
-              <span className="ura-funnel-overall">{overallPct}% <span className="muted">of top</span></span>
-            </div>
-          </div>
-        );
-      })}
+            </g>
+          );
+        })}
+      </svg>
+      <div className="ura-funnel-foot">
+        Counts are distinct leads that reached each stage during the period.
+        Overall: <strong>{top > 0 ? ((steps[steps.length - 1].value / top) * 100).toFixed(1) : '0.0'}%</strong>
+        {' '}top-to-bottom conversion.
+      </div>
     </div>
   );
 }
 
 export default function UserReportAnalytics({ from, to, users, reportData }) {
-  const [trend, setTrend] = useState({ daily_trend: [] });
+  const [analytics, setAnalytics] = useState({ daily_trend: [], funnel: {} });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -344,7 +400,7 @@ export default function UserReportAnalytics({ from, to, users, reportData }) {
     const params = new URLSearchParams({ from, to });
     if (users.length) params.set('users', users.join(','));
     api.get(`/api/activity/user-report/analytics?${params}`)
-      .then((r) => { if (alive) setTrend(r); })
+      .then((r) => { if (alive) setAnalytics(r); })
       .catch((e) => { if (alive) setError(e.data?.error || e.message); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
@@ -369,7 +425,7 @@ export default function UserReportAnalytics({ from, to, users, reportData }) {
       <section className="ura-card ura-card-wide">
         <h3 className="ura-title">Daily activity</h3>
         <div className="ura-subtitle">Stage changes per day, stacked by final stage.</div>
-        <DailyTrendChart days={trend.daily_trend || []} />
+        <DailyTrendChart days={analytics.daily_trend || []} />
       </section>
 
       <section className="ura-card">
@@ -380,8 +436,8 @@ export default function UserReportAnalytics({ from, to, users, reportData }) {
 
       <section className="ura-card">
         <h3 className="ura-title">Conversion funnel</h3>
-        <div className="ura-subtitle">Lead → visit scheduled → visit completed → offer given.</div>
-        <FunnelChart totals={totals} />
+        <div className="ura-subtitle">Distinct leads that reached each pipeline stage.</div>
+        <FunnelChart funnel={analytics.funnel || {}} />
       </section>
 
       <section className="ura-card ura-card-wide">

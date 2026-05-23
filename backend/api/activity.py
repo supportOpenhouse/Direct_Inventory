@@ -379,7 +379,15 @@ def user_report_analytics():
     /user-report — this endpoint only adds the cross-user daily series which
     can't be cheaply recomputed from that response.
 
-    Response: { from, to, daily_trend: [{ day, total, counts: {stage: n} }] }
+    Funnel reports DISTINCT leads that reached each canonical pipeline stage
+    in the period — `daily_trend` can double-count one lead across days,
+    which is wrong for a conversion funnel.
+
+    Response: {
+      from, to,
+      daily_trend: [{ day, total, counts: {stage: n} }],
+      funnel: { qualified, visit_scheduled, visit_completed, offer_given },
+    }
     """
     try:
         date_from, date_to, start_utc, end_utc = _parse_ist_range()
@@ -388,6 +396,8 @@ def user_report_analytics():
 
     emails = _parse_users_param()
 
+    rows: list = []
+    funnel_rows: list = []
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
@@ -402,6 +412,7 @@ def user_report_analytics():
                         "from": date_from.isoformat(),
                         "to": date_to.isoformat(),
                         "daily_trend": [],
+                        "funnel": {},
                     })
 
             extra_where = "AND a.actor_email = ANY(%s)" if emails else ""
@@ -414,6 +425,23 @@ def user_report_analytics():
                 params.append(emails)
             cur.execute(sql, params)
             rows = cur.fetchall()
+
+            funnel_sql = (
+                "SELECT a.after_value AS stage, COUNT(DISTINCT a.entity_id) AS leads "
+                "FROM activity_log a "
+                "WHERE a.action = 'stage_change' "
+                "  AND a.entity_type = 'inventory' "
+                "  AND a.created_at >= %s "
+                "  AND a.created_at <  %s "
+                "  AND a.actor_email IS NOT NULL "
+                "  AND a.actor_email NOT LIKE 'apps-script:%%' "
+                "  AND a.actor_email <> 'system:forms-webhook' "
+                "  AND a.after_value IN ('qualified', 'visit_scheduled', 'visit_completed', 'offer_given') "
+                f"  {extra_where} "
+                "GROUP BY a.after_value"
+            )
+            cur.execute(funnel_sql, params)
+            funnel_rows = cur.fetchall()
     finally:
         conn.close()
 
@@ -429,10 +457,12 @@ def user_report_analytics():
         bucket["counts"][stage] = bucket["counts"].get(stage, 0) + 1
 
     ordered = sorted(days.values(), key=lambda d: d["day"])
+    funnel = {r["stage"]: r["leads"] for r in funnel_rows}
     return jsonify({
         "from": date_from.isoformat(),
         "to": date_to.isoformat(),
         "daily_trend": ordered,
+        "funnel": funnel,
     })
 
 
