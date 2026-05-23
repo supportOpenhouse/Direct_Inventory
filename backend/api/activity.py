@@ -437,48 +437,40 @@ def user_report_analytics():
             cur.execute(sql, params)
             rows = cur.fetchall()
 
-            # Funnel — strict cohort.
+            # Funnel — strict cohort, period-independent.
             #
-            # Cohort = leads CREATED in the period (and, if a user filter
-            # is in play, assigned to those users). For each subsequent
-            # pipeline stage, count how many of THOSE COHORT LEADS have
-            # ever reached that stage (during or after the period).
+            # Cohort = ALL leads currently assigned to the filtered users
+            # (the same set the user sees on the Board's Lead chip with
+            # city=All). The selected date range deliberately does NOT
+            # apply to the funnel — a funnel is a snapshot of "of all
+            # leads I own, where are they in the pipeline", not "what
+            # happened in this window". The period filter still applies
+            # to the other analytics cards (daily trend, distribution,
+            # leaderboard) which are activity views.
             #
-            # This guarantees the funnel is mathematically coherent:
-            # stage counts can never exceed the cohort size, so we never
-            # see >100% conversion or negative "dropped" counts.
-            #
-            # Why not "leads any user moved into this stage during the
-            # period"? Because those leads were typically created long
-            # before the period, so they're a different cohort than the
-            # top-of-funnel — mixing them produces nonsense (e.g. 3
-            # leads at Visit Scheduled vs 1 at Qualified = 300%).
+            # For each subsequent pipeline stage we count how many of
+            # the cohort leads have ever reached that stage, so the
+            # math always satisfies stage_count <= cohort_size.
             if emails:
                 cohort_user_clause = (
-                    "AND i.assigned_rm_id IN ("
+                    "WHERE i.assigned_rm_id IN ("
                     "  SELECT id FROM users WHERE LOWER(email) = ANY(%s)"
                     ")"
                 )
-                cohort_params: list = [
-                    start_utc, end_utc, [e.lower() for e in emails],
-                ]
+                cohort_params: list = [[e.lower() for e in emails]]
             else:
                 cohort_user_clause = ""
-                cohort_params = [start_utc, end_utc]
+                cohort_params = []
 
             cur.execute(
-                "SELECT COUNT(*) AS leads FROM inventory i "
-                "WHERE i.created_at >= %s AND i.created_at < %s "
-                f"  {cohort_user_clause}",
+                f"SELECT COUNT(*) AS leads FROM inventory i {cohort_user_clause}",
                 cohort_params,
             )
             qualified_count = cur.fetchone()["leads"]
 
             cur.execute(
                 "WITH cohort AS ("
-                "  SELECT i.oh_id FROM inventory i "
-                "  WHERE i.created_at >= %s AND i.created_at < %s "
-                f"    {cohort_user_clause}"
+                f"  SELECT i.oh_id FROM inventory i {cohort_user_clause}"
                 ") "
                 "SELECT a.after_value AS stage, "
                 "       COUNT(DISTINCT a.entity_id) AS leads "
