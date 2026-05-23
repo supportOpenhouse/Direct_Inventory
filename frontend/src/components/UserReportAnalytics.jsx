@@ -596,16 +596,19 @@ export default function UserReportAnalytics({ from, to, users, reportData }) {
     return out;
   }, [reportData]);
 
-  if (loading) return <div className="al-empty">Loading analytics…</div>;
-  if (error) return <div className="modal-error">{error}</div>;
-
   // RM leaderboard: drop admin-role users (they're noise on a sales-perf
   // view) and rank by % of activity that resulted in "visit scheduled".
   // Falls back to volume as the tiebreaker.
+  // MUST be declared BEFORE the loading/error early returns — Rules of
+  // Hooks: a hook called only on the post-loading render would crash
+  // the component and leave the analytics tab blank.
   const rmRows = useMemo(() => {
     const all = reportData.users || [];
     return all.filter((u) => (u.actor_role || '').toLowerCase() !== 'admin');
   }, [reportData]);
+
+  if (loading) return <div className="al-empty">Loading analytics…</div>;
+  if (error) return <div className="modal-error">{error}</div>;
 
   return (
     <div className="ura-grid">
