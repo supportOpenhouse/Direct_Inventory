@@ -742,3 +742,137 @@ a { color: inherit; }
 .pill-on { background: #0f1115; color: #fff; }
 
 .loading { color: #64748b; padding: 20px; }
+
+/* ===== User Report — tabs ===== */
+.ur-tabs {
+  display: flex; gap: 4px; margin: 0 0 14px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.ur-tab {
+  background: transparent; border: 0; padding: 8px 14px;
+  font-size: 13px; color: #64748b; cursor: pointer; font-weight: 600;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.ur-tab:hover { color: #0f1115; }
+.ur-tab-on { color: #0f1115; border-bottom-color: #0f1115; }
+
+/* ===== User Report — Analytics view ===== */
+.ura-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.ura-card {
+  background: #fff; border-radius: 12px; padding: 16px 18px;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+}
+.ura-card-wide { grid-column: 1 / -1; }
+.ura-title { font-size: 14px; font-weight: 700; color: #0f1115; margin: 0; }
+.ura-subtitle { color: #64748b; font-size: 12px; margin: 2px 0 12px; }
+.ura-empty { color: #94a3b8; font-size: 13px; padding: 24px; text-align: center; }
+
+/* Daily trend chart */
+.ura-chart-wrap { position: relative; }
+.ura-chart { display: block; }
+.ura-tooltip {
+  position: absolute; transform: translate(-50%, calc(-100% - 8px));
+  background: #0f1115; color: #fff; padding: 8px 10px; border-radius: 8px;
+  font-size: 12px; pointer-events: none; min-width: 160px; z-index: 5;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+}
+.ura-tt-title { font-weight: 700; margin-bottom: 4px; }
+.ura-tt-row {
+  display: grid; grid-template-columns: 10px 1fr auto;
+  gap: 6px; align-items: center; margin-top: 2px;
+}
+.ura-tt-row strong { color: #fff; }
+.ura-legend {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+.ura-legend-item {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; color: #475569;
+}
+
+/* Donut chart */
+.ura-donut-wrap {
+  display: flex; gap: 18px; align-items: center; flex-wrap: wrap;
+}
+.ura-donut-legend { flex: 1; min-width: 180px; }
+.ura-legend-row {
+  display: grid; grid-template-columns: 10px 1fr auto auto;
+  gap: 8px; align-items: center;
+  padding: 4px 0; font-size: 12px; color: #334155;
+}
+.ura-legend-name { color: #0f1115; }
+.ura-legend-pct { color: #64748b; font-size: 11px; }
+.ura-legend-val { color: #0f1115; }
+
+/* Leaderboard */
+.ura-leaderboard { display: flex; flex-direction: column; gap: 10px; }
+.ura-lb-row {
+  display: grid;
+  grid-template-columns: 24px minmax(140px, 220px) 1fr 40px;
+  gap: 12px; align-items: center;
+}
+.ura-lb-rank {
+  color: #94a3b8; font-weight: 700; font-size: 12px;
+  text-align: right;
+}
+.ura-lb-name { min-width: 0; }
+.ura-lb-name-line {
+  display: flex; align-items: center; gap: 6px; min-width: 0;
+}
+.ura-lb-name-line strong {
+  font-size: 13px; color: #0f1115; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.ura-lb-email {
+  color: #94a3b8; font-size: 11px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ura-lb-bar-wrap {
+  background: #f8fafc; border-radius: 999px; height: 18px; overflow: hidden;
+}
+.ura-lb-bar {
+  height: 100%; display: flex; min-width: 4px;
+  transition: width 0.2s;
+}
+.ura-lb-seg { display: inline-block; height: 100%; }
+.ura-lb-total {
+  font-weight: 700; color: #0f1115; font-size: 13px; text-align: right;
+}
+
+/* Funnel */
+.ura-funnel { display: flex; flex-direction: column; gap: 10px; }
+.ura-funnel-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 150px) 1fr minmax(140px, auto);
+  gap: 12px; align-items: center;
+}
+.ura-funnel-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; color: #0f1115; font-weight: 600;
+}
+.ura-funnel-bar-wrap {
+  background: #f8fafc; border-radius: 6px; overflow: hidden; height: 28px;
+}
+.ura-funnel-bar {
+  height: 100%; display: flex; align-items: center; padding-left: 10px;
+  color: #fff; font-weight: 700; font-size: 12px; min-width: 28px;
+  transition: width 0.2s;
+}
+.ura-funnel-val { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.18); }
+.ura-funnel-pct {
+  display: flex; flex-direction: column; gap: 2px;
+  font-size: 11px; color: #334155; text-align: right;
+}
+.ura-funnel-step { color: #0f1115; font-weight: 600; }
+.ura-funnel-overall { color: #64748b; }
+.ura-funnel-pct .muted { color: #94a3b8; font-weight: 400; }
+
+@media (max-width: 900px) {
+  .ura-grid { grid-template-columns: 1fr; }
+}

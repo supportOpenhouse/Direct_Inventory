@@ -369,6 +369,73 @@ def user_report():
     })
 
 
+@bp.get("/user-report/analytics")
+@require_auth("admin", "manager")
+def user_report_analytics():
+    """Daily trend aggregated across all selected users (or all users in scope).
+
+    Same filters as /user-report (from, to, users). The per-user leaderboard,
+    overall stage distribution, and funnel rates are derived FE-side from
+    /user-report — this endpoint only adds the cross-user daily series which
+    can't be cheaply recomputed from that response.
+
+    Response: { from, to, daily_trend: [{ day, total, counts: {stage: n} }] }
+    """
+    try:
+        date_from, date_to, start_utc, end_utc = _parse_ist_range()
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    emails = _parse_users_param()
+
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            if g.user["role"] == "manager":
+                rm_emails = _manager_rm_emails(cur, g.user["id"])
+                if emails:
+                    emails = [e for e in emails if e.strip().lower() in rm_emails]
+                else:
+                    emails = list(rm_emails)
+                if not emails:
+                    return jsonify({
+                        "from": date_from.isoformat(),
+                        "to": date_to.isoformat(),
+                        "daily_trend": [],
+                    })
+
+            extra_where = "AND a.actor_email = ANY(%s)" if emails else ""
+            sql = (
+                _WINNERS_CTE.format(extra_where=extra_where) +
+                " SELECT w.day, w.final_stage FROM winners w"
+            )
+            params: list = [start_utc, end_utc]
+            if emails:
+                params.append(emails)
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+    finally:
+        conn.close()
+
+    days: dict = {}
+    for r in rows:
+        d = r["day"]
+        bucket = days.get(d)
+        if bucket is None:
+            bucket = {"day": d.isoformat(), "total": 0, "counts": {}}
+            days[d] = bucket
+        bucket["total"] += 1
+        stage = r["final_stage"] or "(none)"
+        bucket["counts"][stage] = bucket["counts"].get(stage, 0) + 1
+
+    ordered = sorted(days.values(), key=lambda d: d["day"])
+    return jsonify({
+        "from": date_from.isoformat(),
+        "to": date_to.isoformat(),
+        "daily_trend": ordered,
+    })
+
+
 @bp.get("/user-report/days")
 @require_auth("admin", "manager", "rm")
 def user_report_days():

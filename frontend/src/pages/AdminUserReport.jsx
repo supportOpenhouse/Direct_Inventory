@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api/client.js';
+import UserReportAnalytics from '../components/UserReportAnalytics.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
 import { PRESETS, PRESET_LABELS, downloadCSV, todayIST } from '../utils/reportFilters.js';
@@ -80,6 +81,7 @@ export default function AdminUserReport() {
   const [data, setData] = useState({ from: '', to: '', users: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [tab, setTab] = useState('users');  // 'users' | 'analytics'
 
   async function loadUserOptions() {
     try {
@@ -187,46 +189,73 @@ export default function AdminUserReport() {
         <button className="btn-primary" onClick={refresh} disabled={loading}>
           {loading ? 'Loading…' : 'Apply'}
         </button>
+        {tab === 'users' && (
+          <button
+            className="btn-ghost"
+            onClick={exportCSV}
+            disabled={loading || data.users.length === 0}
+            title="Download visible rows as CSV"
+          >
+            Download CSV
+          </button>
+        )}
+      </div>
+
+      <div className="ur-tabs">
         <button
-          className="btn-ghost"
-          onClick={exportCSV}
-          disabled={loading || data.users.length === 0}
-          title="Download visible rows as CSV"
-        >
-          Download CSV
-        </button>
+          type="button"
+          className={tab === 'users' ? 'ur-tab ur-tab-on' : 'ur-tab'}
+          onClick={() => setTab('users')}
+        >Users</button>
+        <button
+          type="button"
+          className={tab === 'analytics' ? 'ur-tab ur-tab-on' : 'ur-tab'}
+          onClick={() => setTab('analytics')}
+        >Analytics</button>
       </div>
 
       {error && <div className="modal-error">{error}</div>}
 
-      {!loading && data.users.length === 0 && !error && (
-        <div className="al-empty">No stage changes for the selected range.</div>
+      {tab === 'users' && (
+        <>
+          {!loading && data.users.length === 0 && !error && (
+            <div className="al-empty">No stage changes for the selected range.</div>
+          )}
+          <div className="ur-user-list">
+            {data.users.map((u) => (
+              <a
+                key={u.actor_email}
+                href={userDetailHref(u.actor_email)}
+                target="_blank"
+                rel="noreferrer"
+                className="ur-user-card"
+              >
+                <div className="dr-user-head">
+                  <div>
+                    <strong>{u.actor_name || u.actor_email}</strong>
+                    {u.actor_role && <span className="role-chip dr-role">{u.actor_role}</span>}
+                    <div className="dr-user-email">{u.actor_email}</div>
+                  </div>
+                  <div className="dr-user-counts">
+                    <span className="dr-total">{u.total} lead{u.total === 1 ? '' : 's'}</span>
+                    <span className="dr-count-pill">{u.days_active} day{u.days_active === 1 ? '' : 's'} active</span>
+                    <StageCountPills counts={u.counts} />
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </>
       )}
 
-      <div className="ur-user-list">
-        {data.users.map((u) => (
-          <a
-            key={u.actor_email}
-            href={userDetailHref(u.actor_email)}
-            target="_blank"
-            rel="noreferrer"
-            className="ur-user-card"
-          >
-            <div className="dr-user-head">
-              <div>
-                <strong>{u.actor_name || u.actor_email}</strong>
-                {u.actor_role && <span className="role-chip dr-role">{u.actor_role}</span>}
-                <div className="dr-user-email">{u.actor_email}</div>
-              </div>
-              <div className="dr-user-counts">
-                <span className="dr-total">{u.total} lead{u.total === 1 ? '' : 's'}</span>
-                <span className="dr-count-pill">{u.days_active} day{u.days_active === 1 ? '' : 's'} active</span>
-                <StageCountPills counts={u.counts} />
-              </div>
-            </div>
-          </a>
-        ))}
-      </div>
+      {tab === 'analytics' && (
+        <UserReportAnalytics
+          from={data.from || from}
+          to={data.to || to}
+          users={users}
+          reportData={data}
+        />
+      )}
     </div>
   );
 }
