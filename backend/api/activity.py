@@ -437,40 +437,54 @@ def user_report_analytics():
             cur.execute(sql, params)
             rows = cur.fetchall()
 
-            # Funnel — strict cohort, period-independent.
+            # Funnel — strict period-dependent cohort.
             #
-            # Cohort = ALL leads currently assigned to the filtered users
-            # (the same set the user sees on the Board's Lead chip with
-            # city=All). The selected date range deliberately does NOT
-            # apply to the funnel — a funnel is a snapshot of "of all
-            # leads I own, where are they in the pipeline", not "what
-            # happened in this window". The period filter still applies
-            # to the other analytics cards (daily trend, distribution,
-            # leaderboard) which are activity views.
+            # Cohort = leads that became assigned to the filtered users
+            # DURING the selected period. Practically that's
+            # `inventory.created_at IN period AND assigned_rm_id IN
+            # filtered_users` — auto-assignment runs at row creation in
+            # services/sheet_sync.py and api/inventory.py, so creation
+            # time is the assignment time for the common case.
             #
-            # For each subsequent pipeline stage we count how many of
-            # the cohort leads have ever reached that stage, so the
-            # math always satisfies stage_count <= cohort_size.
+            # The period DOES apply to the funnel (per Ashish: "In April,
+            # zero leads were assigned, the funnel should reflect that.
+            # In May, whatever new leads were assigned, it should count
+            # that.").
+            #
+            # Lead count NEVER comes from activity_log.after_value =
+            # 'qualified' — a user moving a lead back to qualified must
+            # not bump the new-lead count. Sourcing from inventory.created
+            # _at sidesteps the activity_log path entirely.
+            #
+            # For each subsequent pipeline stage we count how many of the
+            # cohort leads have ever reached that stage — strict cohort
+            # so stage_count <= cohort_size, no >100% conversions.
             if emails:
                 cohort_user_clause = (
-                    "WHERE i.assigned_rm_id IN ("
+                    "AND i.assigned_rm_id IN ("
                     "  SELECT id FROM users WHERE LOWER(email) = ANY(%s)"
                     ")"
                 )
-                cohort_params: list = [[e.lower() for e in emails]]
+                cohort_params: list = [
+                    start_utc, end_utc, [e.lower() for e in emails],
+                ]
             else:
                 cohort_user_clause = ""
-                cohort_params = []
+                cohort_params = [start_utc, end_utc]
 
             cur.execute(
-                f"SELECT COUNT(*) AS leads FROM inventory i {cohort_user_clause}",
+                "SELECT COUNT(*) AS leads FROM inventory i "
+                "WHERE i.created_at >= %s AND i.created_at < %s "
+                f"  {cohort_user_clause}",
                 cohort_params,
             )
             qualified_count = cur.fetchone()["leads"]
 
             cur.execute(
                 "WITH cohort AS ("
-                f"  SELECT i.oh_id FROM inventory i {cohort_user_clause}"
+                "  SELECT i.oh_id FROM inventory i "
+                "  WHERE i.created_at >= %s AND i.created_at < %s "
+                f"    {cohort_user_clause}"
                 ") "
                 "SELECT a.after_value AS stage, "
                 "       COUNT(DISTINCT a.entity_id) AS leads "
