@@ -70,20 +70,100 @@ function niceTicks(rawMax, tickCount = 4) {
   return { ticks, niceMax };
 }
 
-// Stacked bar chart of stage activity per day. Pure SVG — no chart lib.
-function DailyTrendChart({ days }) {
-  const [hover, setHover] = useState(null); // { x, y, day, total, counts }
+// Palette for user-series (no natural color per user, so cycle through).
+// Distinct enough hues that 8+ users on the same chart stay separable.
+const USER_PALETTE = [
+  '#378ADD', '#EF9F27', '#1D9E75', '#7F77DD', '#BA7517',
+  '#dc2626', '#06b6d4', '#a855f7', '#84cc16', '#f43f5e',
+];
+const TOP_USERS = 8;          // cap distinct series; rest collapses to "Other"
+const OTHER_KEY = '__other__';
+const OTHER_COLOR = '#94a3b8';
 
-  const stages = useMemo(() => {
-    const set = new Set();
-    for (const d of days) for (const k of Object.keys(d.counts || {})) set.add(k);
-    return sortStages(Array.from(set));
-  }, [days]);
+// Build the (series, perDayValues) shape the chart renders from. Returns
+// { series: [{key, label, color, total}], rows: [{day, total, values}] }
+// where values[key] is that series' count for that day.
+function buildSeries({ days, groupBy, userNames }) {
+  if (groupBy === 'user') {
+    // Sum per-user across all days to pick the top-N. Everything else
+    // collapses to a single "Other" series so the legend stays readable
+    // even on a 30-day window with 40+ users.
+    const totalsByUser = {};
+    for (const d of days) {
+      for (const [email, n] of Object.entries(d.by_user || {})) {
+        totalsByUser[email] = (totalsByUser[email] || 0) + n;
+      }
+    }
+    const sortedUsers = Object.entries(totalsByUser)
+      .sort((a, b) => b[1] - a[1]);
+    const top = sortedUsers.slice(0, TOP_USERS);
+    const rest = sortedUsers.slice(TOP_USERS);
+    const series = top.map(([email, total], i) => ({
+      key: email,
+      label: userNames[email] || email,
+      color: USER_PALETTE[i % USER_PALETTE.length],
+      total,
+    }));
+    if (rest.length > 0) {
+      series.push({
+        key: OTHER_KEY,
+        label: `Other (${rest.length} user${rest.length === 1 ? '' : 's'})`,
+        color: OTHER_COLOR,
+        total: rest.reduce((a, [, n]) => a + n, 0),
+      });
+    }
+    const topEmails = new Set(top.map(([e]) => e));
+    const rows = days.map((d) => {
+      const values = {};
+      let otherSum = 0;
+      for (const [email, n] of Object.entries(d.by_user || {})) {
+        if (topEmails.has(email)) values[email] = n;
+        else otherSum += n;
+      }
+      if (rest.length > 0) values[OTHER_KEY] = otherSum;
+      return { day: d.day, total: d.total, values };
+    });
+    return { series, rows };
+  }
+  // groupBy === 'stage' — existing shape, derived from d.counts.
+  const stageSet = new Set();
+  for (const d of days) for (const k of Object.keys(d.counts || {})) stageSet.add(k);
+  const series = sortStages(Array.from(stageSet)).map((s) => ({
+    key: s,
+    label: stageLabel(s),
+    color: stageColor(s),
+    total: days.reduce((a, d) => a + (d.counts?.[s] || 0), 0),
+  }));
+  const rows = days.map((d) => ({
+    day: d.day,
+    total: d.total,
+    values: { ...(d.counts || {}) },
+  }));
+  return { series, rows };
+}
 
-  const rawMax = useMemo(
-    () => days.reduce((m, d) => Math.max(m, d.total || 0), 0) || 1,
-    [days],
+// Daily activity chart. Two axes of variation:
+//   chartType: 'bar' (stacked) | 'line' (one polyline per series)
+//   groupBy:   'stage'         | 'user'
+// Day-over-day % delta is shown above each day's total in both modes.
+function DailyTrendChart({ days, chartType, groupBy, userNames }) {
+  const [hover, setHover] = useState(null);
+
+  const { series, rows } = useMemo(
+    () => buildSeries({ days, groupBy, userNames: userNames || {} }),
+    [days, groupBy, userNames],
   );
+
+  const rawMax = useMemo(() => {
+    if (chartType === 'line') {
+      // For line mode the Y range needs to fit the tallest *single* series
+      // value, not the daily total — otherwise lines hug the baseline.
+      let m = 0;
+      for (const r of rows) for (const s of series) m = Math.max(m, r.values[s.key] || 0);
+      return m || 1;
+    }
+    return rows.reduce((m, r) => Math.max(m, r.total || 0), 0) || 1;
+  }, [rows, series, chartType]);
   const { ticks, niceMax } = useMemo(() => niceTicks(rawMax, 4), [rawMax]);
 
   if (days.length === 0) {
@@ -92,21 +172,21 @@ function DailyTrendChart({ days }) {
 
   const W = 880;
   const H = 300;
-  // Extra top padding so the +/- % delta labels above each bar have room.
   const PAD = { top: 28, right: 16, bottom: 36, left: 40 };
   const innerW = W - PAD.left - PAD.right;
   const innerH = H - PAD.top - PAD.bottom;
-  const slot = innerW / days.length;
+  const slot = innerW / rows.length;
   const barW = Math.max(4, Math.min(28, slot * 0.7));
-
-  // Show ~8 x-axis labels max so they don't overlap.
-  const xLabelEvery = Math.max(1, Math.ceil(days.length / 8));
+  const xLabelEvery = Math.max(1, Math.ceil(rows.length / 8));
+  // Plot a point at the center of each day's column for line mode.
+  const xOf = (i) => PAD.left + slot * i + slot / 2;
+  const yOf = (v) => PAD.top + innerH - (v / niceMax) * innerH;
 
   return (
     <div className="ura-chart-wrap">
       <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="ura-chart">
         {ticks.map((t, i) => {
-          const y = PAD.top + innerH - (t / niceMax) * innerH;
+          const y = yOf(t);
           return (
             <g key={i}>
               <line x1={PAD.left} y1={y} x2={W - PAD.right} y2={y}
@@ -116,51 +196,71 @@ function DailyTrendChart({ days }) {
             </g>
           );
         })}
-        {days.map((d, i) => {
+
+        {chartType === 'bar' && rows.map((r, i) => {
           const x = PAD.left + slot * i + (slot - barW) / 2;
           let yCursor = PAD.top + innerH;
           const segments = [];
-          for (const s of stages) {
-            const v = d.counts?.[s] || 0;
+          for (const s of series) {
+            const v = r.values[s.key] || 0;
             if (v === 0) continue;
             const h = (v / niceMax) * innerH;
             yCursor -= h;
             segments.push(
-              <rect key={s} x={x} y={yCursor} width={barW} height={h}
-                    fill={stageColor(s)} />,
+              <rect key={s.key} x={x} y={yCursor} width={barW} height={h}
+                    fill={s.color} />,
             );
           }
-          const dayLabel = d.day.slice(5); // MM-DD
-          const showLabel = i % xLabelEvery === 0 || i === days.length - 1;
-          // Day-over-day % change. Skip on day 0 and skip when previous
-          // day was zero (division-by-zero / "infinite increase" is not
-          // a useful number to surface).
-          const prev = i > 0 ? days[i - 1].total || 0 : null;
-          const deltaPct = (prev != null && prev > 0)
-            ? ((d.total - prev) / prev) * 100
-            : null;
-          // Place the delta label above the top of the bar; clamp into
-          // the top padding band so it never overlaps the bar segments.
-          const deltaY = Math.max(PAD.top - 8, yCursor - 6);
+          return <g key={r.day}>{segments}</g>;
+        })}
+
+        {chartType === 'line' && series.map((s) => {
+          const pts = rows
+            .map((r, i) => `${xOf(i)},${yOf(r.values[s.key] || 0)}`)
+            .join(' ');
           return (
-            <g key={d.day}
-               onMouseEnter={() => setHover({ x: x + barW / 2, y: yCursor, ...d, deltaPct })}
+            <g key={s.key}>
+              <polyline points={pts} fill="none"
+                        stroke={s.color} strokeWidth="2"
+                        strokeLinejoin="round" strokeLinecap="round" />
+              {rows.map((r, i) => (
+                <circle key={i} cx={xOf(i)} cy={yOf(r.values[s.key] || 0)}
+                        r="3" fill={s.color} />
+              ))}
+            </g>
+          );
+        })}
+
+        {/* Day-over-day % delta on TOTAL + x-axis label + hit area, drawn
+            after the bars/lines so it always overlays cleanly. */}
+        {rows.map((r, i) => {
+          const x = xOf(i);
+          const prev = i > 0 ? rows[i - 1].total || 0 : null;
+          const deltaPct = (prev != null && prev > 0)
+            ? ((r.total - prev) / prev) * 100
+            : null;
+          const topY = chartType === 'line'
+            ? yOf(Math.max(...series.map((s) => r.values[s.key] || 0), 0))
+            : yOf(r.total);
+          const deltaY = Math.max(PAD.top - 8, topY - 6);
+          const showLabel = i % xLabelEvery === 0 || i === rows.length - 1;
+          return (
+            <g key={`o-${r.day}`}
+               onMouseEnter={() => setHover({ x, y: topY, ...r, deltaPct })}
                onMouseLeave={() => setHover(null)}>
-              {/* invisible hit-area covers the entire column */}
               <rect x={PAD.left + slot * i} y={PAD.top}
                     width={slot} height={innerH} fill="transparent" />
-              {segments}
-              {deltaPct !== null && d.total !== prev && (
-                <text x={x + barW / 2} y={deltaY}
-                      fontSize="10" fontWeight="700" textAnchor="middle"
+              {deltaPct !== null && r.total !== prev && (
+                <text x={x} y={deltaY} fontSize="10" fontWeight="700"
+                      textAnchor="middle"
                       fill={deltaPct > 0 ? '#16a34a' : '#dc2626'}>
                   {deltaPct > 0 ? '▲' : '▼'} {Math.abs(deltaPct).toFixed(0)}%
                 </text>
               )}
               {showLabel && (
-                <text x={x + barW / 2} y={H - PAD.bottom + 14}
-                      fontSize="10" fill="#64748b" textAnchor="middle">
-                  {dayLabel}
+                <text x={x} y={H - PAD.bottom + 14} fontSize="10"
+                      fill="#64748b" textAnchor="middle">
+                  {r.day.slice(5)}
                 </text>
               )}
             </g>
@@ -175,21 +275,25 @@ function DailyTrendChart({ days }) {
             top: `${(hover.y / H) * 100}%`,
           }}
         >
-          <div className="ura-tt-title">{hover.day} · {hover.total} lead{hover.total === 1 ? '' : 's'}</div>
-          {sortStages(Object.keys(hover.counts || {})).map((s) => (
-            <div key={s} className="ura-tt-row">
-              <span className="stage-dot" style={{ background: stageColor(s) }} />
-              <span>{stageLabel(s)}</span>
-              <strong>{hover.counts[s]}</strong>
-            </div>
-          ))}
+          <div className="ura-tt-title">
+            {hover.day} · {hover.total} action{hover.total === 1 ? '' : 's'}
+          </div>
+          {series
+            .filter((s) => (hover.values?.[s.key] || 0) > 0)
+            .map((s) => (
+              <div key={s.key} className="ura-tt-row">
+                <span className="stage-dot" style={{ background: s.color }} />
+                <span>{s.label}</span>
+                <strong>{hover.values[s.key]}</strong>
+              </div>
+            ))}
         </div>
       )}
       <div className="ura-legend">
-        {stages.map((s) => (
-          <span key={s} className="ura-legend-item">
-            <span className="stage-dot" style={{ background: stageColor(s) }} />
-            {stageLabel(s)}
+        {series.map((s) => (
+          <span key={s.key} className="ura-legend-item">
+            <span className="stage-dot" style={{ background: s.color }} />
+            {s.label}
           </span>
         ))}
       </div>
@@ -462,9 +566,11 @@ function FunnelChart({ funnel }) {
 }
 
 export default function UserReportAnalytics({ from, to, users, reportData }) {
-  const [analytics, setAnalytics] = useState({ daily_trend: [], funnel: {} });
+  const [analytics, setAnalytics] = useState({ daily_trend: [], funnel: {}, user_names: {} });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [chartType, setChartType] = useState('bar');   // 'bar' | 'line'
+  const [groupBy, setGroupBy] = useState('stage');     // 'stage' | 'user'
 
   useEffect(() => {
     let alive = true;
@@ -504,12 +610,48 @@ export default function UserReportAnalytics({ from, to, users, reportData }) {
   return (
     <div className="ura-grid">
       <section className="ura-card ura-card-wide">
-        <h3 className="ura-title">Daily activity</h3>
-        <div className="ura-subtitle">
-          Number of stage changes recorded per day, stacked by the final
-          stage each action moved a lead to. Compared with the previous day.
+        <div className="ura-card-head">
+          <div>
+            <h3 className="ura-title">Daily activity</h3>
+            <div className="ura-subtitle">
+              Number of stage changes recorded per day,{' '}
+              {groupBy === 'stage' ? 'grouped by final stage' : 'grouped by user'}.
+              ▲/▼ vs the previous day on each column.
+            </div>
+          </div>
+          <div className="ura-card-controls">
+            <div className="ura-seg">
+              <button
+                type="button"
+                className={chartType === 'bar' ? 'ura-seg-on' : ''}
+                onClick={() => setChartType('bar')}
+              >Bar</button>
+              <button
+                type="button"
+                className={chartType === 'line' ? 'ura-seg-on' : ''}
+                onClick={() => setChartType('line')}
+              >Line</button>
+            </div>
+            <div className="ura-seg">
+              <button
+                type="button"
+                className={groupBy === 'stage' ? 'ura-seg-on' : ''}
+                onClick={() => setGroupBy('stage')}
+              >By stage</button>
+              <button
+                type="button"
+                className={groupBy === 'user' ? 'ura-seg-on' : ''}
+                onClick={() => setGroupBy('user')}
+              >By user</button>
+            </div>
+          </div>
         </div>
-        <DailyTrendChart days={analytics.daily_trend || []} />
+        <DailyTrendChart
+          days={analytics.daily_trend || []}
+          chartType={chartType}
+          groupBy={groupBy}
+          userNames={analytics.user_names || {}}
+        />
       </section>
 
       <section className="ura-card">

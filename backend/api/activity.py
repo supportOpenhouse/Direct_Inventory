@@ -436,7 +436,9 @@ def user_report_analytics():
             extra_where = "AND a.actor_email = ANY(%s)" if emails else ""
             sql = (
                 _WINNERS_CTE.format(extra_where=extra_where) +
-                " SELECT w.day, w.final_stage FROM winners w"
+                " SELECT w.day, w.final_stage, w.actor_email, "
+                "        u.name AS actor_name "
+                " FROM winners w LEFT JOIN users u ON u.email = w.actor_email"
             )
             params: list = [start_utc, end_utc]
             if emails:
@@ -508,15 +510,22 @@ def user_report_analytics():
         conn.close()
 
     days: dict = {}
+    user_names: dict = {}
     for r in rows:
         d = r["day"]
         bucket = days.get(d)
         if bucket is None:
-            bucket = {"day": d.isoformat(), "total": 0, "counts": {}}
+            # by_user is keyed on actor_email so the FE can pick its own
+            # ordering / top-N and look up display names from user_names.
+            bucket = {"day": d.isoformat(), "total": 0, "counts": {}, "by_user": {}}
             days[d] = bucket
         bucket["total"] += 1
         stage = r["final_stage"] or "(none)"
         bucket["counts"][stage] = bucket["counts"].get(stage, 0) + 1
+        email = r["actor_email"]
+        bucket["by_user"][email] = bucket["by_user"].get(email, 0) + 1
+        if r.get("actor_name"):
+            user_names[email] = r["actor_name"]
 
     ordered = sorted(days.values(), key=lambda d: d["day"])
     funnel = {r["stage"]: r["leads"] for r in funnel_rows}
@@ -526,6 +535,7 @@ def user_report_analytics():
         "to": date_to.isoformat(),
         "daily_trend": ordered,
         "funnel": funnel,
+        "user_names": user_names,
     })
 
 
