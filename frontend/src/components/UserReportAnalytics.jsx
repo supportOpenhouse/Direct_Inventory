@@ -15,15 +15,10 @@ const STAGE_ORDER = [
   'rejected',
 ];
 
-// Funnel order — canonical pipeline progression. Labels here override the
-// generic `stageLabel` mapping ("qualified" is "Lead" everywhere else in
-// the UI, which is confusing as a funnel-stage name).
-const FUNNEL_STAGES = [
-  { key: 'qualified',       label: 'Qualified' },
-  { key: 'visit_scheduled', label: 'Visit Scheduled' },
-  { key: 'visit_completed', label: 'Visit Completed' },
-  { key: 'offer_given',     label: 'Offer Given' },
-];
+// Funnel order — canonical pipeline progression. Labels come from the
+// shared `stageLabel` mapping so they stay consistent with the rest of
+// the UI.
+const FUNNEL_STAGES = ['qualified', 'visit_scheduled', 'visit_completed', 'offer_given'];
 
 function sortStages(keys) {
   return [...keys].sort((a, b) => {
@@ -289,10 +284,10 @@ function UserLeaderboard({ users }) {
 // the drop-off between stages is visible at a glance. Steps are also
 // labeled with their count, step-over-step %, and % of top.
 function FunnelChart({ funnel }) {
-  const steps = FUNNEL_STAGES.map((s) => ({
-    key: s.key,
-    label: s.label,
-    value: funnel?.[s.key] || 0,
+  const steps = FUNNEL_STAGES.map((key) => ({
+    key,
+    label: stageLabel(key),
+    value: funnel?.[key] || 0,
   }));
   const top = steps[0].value;
   const max = Math.max(top, 1);
