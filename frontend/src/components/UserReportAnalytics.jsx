@@ -377,7 +377,8 @@ function FunnelChart({ funnel }) {
         })}
       </svg>
       <div className="ura-funnel-foot">
-        Counts are distinct leads that reached each stage during the period.
+        Cohort = leads created in this period. Subsequent stages count
+        cohort leads that have ever reached that stage.{' '}
         Overall: <strong>{top > 0 ? ((steps[steps.length - 1].value / top) * 100).toFixed(1) : '0.0'}%</strong>
         {' '}top-to-bottom conversion.
       </div>
@@ -433,7 +434,9 @@ export default function UserReportAnalytics({ from, to, users, reportData }) {
 
       <section className="ura-card">
         <h3 className="ura-title">Conversion funnel</h3>
-        <div className="ura-subtitle">Distinct leads that reached each pipeline stage.</div>
+        <div className="ura-subtitle">
+          Of leads created in this period, how many have ever reached each stage.
+        </div>
         <FunnelChart funnel={analytics.funnel || {}} />
       </section>
 

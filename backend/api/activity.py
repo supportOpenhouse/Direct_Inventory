@@ -437,54 +437,59 @@ def user_report_analytics():
             cur.execute(sql, params)
             rows = cur.fetchall()
 
-            # Funnel — distinct leads that reached each pipeline stage.
+            # Funnel — strict cohort.
             #
-            # The "qualified" top-of-funnel count CANNOT come from
-            # activity_log.after_value='qualified' — a user moving a lead
-            # back to qualified (e.g. from rejected) would be wrongly
-            # counted as a new lead. New leads are inventory rows created
-            # in the period, full stop. The remaining funnel stages
-            # (visit_scheduled, visit_completed, offer_given) are still
-            # derived from activity_log: distinct leads that any in-scope
-            # user moved INTO that stage during the period.
-            qualified_sql = (
-                "SELECT COUNT(*) AS leads FROM inventory i "
-                "WHERE i.created_at >= %s AND i.created_at < %s "
-                "  {qual_user_clause}"
-            )
+            # Cohort = leads CREATED in the period (and, if a user filter
+            # is in play, assigned to those users). For each subsequent
+            # pipeline stage, count how many of THOSE COHORT LEADS have
+            # ever reached that stage (during or after the period).
+            #
+            # This guarantees the funnel is mathematically coherent:
+            # stage counts can never exceed the cohort size, so we never
+            # see >100% conversion or negative "dropped" counts.
+            #
+            # Why not "leads any user moved into this stage during the
+            # period"? Because those leads were typically created long
+            # before the period, so they're a different cohort than the
+            # top-of-funnel — mixing them produces nonsense (e.g. 3
+            # leads at Visit Scheduled vs 1 at Qualified = 300%).
             if emails:
-                qualified_sql = qualified_sql.format(
-                    qual_user_clause=(
-                        "AND i.assigned_rm_id IN ("
-                        "  SELECT id FROM users WHERE LOWER(email) = ANY(%s)"
-                        ")"
-                    ),
+                cohort_user_clause = (
+                    "AND i.assigned_rm_id IN ("
+                    "  SELECT id FROM users WHERE LOWER(email) = ANY(%s)"
+                    ")"
                 )
-                qual_params: list = [
-                    start_utc, end_utc,
-                    [e.lower() for e in emails],
+                cohort_params: list = [
+                    start_utc, end_utc, [e.lower() for e in emails],
                 ]
             else:
-                qualified_sql = qualified_sql.format(qual_user_clause="")
-                qual_params = [start_utc, end_utc]
-            cur.execute(qualified_sql, qual_params)
+                cohort_user_clause = ""
+                cohort_params = [start_utc, end_utc]
+
+            cur.execute(
+                "SELECT COUNT(*) AS leads FROM inventory i "
+                "WHERE i.created_at >= %s AND i.created_at < %s "
+                f"  {cohort_user_clause}",
+                cohort_params,
+            )
             qualified_count = cur.fetchone()["leads"]
 
-            funnel_sql = (
-                "SELECT a.after_value AS stage, COUNT(DISTINCT a.entity_id) AS leads "
+            cur.execute(
+                "WITH cohort AS ("
+                "  SELECT i.oh_id FROM inventory i "
+                "  WHERE i.created_at >= %s AND i.created_at < %s "
+                f"    {cohort_user_clause}"
+                ") "
+                "SELECT a.after_value AS stage, "
+                "       COUNT(DISTINCT a.entity_id) AS leads "
                 "FROM activity_log a "
                 "WHERE a.action = 'stage_change' "
                 "  AND a.entity_type = 'inventory' "
-                "  AND a.created_at >= %s "
-                "  AND a.created_at <  %s "
-                "  AND a.actor_email IS NOT NULL "
-                "  AND a.actor_email NOT LIKE 'apps-script:%%' "
-                "  AND a.actor_email <> 'system:forms-webhook' "
                 "  AND a.after_value IN ('visit_scheduled', 'visit_completed', 'offer_given') "
-                f"  {extra_where} "
-                "GROUP BY a.after_value"
+                "  AND a.entity_id IN (SELECT oh_id FROM cohort) "
+                "GROUP BY a.after_value",
+                cohort_params,
             )
-            cur.execute(funnel_sql, params)
             funnel_rows = cur.fetchall()
     finally:
         conn.close()
