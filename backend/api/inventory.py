@@ -51,6 +51,7 @@ VALID_STAGES = {
 SORTABLE_FIELDS = {
     "oh_id":         "oh_id",
     "city":          "city",
+    "rm_name":       "rm_name",
     "society":       "society",
     "bedrooms":      "bedrooms",
     "floor":         "floor",
@@ -447,8 +448,10 @@ _INVENTORY_WITH_PRICING_SQL = """
            p.acq_price    AS oh_price,
            p.area_sqft    AS oh_price_area,
            p.bhk          AS oh_price_bhk,
-           p.match_kind   AS oh_price_match
+           p.match_kind   AS oh_price_match,
+           u_rm.name      AS rm_name
     FROM inventory i
+    LEFT JOIN users u_rm ON u_rm.id = i.assigned_rm_id
     LEFT JOIN LATERAL (
         SELECT op.acq_price, op.area_sqft, op.bhk,
                CASE

@@ -5,7 +5,7 @@ import {
 } from '../utils/format.js';
 
 const SORTABLE = new Set([
-  'oh_id', 'city', 'society', 'bedrooms', 'floor', 'area_sqft',
+  'oh_id', 'city', 'rm_name', 'society', 'bedrooms', 'floor', 'area_sqft',
   'price', 'oh_price', 'variation', 'stage', 'seller_name', 'seller_phone',
   'posting_date', 'created_at', 'follow_up_at', 'notes',
 ]);
@@ -39,8 +39,9 @@ export default function InventoryTable({
   showStageColumn = true, loading = false,
 }) {
   const canSetPriority = ['admin', 'manager', 'rm'].includes(role);
-  // 16 base columns; +1 if selectMode, -1 if Stage hidden.
-  const colCount = 16 + (selectMode ? 1 : 0) - (showStageColumn ? 0 : 1);
+  const showRmColumn = role === 'admin' || role === 'manager';
+  // 16 base columns; +1 if selectMode, -1 if Stage hidden, +1 if RM column shown.
+  const colCount = 16 + (selectMode ? 1 : 0) - (showStageColumn ? 0 : 1) + (showRmColumn ? 1 : 0);
 
   async function togglePriority(e, item) {
     e.stopPropagation();
@@ -75,6 +76,7 @@ export default function InventoryTable({
             <th className="inv-th inv-th-star"></th>
             <SortableTh field="oh_id" label="OH-ID" sort={sort} onSort={onSort} />
             <SortableTh field="city" label="City" sort={sort} onSort={onSort} />
+            {showRmColumn && <SortableTh field="rm_name" label="RM" sort={sort} onSort={onSort} />}
             <SortableTh field="society" label="Society" sort={sort} onSort={onSort} />
             <SortableTh field="bedrooms" label="BHK" sort={sort} onSort={onSort} />
             <SortableTh field="floor" label="Floor" sort={sort} onSort={onSort} />
@@ -163,6 +165,7 @@ export default function InventoryTable({
                 </td>
                 <td className={`inv-td-id ${flagCls}`.trim()}>{item.oh_id}</td>
                 <td className={flagCls}><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></td>
+                {showRmColumn && <td className="inv-td-muted">{item.rm_name || '—'}</td>}
                 <td className={`inv-td-society ${flagCls}`.trim()}>
                   {item.society || '—'}
                 </td>
