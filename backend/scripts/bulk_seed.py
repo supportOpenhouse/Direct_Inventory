@@ -232,6 +232,7 @@ def main(csv_path: str):
                     rec["bedrooms"], rec["area_sqft"], rec["floor"], rec["price"],
                     rec["seller_name"], rec["posting_date"], rec["listing_link"],
                     "qualified", rm_id, mgr_id,
+                    rec["posting_date"],  # follow_up_at default = posting_date
                 ))
 
             if tuples:
@@ -240,10 +241,10 @@ def main(csv_path: str):
                     INSERT INTO inventory (
                         oh_id, source, city, locality, society, bedrooms, area_sqft,
                         floor, price, seller_name, posting_date, listing_link,
-                        stage, assigned_rm_id, assigned_mgr_id, last_synced_at
+                        stage, assigned_rm_id, assigned_mgr_id, follow_up_at, last_synced_at
                     ) VALUES %s
                 """, tuples,
-                template="(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())",
+                template="(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())",
                 page_size=500)
 
                 print("bumping oh_id_counter ...")

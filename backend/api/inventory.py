@@ -500,9 +500,11 @@ def list_inventory():
         #             others; most recent follow-up date first within each
         #   bucket 2: future follow-up — nearest date first
         #   bucket 3: no follow-up date
-        # 'smart' has no priority float / rejected sink. An explicit column-header
-        # sort is a pure column sort — no rejected sink, no priority float — with
-        # updated_at DESC only as the final tiebreaker.
+        # Within any tied follow-up date, an UNWORKED lead (no activity_log row
+        # other than the auto 'create') beats a worked one — new leads win on
+        # date clashes. 'smart' has no priority float / rejected sink. An
+        # explicit column-header sort is a pure column sort — no rejected sink,
+        # no priority float — with updated_at DESC only as the final tiebreaker.
         sort_field = (args.get("sort") or "smart").strip()
         if sort_field == "smart":
             today_ist = "(NOW() AT TIME ZONE 'Asia/Kolkata')::DATE"
@@ -521,6 +523,14 @@ def list_inventory():
                 # Future: nearest follow-up date first.
                 f"CASE WHEN follow_up_at IS NOT NULL AND follow_up_at::DATE > {today_ist} "
                 f"     THEN follow_up_at END ASC NULLS LAST, "
+                # Unworked beats worked: any activity_log row other than the
+                # auto 'create' counts as work. Uses idx_activity_log_entity.
+                f"CASE WHEN EXISTS ("
+                f"    SELECT 1 FROM activity_log al "
+                f"    WHERE al.entity_type = 'inventory' "
+                f"      AND al.entity_id = oh_id "
+                f"      AND al.action <> 'create'"
+                f") THEN 1 ELSE 0 END ASC, "
                 f"updated_at DESC"
             )
         else:
@@ -901,11 +911,11 @@ def create_one():
                     oh_id, source, city, locality, society, bedrooms, area_sqft,
                     floor, tower, unit_no,
                     price, seller_name, seller_phone, posting_date, listing_link,
-                    stage, assigned_rm_id, assigned_mgr_id, last_synced_at
+                    stage, assigned_rm_id, assigned_mgr_id, follow_up_at, last_synced_at
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s,
                           %s, %s, %s,
                           %s, %s, %s, %s, %s,
-                          'qualified', %s, %s, NULL)
+                          'qualified', %s, %s, %s, NULL)
                 RETURNING *
                 """,
                 (
@@ -914,7 +924,7 @@ def create_one():
                     fields.get("floor"), fields.get("tower"), fields.get("unit_no"),
                     fields.get("price"), fields.get("seller_name"),
                     fields.get("seller_phone"), fields.get("posting_date"), fields["listing_link"],
-                    rm_id, mgr_id,
+                    rm_id, mgr_id, fields.get("posting_date"),  # follow_up_at default = posting_date
                 ),
             )
             row = cur.fetchone()
