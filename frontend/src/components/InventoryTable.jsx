@@ -7,7 +7,7 @@ import {
 const SORTABLE = new Set([
   'oh_id', 'city', 'society', 'bedrooms', 'floor', 'area_sqft',
   'price', 'oh_price', 'variation', 'stage', 'seller_name', 'seller_phone',
-  'posting_date', 'follow_up_at', 'notes',
+  'posting_date', 'created_at', 'follow_up_at', 'notes',
 ]);
 
 // Placeholder rows shown while a page is loading — keeps the table (and its
@@ -85,7 +85,7 @@ export default function InventoryTable({
             {showStageColumn && <SortableTh field="stage" label="Stage" sort={sort} onSort={onSort} />}
             <SortableTh field="seller_name" label="Seller" sort={sort} onSort={onSort} />
             <SortableTh field="seller_phone" label="Phone" sort={sort} onSort={onSort} />
-            <SortableTh field="posting_date" label="Posted" sort={sort} onSort={onSort} />
+            <SortableTh field="created_at" label="Posted" sort={sort} onSort={onSort} />
             <SortableTh field="follow_up_at" label="Follow-up" sort={sort} onSort={onSort} className="inv-th-date" />
             <SortableTh field="notes" label="Notes" sort={sort} onSort={onSort} />
           </tr>

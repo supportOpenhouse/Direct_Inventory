@@ -232,11 +232,12 @@ def main(csv_path: str):
                     rec["bedrooms"], rec["area_sqft"], rec["floor"], rec["price"],
                     rec["seller_name"], rec["posting_date"], rec["listing_link"],
                     "qualified", rm_id, mgr_id,
-                    rec["posting_date"],  # follow_up_at default = posting_date
                 ))
 
             if tuples:
                 print(f"bulk INSERT of {len(tuples)} rows ...")
+                # follow_up_at defaults to today (IST) — matches created_at's date
+                # and the Board's "Posted" column.
                 execute_values(cur, """
                     INSERT INTO inventory (
                         oh_id, source, city, locality, society, bedrooms, area_sqft,
@@ -244,7 +245,8 @@ def main(csv_path: str):
                         stage, assigned_rm_id, assigned_mgr_id, follow_up_at, last_synced_at
                     ) VALUES %s
                 """, tuples,
-                template="(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())",
+                template="(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+                         "(NOW() AT TIME ZONE 'Asia/Kolkata')::DATE, NOW())",
                 page_size=500)
 
                 print("bumping oh_id_counter ...")

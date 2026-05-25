@@ -66,6 +66,7 @@ SORTABLE_FIELDS = {
     "seller_name":   "seller_name",
     "seller_phone":  "seller_phone",
     "posting_date":  "posting_date",
+    "created_at":    "created_at",
     "follow_up_at":  "follow_up_at",
     "notes":         "notes",
     "updated_at":    "updated_at",
@@ -915,7 +916,8 @@ def create_one():
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s,
                           %s, %s, %s,
                           %s, %s, %s, %s, %s,
-                          'qualified', %s, %s, %s, NULL)
+                          'qualified', %s, %s,
+                          (NOW() AT TIME ZONE 'Asia/Kolkata')::DATE, NULL)
                 RETURNING *
                 """,
                 (
@@ -924,7 +926,7 @@ def create_one():
                     fields.get("floor"), fields.get("tower"), fields.get("unit_no"),
                     fields.get("price"), fields.get("seller_name"),
                     fields.get("seller_phone"), fields.get("posting_date"), fields["listing_link"],
-                    rm_id, mgr_id, fields.get("posting_date"),  # follow_up_at default = posting_date
+                    rm_id, mgr_id,
                 ),
             )
             row = cur.fetchone()

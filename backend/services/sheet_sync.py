@@ -147,14 +147,15 @@ def run_push_sync(conn, rows: list[dict], *, actor_email: str = "system:apps-scr
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s,
                               %s, %s, %s,
                               %s, %s, %s, %s,
-                              'qualified', %s, %s, %s, NOW())
+                              'qualified', %s, %s,
+                              (NOW() AT TIME ZONE 'Asia/Kolkata')::DATE, NOW())
                     """,
                     (
                         oh_id, rec["source"], rec["city"], rec["locality"], rec["society"],
                         rec["bedrooms"], rec["area_sqft"], rec["floor"],
                         rec.get("tower"), rec.get("unit_no"),
                         rec["price"], rec["seller_name"], rec["posting_date"], rec["listing_link"],
-                        rm_id, mgr_id, rec["posting_date"],  # follow_up_at default = posting_date
+                        rm_id, mgr_id,
                     ),
                 )
                 cur.execute("RELEASE SAVEPOINT row_save")
