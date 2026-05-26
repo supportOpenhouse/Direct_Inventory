@@ -50,6 +50,43 @@ function stageColor(s) {
   return ANALYTICS_STAGE_COLOR[s] || '#94a3b8';
 }
 
+// "Rejected" is rendered with a diagonal red-stripe pattern instead of a flat
+// fill — meant to read as crossed-out/cancelled at a glance.
+const REJECTED_STRIPE_COLOR = '#dc2626';
+const REJECTED_STRIPES_CSS = (
+  `repeating-linear-gradient(45deg, #ffffff 0 5px, ${REJECTED_STRIPE_COLOR} 5px 7px)`
+);
+
+// HTML background for a stage (legend dots, leaderboard segments, funnel
+// bars). Rejected returns a CSS gradient; everything else a hex color.
+function stageBackground(s) {
+  if (s === 'rejected') return REJECTED_STRIPES_CSS;
+  return stageColor(s);
+}
+
+// SVG fill — uses the in-defs <pattern id="stripes-rejected"> for rejected.
+// Hosts must embed `<RejectedStripesDef />` inside their <svg>.
+function svgStageFill(s) {
+  if (s === 'rejected') return 'url(#stripes-rejected)';
+  return stageColor(s);
+}
+
+function RejectedStripesDef() {
+  return (
+    <defs>
+      <pattern
+        id="stripes-rejected"
+        patternUnits="userSpaceOnUse"
+        width="8" height="8"
+        patternTransform="rotate(45)"
+      >
+        <rect width="8" height="8" fill="#ffffff" />
+        <rect width="2" height="8" fill={REJECTED_STRIPE_COLOR} />
+      </pattern>
+    </defs>
+  );
+}
+
 // Pick a "nice" axis upper bound + tick interval for a given raw max.
 // Round to 1/2/5 * 10^n so ticks land on clean values (0/100/200/300/400,
 // not 0/100/201/301/401 — the previous code used Math.round() on
@@ -185,6 +222,7 @@ function DailyTrendChart({ days, chartType, groupBy, userNames }) {
   return (
     <div className="ura-chart-wrap">
       <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="ura-chart">
+        <RejectedStripesDef />
         {ticks.map((t, i) => {
           const y = yOf(t);
           return (
@@ -208,7 +246,7 @@ function DailyTrendChart({ days, chartType, groupBy, userNames }) {
             yCursor -= h;
             segments.push(
               <rect key={s.key} x={x} y={yCursor} width={barW} height={h}
-                    fill={s.color} />,
+                    fill={svgStageFill(s.key)} />,
             );
           }
           return <g key={r.day}>{segments}</g>;
@@ -222,7 +260,8 @@ function DailyTrendChart({ days, chartType, groupBy, userNames }) {
             <g key={s.key}>
               <polyline points={pts} fill="none"
                         stroke={s.color} strokeWidth="2"
-                        strokeLinejoin="round" strokeLinecap="round" />
+                        strokeLinejoin="round" strokeLinecap="round"
+                        strokeDasharray={s.key === 'rejected' ? '5 3' : undefined} />
               {rows.map((r, i) => (
                 <circle key={i} cx={xOf(i)} cy={yOf(r.values[s.key] || 0)}
                         r="3" fill={s.color} />
@@ -282,7 +321,7 @@ function DailyTrendChart({ days, chartType, groupBy, userNames }) {
             .filter((s) => (hover.values?.[s.key] || 0) > 0)
             .map((s) => (
               <div key={s.key} className="ura-tt-row">
-                <span className="stage-dot" style={{ background: s.color }} />
+                <span className="stage-dot" style={{ background: stageBackground(s.key) }} />
                 <span>{s.label}</span>
                 <strong>{hover.values[s.key]}</strong>
               </div>
@@ -292,7 +331,7 @@ function DailyTrendChart({ days, chartType, groupBy, userNames }) {
       <div className="ura-legend">
         {series.map((s) => (
           <span key={s.key} className="ura-legend-item">
-            <span className="stage-dot" style={{ background: s.color }} />
+            <span className="stage-dot" style={{ background: stageBackground(s.key) }} />
             {s.label}
           </span>
         ))}
@@ -347,8 +386,9 @@ function StageDistribution({ totals }) {
   return (
     <div className="ura-donut-wrap">
       <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+        <RejectedStripesDef />
         {segments.map((seg) => (
-          <path key={seg.stage} d={seg.d} fill={stageColor(seg.stage)}>
+          <path key={seg.stage} d={seg.d} fill={svgStageFill(seg.stage)}>
             <title>{stageLabel(seg.stage)}: {seg.value} ({((seg.value / total) * 100).toFixed(1)}%)</title>
           </path>
         ))}
@@ -362,7 +402,7 @@ function StageDistribution({ totals }) {
       <div className="ura-donut-legend">
         {entries.map((e) => (
           <div key={e.stage} className="ura-legend-row">
-            <span className="stage-dot" style={{ background: stageColor(e.stage) }} />
+            <span className="stage-dot" style={{ background: stageBackground(e.stage) }} />
             <span className="ura-legend-name">{stageLabel(e.stage)}</span>
             <span className="ura-legend-pct">{((e.value / total) * 100).toFixed(1)}%</span>
             <strong className="ura-legend-val">{e.value}</strong>
@@ -429,7 +469,7 @@ function UserLeaderboard({ users }) {
                   <span
                     key={s}
                     className="ura-lb-seg"
-                    style={{ width: `${pct}%`, background: stageColor(s) }}
+                    style={{ width: `${pct}%`, background: stageBackground(s) }}
                     title={`${stageLabel(s)}: ${v}`}
                   />
                 );
@@ -443,7 +483,7 @@ function UserLeaderboard({ users }) {
       <div className="ura-legend">
         {stages.map((s) => (
           <span key={s} className="ura-legend-item">
-            <span className="stage-dot" style={{ background: stageColor(s) }} />
+            <span className="stage-dot" style={{ background: stageBackground(s) }} />
             {stageLabel(s)}
           </span>
         ))}
