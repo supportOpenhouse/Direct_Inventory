@@ -865,6 +865,12 @@ a { color: inherit; }
 .det-after  { color: #16a34a; font-weight: 600; }
 .det-arrow  { color: #94a3b8; }
 .det-sub { color: #64748b; font-size: 11px; }
+.det-note-body {
+  display: block; color: #0f1115; font-weight: 400;
+  background: #f8fafc; border-radius: 6px; padding: 6px 10px;
+  margin-top: 4px; font-size: 13px; line-height: 1.45;
+  white-space: pre-wrap; word-break: break-word; max-width: 560px;
+}
 .det-meta { font-size: 11px; color: #475569; white-space: pre-wrap; }
 
 .city-pills { display: flex; gap: 6px; flex-wrap: wrap; }

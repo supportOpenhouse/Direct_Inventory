@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
+import { stageLabel } from '../utils/format.js';
 
 // Pretty-print a timestamp like "14 May 2026, 12:32:51".
 function formatTs(iso) {
@@ -26,7 +27,8 @@ function Details({ row }) {
   const md = metadata || null;
 
   // Field change with before/after — show strikethrough before → green after.
-  if (field && (before_value != null || after_value != null)) {
+  // (note_added uses field='note' but has its own block below.)
+  if (field && (before_value != null || after_value != null) && action !== 'note_added') {
     return (
       <div className="det-line">
         <div className="det-change">
@@ -53,7 +55,119 @@ function Details({ row }) {
   }
 
   if (action === 'create' && entity_type === 'inventory') {
-    return <span className="det-after"><strong>Created</strong></span>;
+    const where = [md?.society, md?.city].filter(Boolean).join(', ');
+    return (
+      <div className="det-line">
+        <div className="det-change">
+          <strong>Created</strong>{where ? ` — ${where}` : ''}
+        </div>
+        {(md?.rm_user_id || md?.manager_user_id) && (
+          <div className="det-sub">
+            Auto-assigned
+            {md.rm_user_id     ? ` · RM #${md.rm_user_id}`      : ''}
+            {md.manager_user_id ? ` · Mgr #${md.manager_user_id}` : ''}
+          </div>
+        )}
+        {md?.locality && <div className="det-sub muted">Locality: {md.locality}</div>}
+      </div>
+    );
+  }
+  // Bulk POC backfill — POST /api/inventory/assign-missing.
+  if (action === 'assign_missing' && md && typeof md === 'object') {
+    return (
+      <div className="det-line">
+        <div className="det-change">
+          <strong>POC backfill</strong>
+          <span> · {md.updated ?? '?'} assigned</span>
+        </div>
+        <div className="det-sub">
+          scanned {md.scanned ?? '?'} · remaining {md.remaining ?? '?'}
+        </div>
+      </div>
+    );
+  }
+  // New user auto-provisioned on first Google login.
+  if (action === 'auto_provision' && md && typeof md === 'object') {
+    return (
+      <div className="det-line">
+        <div className="det-change">
+          <strong>Auto-provisioned</strong>{md.name ? ` — ${md.name}` : ''}
+        </div>
+      </div>
+    );
+  }
+  // CP match scan run — POST /api/inventory/cp-match-scan completion summary.
+  if (action === 'run' && md && typeof md === 'object'
+      && ('perfect' in md || 'partial' in md || 'no_match' in md)) {
+    return (
+      <div className="det-line">
+        <div className="det-change">
+          <strong>CP match scan</strong>
+          <span> · {md.total ?? '?'} rows</span>
+        </div>
+        <div className="det-sub">
+          perfect {md.perfect ?? 0} · partial {md.partial ?? 0} · no match {md.no_match ?? 0}
+        </div>
+      </div>
+    );
+  }
+  // Bulk CSV-driven stage move (one-shot cleanup script).
+  if (action === 'bulk_stage_cleanup' && md && typeof md === 'object') {
+    const from = md.from_stage ? stageLabel(md.from_stage) : '?';
+    const to   = md.to_stage   ? stageLabel(md.to_stage)   : '?';
+    return (
+      <div className="det-line">
+        <div className="det-change">
+          <strong>Bulk stage cleanup</strong>
+          <span> · {from} <span className="det-arrow">→</span> {to}</span>
+        </div>
+        <div className="det-sub">
+          {md.updated ?? '?'} updated{md.csv ? ` · source: ${md.csv}` : ''}
+        </div>
+      </div>
+    );
+  }
+  // Visit scheduled — POST /api/visits/schedule logs this with the field-exec
+  // and slot details. Render it as a small structured block instead of raw JSON.
+  if (action === 'visit_scheduled' && md && typeof md === 'object') {
+    const when = (() => {
+      if (!md.schedule_date) return null;
+      const d = new Date(`${md.schedule_date}T${md.schedule_time || '00:00'}`);
+      if (Number.isNaN(d.getTime())) {
+        return `${md.schedule_date}${md.schedule_time ? ' ' + md.schedule_time : ''}`;
+      }
+      const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      return md.schedule_time ? `${dateStr}, ${md.schedule_time}` : dateStr;
+    })();
+    return (
+      <div className="det-line">
+        <div className="det-change">
+          <strong>Visit scheduled</strong>
+          {md.field_exec_name && (
+            <span> with {md.field_exec_name}{md.field_exec_phone ? ` (${md.field_exec_phone})` : ''}</span>
+          )}
+        </div>
+        {when && <div className="det-sub">When: {when}</div>}
+        {md.assigned_by_name && (
+          <div className="det-sub">Assigned by: {md.assigned_by_name}</div>
+        )}
+        {md.forms_visit_id && (
+          <div className="det-sub muted">Forms visit id: <code>{md.forms_visit_id}</code></div>
+        )}
+      </div>
+    );
+  }
+  // Note added — show the comment text plain.
+  if (action === 'note_added' && md && typeof md === 'object') {
+    return (
+      <div className="det-line">
+        <div className="det-change">
+          <strong>Note added</strong>
+          {md.author_name && <span className="det-sub"> by {md.author_name}</span>}
+        </div>
+        {after_value && <div className="det-after det-note-body">{after_value}</div>}
+      </div>
+    );
   }
   if (action === 'login') {
     return <span className="muted">Logged in</span>;

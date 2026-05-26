@@ -872,7 +872,12 @@ def add_note(oh_id: str):
                 entity_type="inventory",
                 entity_id=oh_id,
                 action="note_added",
-                metadata={"note_id": note["id"]},
+                field="note",
+                after_value=text,
+                metadata={
+                    "note_id": note["id"],
+                    "author_name": user.get("name"),
+                },
             )
         return jsonify({"note": note, "note_thread": row["note_thread"]}), 201
     finally:
