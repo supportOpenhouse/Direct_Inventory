@@ -312,7 +312,122 @@ a { color: inherit; }
 .bell-meta { color: #64748b; font-size: 12px; }
 
 /* Card detail modal — replaces the inline expand panel. */
-.modal-card-detail { width: 540px; max-width: 92vw; }
+.modal-card-detail { width: 620px; max-width: 92vw; max-height: 90vh; overflow-y: auto; }
+
+/* New layout (cd-* classes) — header / 2-col detail grid / RM + Stage row /
+   notes thread. Old `.exp-*` rules below are unused now but kept around as
+   reference for in-progress styling changes. */
+.cd-head { margin-bottom: 6px; }
+.cd-title-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.cd-title { margin: 0; font-size: 18px; font-weight: 700; color: #0f1115; }
+.cd-spacer { flex: 1; }
+.cd-title-row .oh-id {
+  color: #64748b; font-family: ui-monospace, Menlo, monospace; font-size: 12px;
+}
+.stage-dot-lg { width: 10px; height: 10px; border-radius: 50%; }
+.cd-sub { color: #64748b; font-size: 13px; margin: 2px 0 14px; }
+
+.cd-section {
+  background: #f8fafc; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;
+}
+.cd-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; font-size: 13px;
+}
+.cd-grid > div { min-width: 0; }
+.cd-lbl {
+  display: block; color: #94a3b8; font-size: 11px; letter-spacing: 1px;
+  margin-bottom: 4px; text-transform: uppercase; font-weight: 600;
+}
+.cd-input {
+  width: 100%; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 6px;
+  font-family: inherit; font-size: 13px; background: #fff;
+}
+.cd-input:disabled { background: #f1f5f9; color: #64748b; }
+.cd-link { color: #2563eb; word-break: break-all; font-size: 13px; }
+.cd-saving { color: #94a3b8; font-size: 11px; margin-left: 6px; }
+.cd-sub-line { color: #64748b; font-size: 11px; margin-top: 2px; }
+
+.cd-var-pill {
+  display: inline-block; padding: 2px 10px; border-radius: 999px;
+  font-weight: 700; font-size: 12px;
+}
+.cd-var-pos  { background: #fee2e2; color: #b91c1c; }   /* asking OVER OH */
+.cd-var-neg  { background: #dcfce7; color: #166534; }   /* asking UNDER OH */
+.cd-var-flat { background: #f1f5f9; color: #475569; }
+
+.cd-row-actions {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  background: #fff; border-top: 1px solid #f1f5f9; padding-top: 12px; margin-top: 4px;
+}
+.cd-row-actions-cell { display: flex; align-items: center; gap: 10px; }
+.cd-row-actions-cell .cd-lbl { margin-bottom: 0; }
+.cd-rm-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #f1f5f9; color: #0f172a; border-radius: 999px;
+  padding: 3px 12px 3px 4px; font-size: 13px; font-weight: 600;
+}
+.cd-stage-select {
+  flex: 1; padding: 6px 10px; border: 1px solid #e5e7eb; border-radius: 8px;
+  background: #fff; font-family: inherit; font-size: 13px;
+}
+.cd-reject-line {
+  display: flex; gap: 12px; align-items: center; padding: 8px 12px; margin: 10px 0;
+  background: #fef2f2; color: #991b1b; border-radius: 8px; font-size: 13px;
+}
+.cd-reject-line .cd-lbl { margin-bottom: 0; color: #b91c1c; }
+
+/* Notes thread */
+.note-thread { margin-top: 14px; border-top: 1px solid #f1f5f9; padding-top: 14px; }
+.note-thread-head {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  font-size: 14px; color: #0f1115;
+}
+.note-thread-ic { font-size: 16px; }
+.note-thread-count {
+  background: #f1f5f9; color: #475569; border-radius: 999px;
+  padding: 1px 9px; font-size: 11px; font-weight: 700;
+}
+.note-list { list-style: none; margin: 0; padding: 0; }
+.note-empty { padding: 10px 4px; font-size: 13px; }
+.note-item {
+  display: grid; grid-template-columns: 32px 1fr; gap: 10px;
+  padding: 6px 0; align-items: flex-start;
+}
+.note-av {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+.note-av-sm { width: 22px; height: 22px; font-size: 10px; }
+.note-body { min-width: 0; }
+.note-meta {
+  display: flex; align-items: baseline; gap: 10px; font-size: 13px; color: #0f1115;
+}
+.note-meta strong { font-weight: 600; }
+.note-time { color: #94a3b8; font-size: 11px; margin-left: auto; white-space: nowrap; }
+.note-text {
+  background: #f8fafc; border-radius: 8px; padding: 8px 12px;
+  margin-top: 4px; color: #0f1115; font-size: 13px; line-height: 1.45;
+  white-space: pre-wrap; word-break: break-word;
+}
+.note-item-input { padding-top: 10px; }
+.note-input-row { display: flex; gap: 8px; align-items: center; }
+.note-input {
+  flex: 1; padding: 9px 14px; border: 1px solid #e5e7eb; border-radius: 999px;
+  background: #f8fafc; font-family: inherit; font-size: 13px;
+}
+.note-input:focus { outline: none; border-color: #94a3b8; background: #fff; }
+.note-send {
+  width: 32px; height: 32px; border-radius: 50%; border: 0;
+  background: #2563eb; color: #fff; cursor: pointer; font-size: 13px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.note-send:disabled { background: #cbd5e1; cursor: not-allowed; }
+.note-send:hover:not(:disabled) { background: #1d4ed8; }
+.note-error { color: #b91c1c; font-size: 12px; margin-top: 4px; }
 .card-detail-head {
   display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
   margin-bottom: 4px;

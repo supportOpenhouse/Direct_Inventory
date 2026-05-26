@@ -16,9 +16,12 @@ Visibility:
 """
 from __future__ import annotations
 
-from flask import Blueprint, g, jsonify, request
-
+import json
 import logging
+import uuid as _uuid
+from datetime import datetime, timezone
+
+from flask import Blueprint, g, jsonify, request
 
 from ..db import get_conn, get_props_conn
 from ..services.activity import log as log_activity
@@ -198,7 +201,7 @@ def _build_filters(user: dict, args, alias: str = ""):
         # (% _ \) in the token are escaped so they match literally.
         search_cols = [
             "oh_id", "society", "seller_name", "locality",
-            "city", "source", "notes", "listing_link",
+            "city", "source", "listing_link",
         ]
         for tok in q.split():
             esc = tok.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
@@ -817,6 +820,58 @@ def create_one():
         conn.close()
 
 
+@bp.post("/<oh_id>/notes")
+@require_auth("admin", "manager", "rm")
+def add_note(oh_id: str):
+    """Append a comment to inventory.note_thread.
+
+    Body: { "body": "<text>" }. Server stamps author + timestamp; the old
+    single-text `notes` column is intentionally untouched and unread.
+
+    Response (201): { "note": <new>, "note_thread": <full updated array> }.
+    """
+    body_json = request.get_json(silent=True) or {}
+    text = (body_json.get("body") or "").strip()
+    if not text:
+        return jsonify({"error": "body is required"}), 400
+
+    user = g.user
+    note = {
+        "id":           str(_uuid.uuid4()),
+        "author_id":    user["id"],
+        "author_name":  user.get("name"),
+        "author_email": user["email"],
+        "body":         text,
+        "created_at":   datetime.now(timezone.utc).isoformat(),
+    }
+
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                "UPDATE inventory "
+                "SET note_thread = COALESCE(note_thread, '[]'::jsonb) || %s::jsonb "
+                "WHERE oh_id = %s "
+                "RETURNING note_thread",
+                (json.dumps([note]), oh_id),
+            )
+            row = cur.fetchone()
+            if not row:
+                return jsonify({"error": "not found"}), 404
+            log_activity(
+                cur,
+                actor_user_id=user["id"],
+                actor_email=user["email"],
+                entity_type="inventory",
+                entity_id=oh_id,
+                action="note_added",
+                metadata={"note_id": note["id"]},
+            )
+        return jsonify({"note": note, "note_thread": row["note_thread"]}), 201
+    finally:
+        conn.close()
+
+
 @bp.patch("/<oh_id>")
 @require_auth("admin", "manager", "rm")
 def update_one(oh_id: str):
@@ -849,8 +904,11 @@ def update_one(oh_id: str):
             requires_visit_form = False
             invalidate_cp_match = False
 
+            # Note: `notes` (the old free-text column) is intentionally NOT
+            # editable through this endpoint — comments live on `note_thread`
+            # and go through POST /<oh_id>/notes instead.
             allowed = EDITABLE_RAW_FIELDS | {
-                "stage", "reject_reason", "notes", "assigned_rm_id", "assigned_mgr_id",
+                "stage", "reject_reason", "assigned_rm_id", "assigned_mgr_id",
                 "follow_up_at", "priority", "star_color", "cp_match",
             }
             for k, v in body.items():

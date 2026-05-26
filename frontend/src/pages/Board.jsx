@@ -219,7 +219,7 @@ export default function Board() {
         'OH-ID', 'City', 'Locality', 'Society', 'BHK', 'Floor', 'Tower', 'Unit',
         'Area (sqft)', 'Asking (Lakhs)', 'OH Price (Lakhs)', 'Variation %',
         'Stage', 'Reject Reason', 'Seller', 'Phone', 'Posting Date', 'Created',
-        'Follow-up', 'Notes', 'Source', 'Listing Link',
+        'Follow-up', 'Source', 'Listing Link',
       ];
       const rows = all.map((it) => {
         const variation = it.price != null && it.oh_price
@@ -245,7 +245,6 @@ export default function Board() {
           fmtDate(it.posting_date),
           fmtDate(it.created_at),
           fmtDate(it.follow_up_at),
-          it.notes || '',
           it.source || '',
           it.listing_link || '',
         ];

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client.js';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import {
   displayCity, formatPrice, REJECT_REASONS, STAGE_DOT_COLOR, STAGES,
   stageLabel, starColor, todayISO, variation,
@@ -9,13 +10,146 @@ import RejectReasonModal from './RejectReasonModal.jsx';
 
 /**
  * Detail popup for a single inventory row — opened by clicking a row in the
- * table. Owns its own edit state (notes, seller fields, follow-up, stage),
- * delegates the visit-schedule and reject-reason flows to their respective
- * sub-modals, and bubbles every saved change up via onUpdated so the
- * parent can patch its row list in place.
+ * table. Owns its own edit state, delegates the visit-schedule / reject-reason
+ * flows to their sub-modals, and bubbles every saved change up via onUpdated.
+ *
+ * Notes live on the new `note_thread` JSONB column (multi-author, timestamped)
+ * — the old single-text `notes` column is no longer read or written here.
  */
+
+// "SR" / "PK" / etc. — first letters of the first two name tokens, else first
+// two characters of the name/email local-part.
+function initialsOf(name, email) {
+  const s = (name || (email || '').split('@')[0] || '').trim();
+  if (!s) return '?';
+  const parts = s.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return s.slice(0, 2).toUpperCase();
+}
+
+// Deterministic hue per identity so an author keeps the same avatar tint
+// across notes / reloads.
+function avatarHue(key) {
+  const s = String(key || '');
+  let h = 0;
+  for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h % 360;
+}
+function avatarStyle(key) {
+  const h = avatarHue(key);
+  return { background: `hsl(${h}, 65%, 88%)`, color: `hsl(${h}, 55%, 28%)` };
+}
+
+function fmtNoteTime(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso || '';
+  return d.toLocaleString('en-IN', {
+    day: 'numeric', month: 'short',
+    hour: 'numeric', minute: '2-digit', hour12: true,
+  });
+}
+
+function fmtPostedDate(d) {
+  if (!d) return null;
+  const x = new Date(d);
+  if (Number.isNaN(x.getTime())) return String(d);
+  return x.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function Avatar({ name, email, sizeClass = '' }) {
+  return (
+    <span className={`note-av ${sizeClass}`.trim()} style={avatarStyle(email || name)}>
+      {initialsOf(name, email)}
+    </span>
+  );
+}
+
+function NoteThread({ ohId, initial = [], canPost, currentUser, onChange }) {
+  const [notes, setNotes] = useState(() => (Array.isArray(initial) ? [...initial] : []));
+  const [draft, setDraft] = useState('');
+  const [posting, setPosting] = useState(false);
+  const [error, setError] = useState(null);
+
+  const ordered = [...notes].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
+
+  async function send() {
+    const text = draft.trim();
+    if (!text || posting) return;
+    setError(null);
+    setPosting(true);
+    try {
+      const r = await api.post(`/api/inventory/${ohId}/notes`, { body: text });
+      const next = r.note_thread || [...notes, r.note];
+      setNotes(next);
+      setDraft('');
+      onChange?.(next);
+    } catch (e) {
+      setError(e?.data?.error || e?.message || 'Failed to post note');
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  return (
+    <div className="note-thread">
+      <div className="note-thread-head">
+        <span className="note-thread-ic" aria-hidden>💬</span>
+        <strong>Notes thread</strong>
+        <span className="note-thread-count">{ordered.length}</span>
+      </div>
+      <ul className="note-list">
+        {ordered.length === 0 && !canPost && (
+          <li className="note-empty muted">No notes yet.</li>
+        )}
+        {ordered.map((n) => (
+          <li key={n.id} className="note-item">
+            <Avatar name={n.author_name} email={n.author_email} />
+            <div className="note-body">
+              <div className="note-meta">
+                <strong>{n.author_name || n.author_email}</strong>
+                <span className="note-time">{fmtNoteTime(n.created_at)}</span>
+              </div>
+              <div className="note-text">{n.body}</div>
+            </div>
+          </li>
+        ))}
+        {canPost && (
+          <li className="note-item note-item-input">
+            <Avatar name={currentUser?.name} email={currentUser?.email} />
+            <div className="note-body">
+              <div className="note-input-row">
+                <input
+                  className="note-input"
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+                  }}
+                  placeholder="Add a note…"
+                  disabled={posting}
+                />
+                <button
+                  type="button"
+                  className="note-send"
+                  onClick={send}
+                  disabled={posting || !draft.trim()}
+                  aria-label="Send"
+                  title="Send"
+                >➤</button>
+              </div>
+              {error && <div className="note-error">{error}</div>}
+            </div>
+          </li>
+        )}
+      </ul>
+    </div>
+  );
+}
+
 export default function CardDetailModal({ item, role, onUpdated, onClose }) {
-  const [notes, setNotes] = useState(item.notes || '');
+  const { user } = useAuth();
   const [sellerName, setSellerName] = useState(item.seller_name || '');
   const [sellerPhone, setSellerPhone] = useState(item.seller_phone || '');
   const [followUp, setFollowUp] = useState(item.follow_up_at ? item.follow_up_at.slice(0, 10) : '');
@@ -27,13 +161,11 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
   const [showReject, setShowReject] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const colorPickerRef = useRef(null);
-  // Visibility audit — which RMs see this property (admin/manager only).
-  const [visibleRms, setVisibleRms] = useState(null);   // null = not loaded yet
-  const [loadingRms, setLoadingRms] = useState(false);
+  const [assignedRm, setAssignedRm] = useState(null);  // {id,name,email} | null
 
   const canEdit = ['admin', 'manager', 'rm'].includes(role);
   const canSetPriority = ['admin', 'manager', 'rm'].includes(role);
-  const canSeeVisibleRms = ['admin', 'manager'].includes(role);
+  const canSeeAssigned = ['admin', 'manager'].includes(role);
   const v = variation(item.price, item.oh_price);
   const isNearest = item.oh_price_match === 'nearest';
   const matchTag = isNearest ? '~' : '';
@@ -51,21 +183,19 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
   }, [showColorPicker]);
 
   useEffect(() => {
-    if (!canSeeVisibleRms) return undefined;
+    if (!canSeeAssigned) return undefined;
     let alive = true;
-    setLoadingRms(true);
     api.get(`/api/inventory/${item.oh_id}/visible-rms`)
-      .then((r) => { if (alive) setVisibleRms(r.rms || []); })
-      .catch(() => { if (alive) setVisibleRms([]); })
-      .finally(() => { if (alive) setLoadingRms(false); });
+      .then((r) => { if (alive) setAssignedRm((r.rms && r.rms[0]) || null); })
+      .catch(() => { if (alive) setAssignedRm(null); });
     return () => { alive = false; };
-  }, [item.oh_id, canSeeVisibleRms]);
+  }, [item.oh_id, canSeeAssigned]);
 
-  async function applyStage(newStage, extraBody = {}) {
+  async function applyStage(newStage, extra = {}) {
     try {
       setSavingStage(true);
-      const r = await api.patch(`/api/inventory/${item.oh_id}`, { stage: newStage, ...extraBody });
-      onUpdated(r.item || { ...item, stage: newStage, ...extraBody });
+      const r = await api.patch(`/api/inventory/${item.oh_id}`, { stage: newStage, ...extra });
+      onUpdated(r.item || { ...item, stage: newStage, ...extra });
     } finally {
       setSavingStage(false);
     }
@@ -74,14 +204,11 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
   async function changeStage(newStage) {
     if (newStage === item.stage) return;
     if (newStage === 'visit_scheduled') {
-      // If a visit already exists for this row (forms_visit_id or visit_at
-      // is set), skip the schedule modal and just flip the stage — Forms
-      // already knows about it, no new request needed.
       if (item.forms_visit_id || item.visit_at) {
         const when = item.visit_at ? new Date(item.visit_at).toLocaleString() : 'previously';
         if (!window.confirm(
-          `Visit already scheduled for ${item.oh_id} on ${when}.\n` +
-          `Reuse it and just move the stage to Visit Scheduled? (No new request will be sent.)`
+          `Visit already scheduled for ${item.oh_id} on ${when}.\n`
+          + 'Reuse it and just move the stage to Visit Scheduled? (No new request will be sent.)',
         )) return;
         await applyStage('visit_scheduled');
         return;
@@ -108,13 +235,6 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
   async function pickColor(picked) {
     if (!canSetPriority || savingField === 'star_color') return;
     setShowColorPicker(false);
-    // Map UI choice -> persisted value + side effects.
-    //   yellow -> priority on, cp_match unchanged (yellow is about priority,
-    //             not match quality).
-    //   green  -> cp_match='perfect' so the manual pick reflects in scan data.
-    //   red    -> cp_match='partial', same idea.
-    //   none   -> wipe every trigger: star_color='none' suppresses display,
-    //             priority off, cp_match cleared.
     const body = { star_color: picked, priority: picked === 'yellow' };
     if (picked === 'green') body.cp_match = 'perfect';
     else if (picked === 'red') body.cp_match = 'partial';
@@ -127,18 +247,25 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
       if (r?.item) onUpdated(r.item);
     } catch (err) {
       onUpdated(item);
+      // eslint-disable-next-line no-console
       console.error('star_color update failed', err);
     } finally {
       setSavingField(null);
     }
   }
 
+  const listingHref = item.listing_link && !/^internal:\/\//.test(item.listing_link)
+    ? item.listing_link : null;
+  const listingLabel = listingHref ? listingHref.replace(/^https?:\/\//, '') : null;
+  const postedLabel = fmtPostedDate(item.posting_date || item.created_at);
+
   return (
     <>
       <div className="modal-backdrop" onClick={onClose}>
         <div className="modal modal-card-detail" onClick={(e) => e.stopPropagation()}>
-          <div className="card-detail-head">
-            <div className="card-detail-title">
+          {/* Header */}
+          <div className="cd-head">
+            <div className="cd-title-row">
               {(color || canSetPriority) && (
                 <span className="prio-star-wrap" ref={colorPickerRef}>
                   <button
@@ -146,8 +273,8 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
                     className={`prio-star prio-star-lg ${
                       color === 'yellow' ? 'prio-on'
                         : color === 'green' ? 'cp-perfect'
-                        : color === 'red' ? 'cp-partial'
-                        : 'prio-off'
+                          : color === 'red' ? 'cp-partial'
+                            : 'prio-off'
                     }`}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -157,216 +284,189 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
                     disabled={!canSetPriority || savingField === 'star_color'}
                     title={canSetPriority ? 'Pick star color' : 'Priority'}
                     aria-label="Pick star color"
-                    aria-haspopup="true"
-                    aria-expanded={showColorPicker}
                   >★</button>
                   {showColorPicker && canSetPriority && (
                     <div className="color-picker" role="menu">
-                      <button
-                        type="button"
-                        className={`color-picker-swatch ${color === 'yellow' ? 'color-picker-swatch-active' : ''}`}
-                        onClick={() => pickColor('yellow')}
-                        title="Yellow (priority)"
-                        aria-label="Yellow star"
-                        aria-current={color === 'yellow' ? 'true' : undefined}
-                      ><span className="prio-star prio-on">★</span></button>
-                      <button
-                        type="button"
-                        className={`color-picker-swatch ${color === 'green' ? 'color-picker-swatch-active' : ''}`}
-                        onClick={() => pickColor('green')}
-                        title="Perfect Match"
-                        aria-label="Perfect match"
-                        aria-current={color === 'green' ? 'true' : undefined}
-                      ><span className="prio-star cp-perfect">★</span></button>
-                      <button
-                        type="button"
-                        className={`color-picker-swatch ${color === 'red' ? 'color-picker-swatch-active' : ''}`}
-                        onClick={() => pickColor('red')}
-                        title="Partial Match"
-                        aria-label="Partial match"
-                        aria-current={color === 'red' ? 'true' : undefined}
-                      ><span className="prio-star cp-partial">★</span></button>
-                      <button
-                        type="button"
-                        className={`color-picker-swatch ${color === null ? 'color-picker-swatch-active' : ''}`}
-                        onClick={() => pickColor('none')}
-                        title="Blank"
-                        aria-label="Blank star"
-                        aria-current={color === null ? 'true' : undefined}
-                      ><span className="prio-star prio-off">★</span></button>
+                      <button type="button" className={`color-picker-swatch ${color === 'yellow' ? 'color-picker-swatch-active' : ''}`} onClick={() => pickColor('yellow')} title="Yellow (priority)" aria-label="Yellow"><span className="prio-star prio-on">★</span></button>
+                      <button type="button" className={`color-picker-swatch ${color === 'green' ? 'color-picker-swatch-active' : ''}`} onClick={() => pickColor('green')} title="Perfect match" aria-label="Perfect"><span className="prio-star cp-perfect">★</span></button>
+                      <button type="button" className={`color-picker-swatch ${color === 'red' ? 'color-picker-swatch-active' : ''}`} onClick={() => pickColor('red')} title="Partial match" aria-label="Partial"><span className="prio-star cp-partial">★</span></button>
+                      <button type="button" className={`color-picker-swatch ${color === null ? 'color-picker-swatch-active' : ''}`} onClick={() => pickColor('none')} title="Blank" aria-label="Blank"><span className="prio-star prio-off">★</span></button>
                     </div>
                   )}
                 </span>
               )}
-              <strong>{item.society || '—'}</strong>
+              <h3 className="cd-title">{item.society || '—'}</h3>
               <span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span>
+              <span className="cd-spacer" />
               <span className="oh-id">{item.oh_id}</span>
-              <span className="stage-dot" style={{ background: STAGE_DOT_COLOR[item.stage] }} />
+              <span className="stage-dot stage-dot-lg" style={{ background: STAGE_DOT_COLOR[item.stage] }} title={stageLabel(item.stage)} />
+              <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
             </div>
-            <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
-          </div>
-
-          <div className="card-detail-sub">
-            {item.locality ? <span>{item.locality}</span> : null}
-            {item.floor ? <span>· {item.floor}</span> : null}
-            {item.bedrooms != null && <span>· {item.bedrooms} BHK</span>}
-            {item.area_sqft != null && <span>· {item.area_sqft} sqft</span>}
-            <span>· <strong className="val-orange">{formatPrice(item.price)}</strong></span>
-          </div>
-
-          <div className="exp-grid">
-            <div>
-              <span className="exp-lbl">Listing</span>
-              <a href={item.listing_link} target="_blank" rel="noreferrer" className="exp-link">{item.listing_link}</a>
-            </div>
-            <div><span className="exp-lbl">Posted</span><span>{item.posting_date || '—'}</span></div>
-            <div>
-              <span className="exp-lbl">Seller Name</span>
-              <input
-                className="exp-input"
-                value={sellerName}
-                onChange={(e) => setSellerName(e.target.value)}
-                onBlur={() => saveField('seller_name', sellerName, item.seller_name)}
-                disabled={!canEdit}
-              />
-              {savingField === 'seller_name' && <span className="exp-saving"> saving…</span>}
-            </div>
-            <div>
-              <span className="exp-lbl">Contact No.</span>
-              <input
-                className="exp-input"
-                type="tel"
-                inputMode="numeric"
-                pattern="[0-9]{10}"
-                maxLength={10}
-                value={sellerPhone}
-                onChange={(e) => setSellerPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                onBlur={() => saveField('seller_phone', sellerPhone, item.seller_phone)}
-                placeholder="10-digit phone"
-                disabled={!canEdit}
-              />
-              {savingField === 'seller_phone' && <span className="exp-saving"> saving…</span>}
-            </div>
-            <div>
-              <span className="exp-lbl">Tower</span>
-              <input
-                className="exp-input"
-                value={tower}
-                onChange={(e) => setTower(e.target.value)}
-                onBlur={() => saveField('tower', tower, item.tower)}
-                placeholder="e.g. T3"
-                disabled={!canEdit}
-              />
-              {savingField === 'tower' && <span className="exp-saving"> saving…</span>}
-            </div>
-            <div>
-              <span className="exp-lbl">Unit No.</span>
-              <input
-                className="exp-input"
-                value={unitNo}
-                onChange={(e) => setUnitNo(e.target.value)}
-                onBlur={() => saveField('unit_no', unitNo, item.unit_no)}
-                placeholder="e.g. 1502"
-                disabled={!canEdit}
-              />
-              {savingField === 'unit_no' && <span className="exp-saving"> saving…</span>}
-            </div>
-            <div><span className="exp-lbl">Source</span><span>{item.source || '—'}</span></div>
-            <div>
-              <span className="exp-lbl">OH Price</span>
-              <span className={item.oh_price ? (isNearest ? 'val-amber' : 'val-green') : 'muted'}>
-                {item.oh_price ? `${matchTag}${formatPrice(item.oh_price)}` : 'no match'}
-                {item.oh_price && item.oh_price_area
-                  ? ` (${isNearest ? 'nearest' : 'matched'} ${item.oh_price_bhk}BHK, ${item.oh_price_area}sqft)`
-                  : ''}
-              </span>
-            </div>
-            <div>
-              <span className="exp-lbl">Variation</span>
-              <span className={v ? `val-var-${v.sign}` : 'muted'}>
-                {v ? v.label : 'no match'}
-              </span>
-            </div>
-            <div>
-              <span className="exp-lbl">Follow-up date</span>
-              <input
-                type="date"
-                className="exp-input"
-                value={followUp}
-                min={todayISO()}
-                onChange={(e) => setFollowUp(e.target.value)}
-                onBlur={() => saveField('follow_up_at', followUp, item.follow_up_at?.slice?.(0, 10))}
-                disabled={!canEdit}
-              />
-              {savingField === 'follow_up_at' && <span className="exp-saving"> saving…</span>}
+            <div className="cd-sub">
+              {item.locality ? <span>{item.locality}</span> : null}
+              {item.floor ? <span> · {item.floor}</span> : null}
+              {item.bedrooms != null && <span> · {item.bedrooms} BHK</span>}
+              {item.area_sqft != null && <span> · {item.area_sqft} sqft</span>}
+              <span> · <strong className="val-orange">{formatPrice(item.price)}</strong></span>
             </div>
           </div>
 
-          {canSeeVisibleRms && (
-            <div className="exp-visible-rms">
-              <span className="exp-lbl">Assigned RM</span>
-              {loadingRms ? (
-                <span className="muted"> loading…</span>
-              ) : !visibleRms || visibleRms.length === 0 ? (
-                <span className="muted"> Unassigned</span>
-              ) : (
-                <div className="vrm-chips">
-                  {visibleRms.map((rm) => (
-                    <span key={rm.id} className="vrm-chip">
-                      {rm.name || rm.email}
-                    </span>
+          {/* Listing / Posted / Seller / Contact / Tower / Unit */}
+          <div className="cd-section">
+            <div className="cd-grid">
+              <div>
+                <span className="cd-lbl">Listing</span>
+                {listingHref
+                  ? <a href={listingHref} target="_blank" rel="noreferrer" className="cd-link">{listingLabel}</a>
+                  : <span className="muted">—</span>}
+              </div>
+              <div>
+                <span className="cd-lbl">Posted</span>
+                <span>{postedLabel || '—'}</span>
+              </div>
+
+              <div>
+                <span className="cd-lbl">Seller name</span>
+                <input
+                  className="cd-input"
+                  value={sellerName}
+                  onChange={(e) => setSellerName(e.target.value)}
+                  onBlur={() => saveField('seller_name', sellerName, item.seller_name)}
+                  disabled={!canEdit}
+                />
+                {savingField === 'seller_name' && <span className="cd-saving"> saving…</span>}
+              </div>
+              <div>
+                <span className="cd-lbl">Contact no.</span>
+                <input
+                  className="cd-input"
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]{10}"
+                  maxLength={10}
+                  value={sellerPhone}
+                  onChange={(e) => setSellerPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  onBlur={() => saveField('seller_phone', sellerPhone, item.seller_phone)}
+                  placeholder="10-digit phone"
+                  disabled={!canEdit}
+                />
+                {savingField === 'seller_phone' && <span className="cd-saving"> saving…</span>}
+              </div>
+
+              <div>
+                <span className="cd-lbl">Tower</span>
+                <input
+                  className="cd-input"
+                  value={tower}
+                  onChange={(e) => setTower(e.target.value)}
+                  onBlur={() => saveField('tower', tower, item.tower)}
+                  placeholder="e.g. T3"
+                  disabled={!canEdit}
+                />
+                {savingField === 'tower' && <span className="cd-saving"> saving…</span>}
+              </div>
+              <div>
+                <span className="cd-lbl">Unit no.</span>
+                <input
+                  className="cd-input"
+                  value={unitNo}
+                  onChange={(e) => setUnitNo(e.target.value)}
+                  onBlur={() => saveField('unit_no', unitNo, item.unit_no)}
+                  placeholder="e.g. 1502"
+                  disabled={!canEdit}
+                />
+                {savingField === 'unit_no' && <span className="cd-saving"> saving…</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* Source / OH price / Variation / Follow-up */}
+          <div className="cd-section">
+            <div className="cd-grid">
+              <div>
+                <span className="cd-lbl">Source</span>
+                <span>{item.source || '—'}</span>
+              </div>
+              <div>
+                <span className="cd-lbl">OH price</span>
+                <span className={item.oh_price ? (isNearest ? 'val-amber' : 'val-green') : 'muted'}>
+                  {item.oh_price ? `${matchTag}${formatPrice(item.oh_price)}` : 'no match'}
+                </span>
+                {item.oh_price && item.oh_price_area && (
+                  <div className="cd-sub-line">
+                    {isNearest ? 'nearest' : 'matched'} {item.oh_price_bhk}BHK, {item.oh_price_area}sqft
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <span className="cd-lbl">Variation</span>
+                {v
+                  ? <span className={`cd-var-pill cd-var-${v.sign}`}>{v.label}</span>
+                  : <span className="muted">no match</span>}
+              </div>
+              <div>
+                <span className="cd-lbl">Follow-up date</span>
+                <input
+                  type="date"
+                  className="cd-input"
+                  value={followUp}
+                  min={todayISO()}
+                  onChange={(e) => setFollowUp(e.target.value)}
+                  onBlur={() => saveField('follow_up_at', followUp, item.follow_up_at?.slice?.(0, 10))}
+                  disabled={!canEdit}
+                />
+                {savingField === 'follow_up_at' && <span className="cd-saving"> saving…</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* Assigned RM + Stage */}
+          <div className="cd-row-actions">
+            {canSeeAssigned && (
+              <div className="cd-row-actions-cell">
+                <span className="cd-lbl">Assigned RM</span>
+                {assignedRm ? (
+                  <span className="cd-rm-chip">
+                    <Avatar name={assignedRm.name} email={assignedRm.email} sizeClass="note-av-sm" />
+                    {assignedRm.name || assignedRm.email}
+                  </span>
+                ) : (
+                  <span className="muted">Unassigned</span>
+                )}
+              </div>
+            )}
+            {canEdit && (
+              <div className="cd-row-actions-cell">
+                <span className="cd-lbl">Stage</span>
+                <select
+                  className="cd-stage-select"
+                  value={item.stage}
+                  onChange={(e) => changeStage(e.target.value)}
+                  disabled={savingStage}
+                >
+                  {STAGES.map((s) => (
+                    <option key={s} value={s}>{stageLabel(s)}</option>
                   ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {canEdit && (
-            <div className="exp-actions">
-              <label>Stage</label>
-              <select
-                value={item.stage}
-                onChange={(e) => changeStage(e.target.value)}
-                disabled={savingStage}
-              >
-                {STAGES.map((s) => (
-                  <option key={s} value={s}>{stageLabel(s)}</option>
-                ))}
-              </select>
-            </div>
-          )}
+                </select>
+              </div>
+            )}
+          </div>
 
           {item.stage === 'rejected' && item.reject_reason && (
-            <div className="exp-reject-line">
-              <span className="exp-lbl">Reject reason</span>
+            <div className="cd-reject-line">
+              <span className="cd-lbl">Reject reason</span>
               <span>{REJECT_REASONS.find((r) => r.value === item.reject_reason)?.label || item.reject_reason}</span>
             </div>
           )}
 
-          <div className="exp-notes">
-            <label>Notes</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              onBlur={() => saveField('notes', notes, item.notes)}
-              placeholder="Add a note…"
-              rows={4}
-              disabled={!canEdit}
-            />
-            <div className="exp-notes-actions">
-              {savingField === 'notes' && <div className="exp-saving">saving…</div>}
-              {canEdit && (notes || '') !== (item.notes || '') && (
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={() => saveField('notes', notes, item.notes)}
-                  disabled={savingField === 'notes'}
-                >
-                  {savingField === 'notes' ? 'Saving…' : 'Save'}
-                </button>
-              )}
-            </div>
-          </div>
+          <NoteThread
+            ohId={item.oh_id}
+            initial={item.note_thread || []}
+            canPost={canEdit}
+            currentUser={user}
+            onChange={(next) => onUpdated({ ...item, note_thread: next })}
+          />
         </div>
       </div>
 

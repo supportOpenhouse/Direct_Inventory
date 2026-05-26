@@ -7,7 +7,7 @@ import {
 const SORTABLE = new Set([
   'oh_id', 'city', 'rm_name', 'society', 'bedrooms', 'floor', 'area_sqft',
   'price', 'oh_price', 'variation', 'stage', 'seller_name', 'seller_phone',
-  'posting_date', 'created_at', 'follow_up_at', 'notes',
+  'posting_date', 'created_at', 'follow_up_at',
 ]);
 
 // Placeholder rows shown while a page is loading — keeps the table (and its
@@ -40,8 +40,8 @@ export default function InventoryTable({
 }) {
   const canSetPriority = ['admin', 'manager', 'rm'].includes(role);
   const showRmColumn = role === 'admin' || role === 'manager';
-  // 16 base columns; +1 if selectMode, -1 if Stage hidden, +1 if RM column shown.
-  const colCount = 16 + (selectMode ? 1 : 0) - (showStageColumn ? 0 : 1) + (showRmColumn ? 1 : 0);
+  // 15 base columns; +1 if selectMode, -1 if Stage hidden, +1 if RM column shown.
+  const colCount = 15 + (selectMode ? 1 : 0) - (showStageColumn ? 0 : 1) + (showRmColumn ? 1 : 0);
 
   async function togglePriority(e, item) {
     e.stopPropagation();
@@ -89,7 +89,6 @@ export default function InventoryTable({
             <SortableTh field="seller_phone" label="Phone" sort={sort} onSort={onSort} />
             <SortableTh field="created_at" label="Posted" sort={sort} onSort={onSort} />
             <SortableTh field="follow_up_at" label="Follow-up" sort={sort} onSort={onSort} className="inv-th-date" />
-            <SortableTh field="notes" label="Notes" sort={sort} onSort={onSort} />
           </tr>
         </thead>
         <tbody>
@@ -189,7 +188,6 @@ export default function InventoryTable({
                 <td className="inv-td-phone">{item.seller_phone || '—'}</td>
                 <td className="inv-td-muted">{item.created_at ? formatDateRel(item.created_at) : '—'}</td>
                 <td className="inv-td-muted inv-td-date">{formatDateShort(item.follow_up_at)}</td>
-                <td className="inv-td-notes" title={item.notes || ''}>{item.notes || '—'}</td>
               </tr>
             );
           })}
