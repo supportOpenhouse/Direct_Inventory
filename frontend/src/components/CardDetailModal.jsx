@@ -161,11 +161,16 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
   const [showReject, setShowReject] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const colorPickerRef = useRef(null);
-  const [assignedRm, setAssignedRm] = useState(null);  // {id,name,email} | null
 
   const canEdit = ['admin', 'manager', 'rm'].includes(role);
   const canSetPriority = ['admin', 'manager', 'rm'].includes(role);
   const canSeeAssigned = ['admin', 'manager'].includes(role);
+
+  // Assigned RM comes joined onto the inventory row (rm_name / rm_email),
+  // so the chip renders synchronously without a second fetch.
+  const assignedRm = item.assigned_rm_id
+    ? { id: item.assigned_rm_id, name: item.rm_name, email: item.rm_email }
+    : null;
   const v = variation(item.price, item.oh_price);
   const isNearest = item.oh_price_match === 'nearest';
   const matchTag = isNearest ? '~' : '';
@@ -195,15 +200,6 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose, showVisit, showReject]);
-
-  useEffect(() => {
-    if (!canSeeAssigned) return undefined;
-    let alive = true;
-    api.get(`/api/inventory/${item.oh_id}/visible-rms`)
-      .then((r) => { if (alive) setAssignedRm((r.rms && r.rms[0]) || null); })
-      .catch(() => { if (alive) setAssignedRm(null); });
-    return () => { alive = false; };
-  }, [item.oh_id, canSeeAssigned]);
 
   async function applyStage(newStage, extra = {}) {
     try {

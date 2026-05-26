@@ -312,7 +312,8 @@ _INVENTORY_WITH_PRICING_SQL = """
            p.area_sqft    AS oh_price_area,
            p.bhk          AS oh_price_bhk,
            p.match_kind   AS oh_price_match,
-           u_rm.name      AS rm_name
+           u_rm.name      AS rm_name,
+           u_rm.email     AS rm_email
     FROM inventory i
     LEFT JOIN users u_rm ON u_rm.id = i.assigned_rm_id
     LEFT JOIN LATERAL (
@@ -649,7 +650,13 @@ def get_one(oh_id: str):
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
-            cur.execute("SELECT * FROM inventory WHERE oh_id = %s", (oh_id,))
+            cur.execute(
+                "SELECT i.*, u_rm.name AS rm_name, u_rm.email AS rm_email "
+                "FROM inventory i "
+                "LEFT JOIN users u_rm ON u_rm.id = i.assigned_rm_id "
+                "WHERE i.oh_id = %s",
+                (oh_id,),
+            )
             row = cur.fetchone()
             if not row:
                 return jsonify({"error": "not found"}), 404
