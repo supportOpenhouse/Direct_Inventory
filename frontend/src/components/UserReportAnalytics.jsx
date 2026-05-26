@@ -434,8 +434,10 @@ function StageDistribution({ totals }) {
         {segments.map((seg) => (
           <path key={seg.stage} d={seg.d}
                 fill={svgStageFill(seg.stage)}
-                stroke={seg.stage === 'rejected' ? REJECTED_STRIPE_COLOR : 'none'}
-                strokeWidth={seg.stage === 'rejected' ? 1.5 : 0}>
+                stroke={seg.stage === 'rejected' ? '#991b1b' : 'none'}
+                strokeWidth={seg.stage === 'rejected' ? 1.25 : 0}
+                strokeLinejoin="round"
+                strokeLinecap="round">
             <title>{stageLabel(seg.stage)}: {seg.value} ({((seg.value / total) * 100).toFixed(1)}%)</title>
           </path>
         ))}
