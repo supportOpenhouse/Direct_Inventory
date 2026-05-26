@@ -9,12 +9,14 @@ Two paths populate it:
                                         in without a match (e.g. before an RM
                                         had their society/micro set).
 
-RM resolution rules (society → micro_market; **no cities fallback**):
+RM resolution rules — first match wins:
   1. Active rm whose `society[]` contains the lead's society
      (case/whitespace-insensitive — the data has 'ROF' / 'Rof' / 'rof' drift).
   2. Active rm whose `micro_market[]` overlaps with a micro that, per
      PROPERTIES_DB.master_societies, contains the lead's society.
-  3. Otherwise — no RM (assigned_rm_id stays NULL).
+  3. Active rm whose `cities[]` contains the lead's city ('Noida' expands to
+     include 'Greater Noida' to match the city-tab convention).
+  4. Otherwise — no RM (assigned_rm_id stays NULL).
 
 Manager comes from the matched RM's `users.manager`. At create time only,
 falls back to an active manager whose `cities[]` contains the row's city when
@@ -32,73 +34,101 @@ from ..db import get_props_conn
 log = logging.getLogger(__name__)
 
 
-def _resolve_rm_for_society(cur, society: str | None) -> Tuple[int | None, int | None]:
-    """Return (rm_id, mgr_id) for one society. Case/whitespace-insensitive."""
-    if not society:
-        return (None, None)
-    s_norm = society.strip().lower()
+def _expand_cities(cities):
+    """Mirror the city-tab convention: 'Noida' includes 'Greater Noida'."""
+    expanded = set(cities or [])
+    if "Noida" in expanded:
+        expanded.add("Greater Noida")
+    return expanded
+
+
+def _resolve_rm_for_lead(
+    cur, society: str | None, city: str | None = None,
+) -> Tuple[int | None, int | None]:
+    """Return (rm_id, mgr_id) for a single lead. Society > micro_market > city.
+    Society matching is case/whitespace-insensitive.
+    """
+    s_norm = (society or "").strip().lower()
 
     # 1. Direct society overlap.
-    cur.execute(
-        """SELECT id, manager FROM users
-           WHERE role = 'rm' AND is_active = TRUE
-             AND EXISTS (
-               SELECT 1 FROM unnest(society) AS s
-               WHERE LOWER(TRIM(s)) = %s
-             )
-           ORDER BY id LIMIT 1""",
-        (s_norm,),
-    )
-    row = cur.fetchone()
-    if row:
-        return (row["id"], row["manager"])
+    if s_norm:
+        cur.execute(
+            """SELECT id, manager FROM users
+               WHERE role = 'rm' AND is_active = TRUE
+                 AND EXISTS (
+                   SELECT 1 FROM unnest(society) AS s
+                   WHERE LOWER(TRIM(s)) = %s
+                 )
+               ORDER BY id LIMIT 1""",
+            (s_norm,),
+        )
+        row = cur.fetchone()
+        if row:
+            return (row["id"], row["manager"])
 
-    # 2. Micro-market overlap, resolved via master_societies.
-    try:
-        pconn = get_props_conn()
+        # 2. Micro-market overlap, resolved via master_societies.
         try:
-            with pconn.cursor() as pcur:
-                pcur.execute(
-                    """SELECT DISTINCT micro_market FROM master_societies
-                       WHERE LOWER(TRIM(society_name)) = %s
-                         AND micro_market IS NOT NULL""",
-                    (s_norm,),
-                )
-                micros = [r["micro_market"] for r in pcur.fetchall()]
-        finally:
-            pconn.close()
-    except Exception:
-        log.exception("master_societies lookup failed for assignment")
-        return (None, None)
+            pconn = get_props_conn()
+            try:
+                with pconn.cursor() as pcur:
+                    pcur.execute(
+                        """SELECT DISTINCT micro_market FROM master_societies
+                           WHERE LOWER(TRIM(society_name)) = %s
+                             AND micro_market IS NOT NULL""",
+                        (s_norm,),
+                    )
+                    micros = [r["micro_market"] for r in pcur.fetchall()]
+            finally:
+                pconn.close()
+        except Exception:
+            log.exception("master_societies lookup failed for assignment")
+            micros = []
 
-    if not micros:
-        return (None, None)
+        if micros:
+            cur.execute(
+                """SELECT id, manager FROM users
+                   WHERE role = 'rm' AND is_active = TRUE
+                     AND micro_market && %s
+                   ORDER BY id LIMIT 1""",
+                (micros,),
+            )
+            row = cur.fetchone()
+            if row:
+                return (row["id"], row["manager"])
 
-    cur.execute(
-        """SELECT id, manager FROM users
-           WHERE role = 'rm' AND is_active = TRUE
-             AND micro_market && %s
-           ORDER BY id LIMIT 1""",
-        (micros,),
-    )
-    row = cur.fetchone()
-    if row:
-        return (row["id"], row["manager"])
+    # 3. City overlap — broadest fallback. Property's city must be in some
+    # active RM's cities[] (with 'Noida' expanded to include 'Greater Noida').
+    if city:
+        city_targets = list(_expand_cities([city]))
+        cur.execute(
+            """SELECT id, manager FROM users
+               WHERE role = 'rm' AND is_active = TRUE
+                 AND cities && %s
+               ORDER BY id LIMIT 1""",
+            (city_targets,),
+        )
+        row = cur.fetchone()
+        if row:
+            return (row["id"], row["manager"])
 
     return (None, None)
+
+
+# Back-compat alias — old name still imported elsewhere.
+_resolve_rm_for_society = _resolve_rm_for_lead
 
 
 def resolve_assignment(cur, *, city: str, locality: str | None = None, society: str | None = None):
     """Return (rm_id, manager_id) for a single new inventory row.
 
-    RM uses society → micro_market (see `_resolve_rm_for_society`). Manager
-    comes from the matched RM's `manager`; falls back to an active manager
-    whose `cities[]` contains `city` when no RM matched or the RM has no
-    manager set.
+    RM uses society → micro_market → cities (see `_resolve_rm_for_lead`).
+    Manager comes from the matched RM's `manager`; falls back to an active
+    manager whose `cities[]` contains `city` when no RM matched or the RM has
+    no manager set.
 
     `locality` is accepted for call-site compatibility but ignored.
     """
-    rm_id, mgr_id = _resolve_rm_for_society(cur, society)
+    rm_id, mgr_id = _resolve_rm_for_lead(cur, society, city=city)
 
     if mgr_id is None and city:
         cur.execute(
@@ -143,7 +173,7 @@ def assign_missing_batch(
     # 1. Build user maps ONCE. Tiny table; reused across chunks.
     with conn.cursor() as cur:
         cur.execute(
-            """SELECT id, manager, society, micro_market FROM users
+            """SELECT id, manager, society, micro_market, cities FROM users
                WHERE role = 'rm' AND is_active = TRUE
                ORDER BY id"""
         )
@@ -151,6 +181,7 @@ def assign_missing_batch(
 
     soc_to_rm: dict[str, tuple[int, int | None]] = {}
     micro_to_rm: dict[str, tuple[int, int | None]] = {}
+    city_to_rm: dict[str, tuple[int, int | None]] = {}
     for rm in rms_data:
         for s in (rm.get("society") or []):
             s_lc = (s or "").strip().lower()
@@ -159,10 +190,13 @@ def assign_missing_batch(
         for m in (rm.get("micro_market") or []):
             if m and m not in micro_to_rm:
                 micro_to_rm[m] = (rm["id"], rm.get("manager"))
+        for c in _expand_cities(rm.get("cities") or []):
+            if c and c not in city_to_rm:
+                city_to_rm[c] = (rm["id"], rm.get("manager"))
 
-    # society_lc -> (rm_id, mgr_id) | None (None = definitively unmatchable).
-    # Seeded with direct society hits so we don't even query master_societies
-    # for them.
+    # society_lc -> (rm_id, mgr_id) | None (None = no society/micro match yet
+    # — the city tier is still tried per-row below). Seeded with direct
+    # society hits so we don't even query master_societies for them.
     resolved: dict[str, tuple[int, int | None] | None] = dict(soc_to_rm)
 
     cursor_id = 0
@@ -176,9 +210,10 @@ def assign_missing_batch(
 
         with conn.cursor() as cur:
             cur.execute(
-                """SELECT id, society FROM inventory
+                """SELECT id, society, city FROM inventory
                    WHERE assigned_rm_id IS NULL
-                     AND society IS NOT NULL AND TRIM(society) <> ''
+                     AND ((society IS NOT NULL AND TRIM(society) <> '')
+                          OR (city IS NOT NULL AND TRIM(city) <> ''))
                      AND id > %s
                    ORDER BY id
                    LIMIT %s""",
@@ -224,7 +259,13 @@ def assign_missing_batch(
             updates: list[tuple] = []
             for r in rows:
                 s_lc = (r["society"] or "").strip().lower()
-                match = resolved.get(s_lc)
+                match = resolved.get(s_lc) if s_lc else None
+                if match is None:
+                    # City fallback — broadest tier. 'Noida' rows match an RM
+                    # scoped to either 'Noida' or 'Greater Noida' (and vv).
+                    c = r.get("city")
+                    if c:
+                        match = city_to_rm.get(c)
                 if match is not None:
                     rm_id, mgr_id = match
                     updates.append((r["id"], rm_id, mgr_id))
@@ -252,7 +293,8 @@ def assign_missing_batch(
         cur.execute(
             """SELECT COUNT(*) AS n FROM inventory
                WHERE assigned_rm_id IS NULL
-                 AND society IS NOT NULL AND TRIM(society) <> ''"""
+                 AND ((society IS NOT NULL AND TRIM(society) <> '')
+                      OR (city IS NOT NULL AND TRIM(city) <> ''))"""
         )
         remaining = cur.fetchone()["n"]
 
