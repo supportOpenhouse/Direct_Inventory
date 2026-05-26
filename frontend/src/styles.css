@@ -939,3 +939,15 @@ a { color: inherit; }
   }
   .ura-ft-col-bar { display: none; }
 }
+
+/* Top-right banner shown after the background POC backfill assigned new
+   leads — clicking it reloads the page. */
+.new-assigned-banner {
+  position: fixed; top: 14px; right: 18px;
+  background: #fef3c7; color: #92400e;
+  border: 1px solid #fcd34d; border-radius: 8px;
+  padding: 8px 14px; font-size: 13px; font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  cursor: pointer; z-index: 200;
+}
+.new-assigned-banner:hover { background: #fde68a; }

@@ -24,7 +24,7 @@ from ..db import get_conn, get_props_conn
 from ..services.activity import log as log_activity
 
 log = logging.getLogger(__name__)
-from ..services.assignment import resolve_assignment
+from ..services.assignment import assign_missing_batch, resolve_assignment
 from ..services.cp_match import MATCH_INPUT_FIELDS, annotate_cp_match, backfill_one_chunk
 from ..services.oh_id import next_oh_id
 from .auth import require_auth
@@ -110,63 +110,17 @@ def _expand_cities(cities: list[str]) -> list[str]:
     return list(expanded)
 
 
-def _rm_society_scope(user: dict) -> list[str] | None:
-    """Resolve the RM's micro_market list to a list of society names via
-    PROPERTIES_DB.master_societies. Only invoked when users.society is empty
-    AND users.micro_market is non-empty (callers handle the other branches).
-
-    Returns:
-      list[str] — societies found (possibly empty if the lookup hit no rows).
-      None      — lookup couldn't run (DB unreachable / schema mismatch).
-                  Caller treats this the same as "empty" under strict scoping.
-
-    Cached per-request on flask.g so list+counts+notifications in the same
-    request don't duplicate the master_societies query.
-    """
-    cache_key = "_rm_society_scope"
-    if hasattr(g, cache_key):
-        return getattr(g, cache_key)
-
-    micros = user.get("micro_market") or []
-    result: list[str] | None = None
-    if micros:
-        try:
-            conn = get_props_conn()
-            try:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        "SELECT DISTINCT society_name FROM master_societies "
-                        "WHERE micro_market = ANY(%s)",
-                        (micros,),
-                    )
-                    rows = cur.fetchall()
-                    result = [r["society_name"] for r in rows]
-            finally:
-                conn.close()
-        except Exception:
-            log.exception(
-                "master_societies lookup failed for user_id=%s", user.get("id")
-            )
-            result = None
-
-    setattr(g, cache_key, result)
-    return result
-
-
 def _scope_clause(user: dict, alias: str = "") -> tuple[str, list]:
     """Return (sql_where_fragment, params) for visibility filtering.
 
     Roles:
       admin    — sees everything.
-      manager  — sees rows in their assigned cities (empty cities → nothing).
-      rm       — strict narrowest-wins, in this order:
-                 1) users.society non-empty → ONLY rows where society is in
-                    that list. No city / assignment overlay.
-                 2) else users.micro_market non-empty → resolve to societies
-                    via PROPERTIES_DB.master_societies; ONLY rows in those
-                    societies. Empty resolution → nothing visible.
-                 3) else (both NULL/empty) → rows assigned to them OR rows
-                    in their cities (the prior default behavior).
+      manager  — sees rows in their assigned cities (empty cities → nothing;
+                 'Noida' expands to include 'Greater Noida').
+      rm       — sees only rows where `assigned_rm_id = me`. POC assignment is
+                 persisted on the row by `services.assignment.assign_missing_batch`
+                 (POST /api/inventory/assign-missing) — RM visibility no longer
+                 derives from users.society / micro_market / cities.
 
     `alias` is the optional table alias prefix (e.g. 'i' if the query uses
     `inventory i`).
@@ -179,116 +133,8 @@ def _scope_clause(user: dict, alias: str = "") -> tuple[str, list]:
         if not cities:
             return ("AND FALSE", [])
         return (f"AND {p}city = ANY(%s)", [_expand_cities(cities)])
-
-    # rm — strict society overlay if configured, else city/assignment fallback.
-    # Society matching is case/whitespace-insensitive: the data has casing
-    # drift (e.g. 'ROF' / 'Rof' / 'rof'), so both sides go through
-    # LOWER(TRIM()).
-    societies = user.get("society") or []
-    if societies:
-        return (
-            f"AND LOWER(TRIM({p}society)) = ANY(%s)",
-            [[s.strip().lower() for s in societies]],
-        )
-
-    micros = user.get("micro_market") or []
-    if micros:
-        resolved = _rm_society_scope(user)  # cached master_societies lookup
-        if resolved:
-            return (
-                f"AND LOWER(TRIM({p}society)) = ANY(%s)",
-                [[s.strip().lower() for s in resolved]],
-            )
-        # Micromarket set but the master_societies lookup returned nothing
-        # (or failed). Strict scoping → no rows visible.
-        return ("AND FALSE", [])
-
-    # Neither society nor micro_market → fall back to city + assignment.
-    cities = user.get("cities") or []
-    if cities:
-        return (
-            f"AND ({p}assigned_rm_id = %s OR {p}city = ANY(%s))",
-            [user["id"], _expand_cities(cities)],
-        )
+    # rm
     return (f"AND {p}assigned_rm_id = %s", [user["id"]])
-
-
-def _rm_filter_clause(conn, rm_id: str, alias: str = "") -> tuple[str, list]:
-    """WHERE fragment for the board's RM filter.
-
-    There is no real per-row RM assignment — `assigned_rm_id` is unused. An RM
-    "has" a property iff the visibility rules (see _scope_clause) would surface
-    it: users.society, else users.micro_market (resolved to societies via
-    PROPERTIES_DB.master_societies), else users.cities.
-
-    rm_id:
-      '<int>' — rows the visibility rules give to that one RM.
-      'none'  — rows no active RM can see at all.
-
-    All active RMs collapse once into two sets — covered societies and covered
-    cities — so the per-row test is a single ANY() check. No per-RM or per-row
-    work, and at most two small lookups (users, then master_societies).
-    """
-    p = f"{alias}." if alias else ""
-    with conn.cursor() as cur:
-        if rm_id == "none":
-            cur.execute(
-                "SELECT society, micro_market, cities FROM users "
-                "WHERE role = 'rm' AND is_active = TRUE"
-            )
-        else:
-            cur.execute(
-                "SELECT society, micro_market, cities FROM users "
-                "WHERE role = 'rm' AND is_active = TRUE AND id = %s",
-                (int(rm_id),),
-            )
-        rms = cur.fetchall()
-
-    cover_societies: set = set()
-    cover_cities: set = set()
-    micros_to_resolve: set = set()
-    for rm in rms:
-        soc = rm.get("society") or []
-        mic = rm.get("micro_market") or []
-        cit = rm.get("cities") or []
-        # Narrowest-wins, mirroring _scope_clause: society > micro_market > city.
-        if soc:
-            cover_societies.update(soc)
-        elif mic:
-            micros_to_resolve.update(mic)
-        elif cit:
-            cover_cities.update(_expand_cities(cit))
-
-    if micros_to_resolve:
-        try:
-            pconn = get_props_conn()
-            try:
-                with pconn.cursor() as pcur:
-                    pcur.execute(
-                        "SELECT DISTINCT society_name FROM master_societies "
-                        "WHERE micro_market = ANY(%s) AND society_name IS NOT NULL",
-                        (list(micros_to_resolve),),
-                    )
-                    cover_societies.update(r["society_name"] for r in pcur.fetchall())
-            finally:
-                pconn.close()
-        except Exception:
-            log.exception("master_societies lookup failed for RM filter")
-
-    parts: list[str] = []
-    params: list = []
-    if cover_societies:
-        # Case/whitespace-insensitive — society casing drifts in the data.
-        parts.append(f"COALESCE(LOWER(TRIM({p}society)) = ANY(%s), FALSE)")
-        params.append([s.strip().lower() for s in cover_societies])
-    if cover_cities:
-        parts.append(f"{p}city = ANY(%s)")
-        params.append(list(cover_cities))
-    covered = "(" + " OR ".join(parts) + ")" if parts else "FALSE"
-
-    if rm_id == "none":
-        return (f"AND NOT {covered}", params)
-    return (f"AND {covered}", params)
 
 
 def _build_filters(user: dict, args, alias: str = ""):
@@ -335,6 +181,15 @@ def _build_filters(user: dict, args, alias: str = ""):
         else:
             base_filters.append(f"AND {p}city = %s")
             base_params.append(city)
+    # RM filter — direct column comparison now that POC is persisted on the row.
+    #   'none'  → rows with no POC assigned (assigned_rm_id IS NULL).
+    #   '<int>' → rows assigned to that RM.
+    rm_id = (args.get("rm_id") or "").strip()
+    if rm_id == "none":
+        base_filters.append(f"AND {p}assigned_rm_id IS NULL")
+    elif rm_id.isdigit():
+        base_filters.append(f"AND {p}assigned_rm_id = %s")
+        base_params.append(int(rm_id))
     if q:
         # Substring ("half") search: each whitespace-separated token must
         # appear case-insensitively, anywhere, in at least one searchable
@@ -486,15 +341,6 @@ def list_inventory():
 
     conn = get_conn()
     try:
-        # RM filter — visibility-based (assigned_rm_id is unused; an RM "has" a
-        # property only via the _scope_clause rules). Needs a DB lookup, so it
-        # is resolved here rather than inside the pure _build_filters.
-        rm_id = (args.get("rm_id") or "").strip()
-        if rm_id == "none" or rm_id.isdigit():
-            rm_sql, rm_params = _rm_filter_clause(conn, rm_id, alias="i")
-            base_filters.append(rm_sql)
-            base_params.extend(rm_params)
-
         inner_where = f"WHERE TRUE {scope} {' '.join(base_filters)}"
         outer_where = f"WHERE TRUE {' '.join(post_filters)}"
 
@@ -637,19 +483,11 @@ def inventory_counts():
         "qualified", "call_not_received", "follow_up", "visit_scheduled", "rejected",
     ]
 
+    inner_where = f"WHERE TRUE {scope} {' '.join(base_filters)}"
+    outer_where = f"WHERE TRUE {' '.join(post_filters)}"
+
     conn = get_conn()
     try:
-        # RM filter — visibility-based (assigned_rm_id is unused); see
-        # _rm_filter_clause. Needs a DB lookup, hence resolved here.
-        rm_id = (request.args.get("rm_id") or "").strip()
-        if rm_id == "none" or rm_id.isdigit():
-            rm_sql, rm_params = _rm_filter_clause(conn, rm_id, alias="i")
-            base_filters.append(rm_sql)
-            base_params.extend(rm_params)
-
-        inner_where = f"WHERE TRUE {scope} {' '.join(base_filters)}"
-        outer_where = f"WHERE TRUE {' '.join(post_filters)}"
-
         with conn, conn.cursor() as cur:
             cur.execute(
                 f"""SELECT stage, COUNT(*) AS n FROM (
@@ -715,6 +553,39 @@ def cp_match_scan():
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         log.exception("cp_match scan failed (cursor=%r)", cursor)
+        return jsonify({"error": f"{type(e).__name__}: {e}"}), 500
+    finally:
+        conn.close()
+
+
+@bp.post("/assign-missing")
+@require_auth()
+def assign_missing():
+    """Background POC backfill — kicked off after the board first paints on
+    every page load. Walks the next chunk of rows where `assigned_rm_id` is
+    NULL and assigns POCs by society → micro_market (case-insensitive). Idle
+    when there's nothing to do; bounded per call so it stays well under any
+    proxy timeout.
+
+    Response: { updated, scanned, remaining }
+    """
+    conn = get_conn()
+    try:
+        result = assign_missing_batch(conn)
+        if result.get("updated"):
+            with conn, conn.cursor() as cur:
+                log_activity(
+                    cur,
+                    actor_user_id=g.user["id"],
+                    actor_email=g.user["email"],
+                    entity_type="inventory",
+                    entity_id=None,
+                    action="assign_missing",
+                    metadata=result,
+                )
+        return jsonify(result)
+    except Exception as e:
+        log.exception("assign_missing failed")
         return jsonify({"error": f"{type(e).__name__}: {e}"}), 500
     finally:
         conn.close()
@@ -793,86 +664,40 @@ def get_one(oh_id: str):
 @bp.get("/<oh_id>/visible-rms")
 @require_auth("admin", "manager")
 def visible_rms(oh_id: str):
-    """Which RMs would see this property under the visibility rules.
+    """The RM currently assigned to this property.
 
-    Inverts the per-RM logic in _scope_clause: for each active RM, apply
-    their scope (society > micro_market > city/assignment) to this one row.
-    Admin/manager only.
+    POC assignment is persisted on the inventory row (`assigned_rm_id`) and is
+    the sole driver of RM visibility — so the answer is the one assigned RM,
+    or an empty list when nothing is assigned. Admin/manager only.
 
     Response: { oh_id, rms: [{ id, name, email, via }] }
-      via ∈ {'society','micro_market','city','assignment'}
+      `via` is always 'assigned' (kept for response-shape compatibility).
     """
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
             cur.execute(
-                "SELECT oh_id, society, city, assigned_rm_id FROM inventory WHERE oh_id = %s",
+                """SELECT i.oh_id, u.id, u.name, u.email
+                   FROM inventory i
+                   LEFT JOIN users u ON u.id = i.assigned_rm_id
+                   WHERE i.oh_id = %s""",
                 (oh_id,),
             )
-            inv = cur.fetchone()
-            if not inv:
-                return jsonify({"error": "not found"}), 404
-            cur.execute(
-                "SELECT id, name, email, society, micro_market, cities "
-                "FROM users WHERE role = 'rm' AND is_active = TRUE"
-            )
-            rms = cur.fetchall()
+            row = cur.fetchone()
     finally:
         conn.close()
 
-    society = inv.get("society")
-    # Society casing drifts in the data ('ROF' / 'Rof' / 'rof') — normalise.
-    society_norm = (society or "").strip().lower()
-    city = inv.get("city")
-    assigned_rm_id = inv.get("assigned_rm_id")
-
-    # Micro-markets that contain this property's society — an RM scoped by
-    # micro_market sees the row iff their micros intersect this set. This is
-    # the inverse of _rm_society_scope's micro_market -> societies resolution.
-    prop_micros: set = set()
-    if society:
-        try:
-            pconn = get_props_conn()
-            try:
-                with pconn.cursor() as pcur:
-                    pcur.execute(
-                        "SELECT DISTINCT micro_market FROM master_societies "
-                        "WHERE LOWER(TRIM(society_name)) = LOWER(TRIM(%s)) "
-                        "  AND micro_market IS NOT NULL",
-                        (society,),
-                    )
-                    prop_micros = {r["micro_market"] for r in pcur.fetchall()}
-            finally:
-                pconn.close()
-        except Exception:
-            log.exception("master_societies lookup failed for visible-rms oh_id=%s", oh_id)
-
-    matched = []
-    for rm in rms:
-        rm_soc = rm.get("society") or []
-        rm_micro = rm.get("micro_market") or []
-        rm_cities = rm.get("cities") or []
-        via = None
-        if rm_soc:
-            if society_norm and society_norm in {s.strip().lower() for s in rm_soc}:
-                via = "society"
-        elif rm_micro:
-            if prop_micros and set(rm_micro) & prop_micros:
-                via = "micro_market"
-        elif rm_cities:
-            if assigned_rm_id == rm["id"]:
-                via = "assignment"
-            elif city and city in _expand_cities(rm_cities):
-                via = "city"
-        elif assigned_rm_id == rm["id"]:
-            via = "assignment"
-        if via:
-            matched.append({
-                "id": rm["id"], "name": rm["name"], "email": rm["email"], "via": via,
-            })
-
-    matched.sort(key=lambda r: (r["name"] or r["email"] or "").lower())
-    return jsonify({"oh_id": oh_id, "rms": matched})
+    if row is None:
+        return jsonify({"error": "not found"}), 404
+    if row.get("id") is None:
+        return jsonify({"oh_id": oh_id, "rms": []})
+    return jsonify({
+        "oh_id": oh_id,
+        "rms": [{
+            "id": row["id"], "name": row["name"], "email": row["email"],
+            "via": "assigned",
+        }],
+    })
 
 
 @bp.post("")

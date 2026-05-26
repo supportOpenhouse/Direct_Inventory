@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { CITIES, STAGES, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
@@ -50,6 +50,12 @@ export default function Board() {
   const [counts, setCounts] = useState({ total: 0, by_stage: {} });
   const [showAdd, setShowAdd] = useState(false);
 
+  // Background POC-backfill notification. After the first inventory load
+  // completes, kick off /assign-missing once; if any new leads were assigned,
+  // show a top-right banner asking the user to reload.
+  const [newAssigned, setNewAssigned] = useState(0);
+  const assignCheckedRef = useRef(false);
+
   function makeParams() {
     const p = new URLSearchParams();
     if (qApplied) p.set('q', qApplied);
@@ -96,6 +102,17 @@ export default function Board() {
   // Keep the jump-to-page field in sync whenever `page` changes elsewhere
   // (Prev/Next, filter reset). Does not fire while the user is mid-typing.
   useEffect(() => { setPageInput(String(page + 1)); }, [page]);
+
+  // Once the table has painted at least once, ask the backend to assign POCs
+  // to any new leads with no RM. Runs once per page mount, in the background;
+  // never blocks rendering. A non-zero result triggers the reload banner.
+  useEffect(() => {
+    if (loading || assignCheckedRef.current) return;
+    assignCheckedRef.current = true;
+    api.post('/api/inventory/assign-missing', {})
+      .then((r) => { if (r?.updated > 0) setNewAssigned(r.updated); })
+      .catch(() => { /* silent — purely a background nicety */ });
+  }, [loading]);
 
   function onSearch(e) {
     e?.preventDefault();
@@ -199,6 +216,16 @@ export default function Board() {
 
   return (
     <div className="board-page">
+      {newAssigned > 0 && (
+        <button
+          type="button"
+          className="new-assigned-banner"
+          onClick={() => window.location.reload()}
+          title="Click to reload"
+        >
+          new leads assigned, please reload
+        </button>
+      )}
       <div className="board-toolbar">
         <div className="city-tabs">
           <button className={!city ? 'tab tab-active' : 'tab'} onClick={() => setCity('')}>All</button>

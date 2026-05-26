@@ -304,17 +304,16 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
 
           {canSeeVisibleRms && (
             <div className="exp-visible-rms">
-              <span className="exp-lbl">Visible to RMs</span>
+              <span className="exp-lbl">Assigned RM</span>
               {loadingRms ? (
                 <span className="muted"> loading…</span>
               ) : !visibleRms || visibleRms.length === 0 ? (
-                <span className="muted"> No RM currently sees this property</span>
+                <span className="muted"> Unassigned</span>
               ) : (
                 <div className="vrm-chips">
                   {visibleRms.map((rm) => (
-                    <span key={rm.id} className="vrm-chip" title={`Visible via ${rm.via}`}>
+                    <span key={rm.id} className="vrm-chip">
                       {rm.name || rm.email}
-                      <span className="vrm-via">{rm.via}</span>
                     </span>
                   ))}
                 </div>
