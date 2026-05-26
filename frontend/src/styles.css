@@ -395,6 +395,12 @@ a { color: inherit; }
 .filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; }
 .filter-grid .filter-block { margin-bottom: 10px; }
 .filter-grid .filter-span-2 { grid-column: 1 / -1; }
+/* Preset row laid out as 3 chips per line (6 chips → 2 rows). Used by the
+   Date posted / Follow-up date blocks. */
+.preset-grid-3 {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+}
+.preset-grid-3 .pill { width: 100%; text-align: center; }
 .modal h3 { margin: 0 0 4px; }
 .modal-sub { color: #64748b; margin: 0 0 14px; font-size: 13px; }
 .modal label { display: block; font-size: 11px; color: #64748b; letter-spacing: 1px; margin-bottom: 4px; }

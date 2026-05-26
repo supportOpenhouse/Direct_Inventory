@@ -238,6 +238,9 @@ def _build_filters(user: dict, args, alias: str = ""):
     if posting_to:
         base_filters.append(f"AND {p}posting_date <= %s")
         base_params.append(posting_to)
+    # "Empty" preset on the Date posted chip row — rows with no posting_date.
+    if str(args.get("posting_empty") or "").strip() in ("1", "true", "yes"):
+        base_filters.append(f"AND {p}posting_date IS NULL")
     follow_up_from = (args.get("follow_up_from") or "").strip()
     follow_up_to   = (args.get("follow_up_to") or "").strip()
     if follow_up_from:
@@ -246,6 +249,8 @@ def _build_filters(user: dict, args, alias: str = ""):
     if follow_up_to:
         base_filters.append(f"AND {p}follow_up_at <= %s")
         base_params.append(follow_up_to)
+    if str(args.get("follow_up_empty") or "").strip() in ("1", "true", "yes"):
+        base_filters.append(f"AND {p}follow_up_at IS NULL")
     if source:
         base_filters.append(f"AND {p}source = %s")
         base_params.append(source)

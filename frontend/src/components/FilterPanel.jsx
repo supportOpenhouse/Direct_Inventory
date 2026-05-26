@@ -44,8 +44,8 @@ function preset(name) {
 }
 
 const EMPTY = {
-  // suggest_city scopes the Society/Locality autocomplete suggestions only.
-  // It does NOT become a board-level city filter (top tabs do that).
+  // suggest_city used to be picked by the user — now it auto-syncs from the
+  // board's active city tab (`defaultCity` prop). Empty → all cities.
   suggest_city: '',
   society: [], locality: [], bhk: [],
   price_min: '', price_max: '',
@@ -53,10 +53,9 @@ const EMPTY = {
   source: '',
   rm_id: '',
   date_preset: '',
-  posting_from: '', posting_to: '',
+  posting_from: '', posting_to: '', posting_empty: false,
   follow_up_preset: '',
-  follow_up_from: '', follow_up_to: '',
-  priority: false,
+  follow_up_from: '', follow_up_to: '', follow_up_empty: false,
   star: [],
 };
 
@@ -172,14 +171,20 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
     [societies],
   );
 
-  // Fetch society suggestions for the selected scope city. Empty city → no suggestions
-  // (1138 societies across all cities is too noisy to show without a scope).
+  // Society / locality suggestions: scope to the board's active city tab when
+  // set; otherwise fetch across all cities so the chip pickers still work on
+  // the "All" tab. Three small requests merged client-side is fine.
   useEffect(() => {
-    if (!f.suggest_city) { setSocieties([]); return; }
     let alive = true;
     setLoadingSocs(true);
-    api.get(`/api/inventory/societies?city=${encodeURIComponent(f.suggest_city)}`)
-      .then((r) => { if (alive) setSocieties(r.items || []); })
+    const cities = f.suggest_city ? [f.suggest_city] : CITIES;
+    Promise.all(
+      cities.map((c) => api.get(`/api/inventory/societies?city=${encodeURIComponent(c)}`)),
+    )
+      .then((results) => {
+        if (!alive) return;
+        setSocieties(results.flatMap((r) => r.items || []));
+      })
       .catch(() => { if (alive) setSocieties([]); })
       .finally(() => { if (alive) setLoadingSocs(false); });
     return () => { alive = false; };
@@ -205,20 +210,26 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
     // Click the active preset again to clear it.
     setF((p) => {
       if (p.date_preset === name) {
-        return { ...p, date_preset: '', posting_from: '', posting_to: '' };
+        return { ...p, date_preset: '', posting_from: '', posting_to: '', posting_empty: false };
+      }
+      if (name === 'empty') {
+        return { ...p, date_preset: 'empty', posting_from: '', posting_to: '', posting_empty: true };
       }
       const { from, to } = preset(name);
-      return { ...p, date_preset: name, posting_from: from, posting_to: to };
+      return { ...p, date_preset: name, posting_from: from, posting_to: to, posting_empty: false };
     });
   }
 
   function applyFollowUpPreset(name) {
     setF((p) => {
       if (p.follow_up_preset === name) {
-        return { ...p, follow_up_preset: '', follow_up_from: '', follow_up_to: '' };
+        return { ...p, follow_up_preset: '', follow_up_from: '', follow_up_to: '', follow_up_empty: false };
+      }
+      if (name === 'empty') {
+        return { ...p, follow_up_preset: 'empty', follow_up_from: '', follow_up_to: '', follow_up_empty: true };
       }
       const { from, to } = preset(name);
-      return { ...p, follow_up_preset: name, follow_up_from: from, follow_up_to: to };
+      return { ...p, follow_up_preset: name, follow_up_from: from, follow_up_to: to, follow_up_empty: false };
     });
   }
 
@@ -238,9 +249,10 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
     if (canFilterRm && f.rm_id) out.rm_id = f.rm_id === 'none' ? 'none' : Number(f.rm_id);
     if (f.posting_from) out.posting_from = f.posting_from;
     if (f.posting_to)   out.posting_to   = f.posting_to;
+    if (f.posting_empty) out.posting_empty = 1;
     if (f.follow_up_from) out.follow_up_from = f.follow_up_from;
     if (f.follow_up_to)   out.follow_up_to   = f.follow_up_to;
-    if (f.priority) out.priority = 1;
+    if (f.follow_up_empty) out.follow_up_empty = 1;
     // Star filter is admin-only — don't emit it for non-admins even if stale
     // state somehow carries a selection.
     if (isAdmin && f.star.length) out.star = f.star.join(',');
@@ -253,31 +265,18 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
         <h3>Filters</h3>
 
         <div className="filter-grid">
-        <div className="filter-block filter-span-2">
-          <div className="society-row">
-            <div className="society-city">
-              <label>City <span className="muted">(scopes suggestions)</span></label>
-              <select value={f.suggest_city} onChange={(e) => set('suggest_city', e.target.value)}>
-                <option value="">— pick city —</option>
-                {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div className="society-input">
-              <label>Society</label>
-              <ChipMultiSelect
-                id="filter-society-options"
-                values={f.society}
-                options={societyOptions}
-                onChange={(v) => set('society', v)}
-                disabled={!f.suggest_city}
-                placeholder={
-                  !f.suggest_city ? 'Pick a city to see suggestions…'
-                  : loadingSocs ? 'Loading societies…'
-                  : f.society.length ? 'Add another society…' : 'Type or pick societies…'
-                }
-              />
-            </div>
-          </div>
+        <div className="filter-block">
+          <label>Society</label>
+          <ChipMultiSelect
+            id="filter-society-options"
+            values={f.society}
+            options={societyOptions}
+            onChange={(v) => set('society', v)}
+            placeholder={
+              loadingSocs ? 'Loading societies…'
+              : f.society.length ? 'Add another society…' : 'Type or pick societies…'
+            }
+          />
         </div>
 
         <div className="filter-block">
@@ -287,10 +286,8 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
             values={f.locality}
             options={localityOptions}
             onChange={(v) => set('locality', v)}
-            disabled={!f.suggest_city}
             placeholder={
-              !f.suggest_city ? 'Pick a city to see suggestions…'
-              : loadingSocs ? 'Loading localities…'
+              loadingSocs ? 'Loading localities…'
               : f.locality.length ? 'Add another locality…' : 'Type or pick localities…'
             }
           />
@@ -309,6 +306,24 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
             ))}
           </div>
         </div>
+
+        {isAdmin && (
+          <div className="filter-block">
+            <label>Star</label>
+            <div className="bhk-pills">
+              {STAR_OPTIONS.map((s) => (
+                <button
+                  key={s.key}
+                  type="button"
+                  className={f.star.includes(s.key) ? 'pill pill-on' : 'pill'}
+                  onClick={() => toggleStar(s.key)}
+                >
+                  <span style={{ color: s.color, marginRight: 4 }}>★</span>{s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="filter-block">
           <label>Asking price (₹, inclusive)</label>
@@ -334,25 +349,27 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
 
         <div className="filter-block">
           <label>Date posted</label>
-          <div className="bhk-pills">
+          <div className="preset-grid-3">
             {[
               ['today', 'Today'],
               ['yesterday', 'Yesterday'],
               ['this_week', 'This Week'],
               ['this_month', 'This Month'],
-            ].map(([k, lbl]) => (
-              <button
-                key={k}
-                type="button"
-                className={f.date_preset === k ? 'pill pill-on' : 'pill'}
-                onClick={() => applyPreset(k)}
-              >{lbl}</button>
-            ))}
-            <button
-              type="button"
-              className={f.date_preset === 'custom' ? 'pill pill-on' : 'pill'}
-              onClick={() => set('date_preset', f.date_preset === 'custom' ? '' : 'custom')}
-            >Custom</button>
+              ['custom', 'Custom'],
+              ['empty', 'Empty'],
+            ].map(([k, lbl]) => {
+              const onClickPreset = k === 'custom'
+                ? () => set('date_preset', f.date_preset === 'custom' ? '' : 'custom')
+                : () => applyPreset(k);
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  className={f.date_preset === k ? 'pill pill-on' : 'pill'}
+                  onClick={onClickPreset}
+                >{lbl}</button>
+              );
+            })}
           </div>
           {f.date_preset === 'custom' && (
             <div className="range-row" style={{ marginTop: 8 }}>
@@ -372,25 +389,27 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
 
         <div className="filter-block">
           <label>Follow-up date</label>
-          <div className="bhk-pills">
+          <div className="preset-grid-3">
             {[
               ['today', 'Today'],
               ['yesterday', 'Yesterday'],
               ['this_week', 'This Week'],
               ['this_month', 'This Month'],
-            ].map(([k, lbl]) => (
-              <button
-                key={k}
-                type="button"
-                className={f.follow_up_preset === k ? 'pill pill-on' : 'pill'}
-                onClick={() => applyFollowUpPreset(k)}
-              >{lbl}</button>
-            ))}
-            <button
-              type="button"
-              className={f.follow_up_preset === 'custom' ? 'pill pill-on' : 'pill'}
-              onClick={() => set('follow_up_preset', f.follow_up_preset === 'custom' ? '' : 'custom')}
-            >Custom</button>
+              ['custom', 'Custom'],
+              ['empty', 'Empty'],
+            ].map(([k, lbl]) => {
+              const onClickPreset = k === 'custom'
+                ? () => set('follow_up_preset', f.follow_up_preset === 'custom' ? '' : 'custom')
+                : () => applyFollowUpPreset(k);
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  className={f.follow_up_preset === k ? 'pill pill-on' : 'pill'}
+                  onClick={onClickPreset}
+                >{lbl}</button>
+              );
+            })}
           </div>
           {f.follow_up_preset === 'custom' && (
             <div className="range-row" style={{ marginTop: 8 }}>
@@ -424,39 +443,6 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
                 <option key={u.id} value={String(u.id)}>{u.name || u.email}</option>
               ))}
             </select>
-          </div>
-        )}
-
-        <div className="filter-block">
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={!!f.priority}
-              onChange={(e) => set('priority', e.target.checked)}
-              style={{ width: 'auto' }}
-            />
-            <span style={{ letterSpacing: 0, fontSize: 14, color: '#0f172a' }}>
-              <span style={{ color: '#eab308', marginRight: 6 }}>★</span>
-              Priority only
-            </span>
-          </label>
-        </div>
-
-        {isAdmin && (
-          <div className="filter-block">
-            <label>Star</label>
-            <div className="bhk-pills">
-              {STAR_OPTIONS.map((s) => (
-                <button
-                  key={s.key}
-                  type="button"
-                  className={f.star.includes(s.key) ? 'pill pill-on' : 'pill'}
-                  onClick={() => toggleStar(s.key)}
-                >
-                  <span style={{ color: s.color, marginRight: 4 }}>★</span>{s.label}
-                </button>
-              ))}
-            </div>
           </div>
         )}
 

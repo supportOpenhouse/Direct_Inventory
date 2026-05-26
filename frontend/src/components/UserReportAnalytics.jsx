@@ -64,6 +64,18 @@ function stageBackground(s) {
   return stageColor(s);
 }
 
+// Full inline style for a stage swatch. Rejected gets a 1px red outline on
+// top of the stripe pattern so the segment reads as "crossed-out and ringed".
+// `extra` is merged in (e.g. `{ width: '40%' }` for variable-width bars).
+function stageStyle(s, extra) {
+  const out = { background: stageBackground(s), ...(extra || {}) };
+  if (s === 'rejected') {
+    out.outline = `1px solid ${REJECTED_STRIPE_COLOR}`;
+    out.outlineOffset = '-1px';
+  }
+  return out;
+}
+
 // SVG fill — uses the in-defs <pattern id="stripes-rejected"> for rejected.
 // Hosts must embed `<RejectedStripesDef />` inside their <svg>.
 function svgStageFill(s) {
@@ -246,7 +258,9 @@ function DailyTrendChart({ days, chartType, groupBy, userNames }) {
             yCursor -= h;
             segments.push(
               <rect key={s.key} x={x} y={yCursor} width={barW} height={h}
-                    fill={svgStageFill(s.key)} />,
+                    fill={svgStageFill(s.key)}
+                    stroke={s.key === 'rejected' ? REJECTED_STRIPE_COLOR : 'none'}
+                    strokeWidth={s.key === 'rejected' ? 1 : 0} />,
             );
           }
           return <g key={r.day}>{segments}</g>;
@@ -259,12 +273,14 @@ function DailyTrendChart({ days, chartType, groupBy, userNames }) {
           return (
             <g key={s.key}>
               <polyline points={pts} fill="none"
-                        stroke={s.color} strokeWidth="2"
+                        stroke={s.key === 'rejected' ? REJECTED_STRIPE_COLOR : s.color}
+                        strokeWidth="2"
                         strokeLinejoin="round" strokeLinecap="round"
                         strokeDasharray={s.key === 'rejected' ? '5 3' : undefined} />
               {rows.map((r, i) => (
                 <circle key={i} cx={xOf(i)} cy={yOf(r.values[s.key] || 0)}
-                        r="3" fill={s.color} />
+                        r="3"
+                        fill={s.key === 'rejected' ? REJECTED_STRIPE_COLOR : s.color} />
               ))}
             </g>
           );
@@ -321,7 +337,7 @@ function DailyTrendChart({ days, chartType, groupBy, userNames }) {
             .filter((s) => (hover.values?.[s.key] || 0) > 0)
             .map((s) => (
               <div key={s.key} className="ura-tt-row">
-                <span className="stage-dot" style={{ background: stageBackground(s.key) }} />
+                <span className="stage-dot" style={stageStyle(s.key)} />
                 <span>{s.label}</span>
                 <strong>{hover.values[s.key]}</strong>
               </div>
@@ -331,7 +347,7 @@ function DailyTrendChart({ days, chartType, groupBy, userNames }) {
       <div className="ura-legend">
         {series.map((s) => (
           <span key={s.key} className="ura-legend-item">
-            <span className="stage-dot" style={{ background: stageBackground(s.key) }} />
+            <span className="stage-dot" style={stageStyle(s.key)} />
             {s.label}
           </span>
         ))}
@@ -388,7 +404,10 @@ function StageDistribution({ totals }) {
       <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
         <RejectedStripesDef />
         {segments.map((seg) => (
-          <path key={seg.stage} d={seg.d} fill={svgStageFill(seg.stage)}>
+          <path key={seg.stage} d={seg.d}
+                fill={svgStageFill(seg.stage)}
+                stroke={seg.stage === 'rejected' ? REJECTED_STRIPE_COLOR : 'none'}
+                strokeWidth={seg.stage === 'rejected' ? 1.5 : 0}>
             <title>{stageLabel(seg.stage)}: {seg.value} ({((seg.value / total) * 100).toFixed(1)}%)</title>
           </path>
         ))}
@@ -402,7 +421,7 @@ function StageDistribution({ totals }) {
       <div className="ura-donut-legend">
         {entries.map((e) => (
           <div key={e.stage} className="ura-legend-row">
-            <span className="stage-dot" style={{ background: stageBackground(e.stage) }} />
+            <span className="stage-dot" style={stageStyle(e.stage)} />
             <span className="ura-legend-name">{stageLabel(e.stage)}</span>
             <span className="ura-legend-pct">{((e.value / total) * 100).toFixed(1)}%</span>
             <strong className="ura-legend-val">{e.value}</strong>
@@ -469,7 +488,7 @@ function UserLeaderboard({ users }) {
                   <span
                     key={s}
                     className="ura-lb-seg"
-                    style={{ width: `${pct}%`, background: stageBackground(s) }}
+                    style={stageStyle(s, { width: `${pct}%` })}
                     title={`${stageLabel(s)}: ${v}`}
                   />
                 );
@@ -483,7 +502,7 @@ function UserLeaderboard({ users }) {
       <div className="ura-legend">
         {stages.map((s) => (
           <span key={s} className="ura-legend-item">
-            <span className="stage-dot" style={{ background: stageBackground(s) }} />
+            <span className="stage-dot" style={stageStyle(s)} />
             {stageLabel(s)}
           </span>
         ))}
