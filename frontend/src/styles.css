@@ -397,13 +397,19 @@ a { color: inherit; }
   border: 1px solid #f1f5f9; border-radius: 8px; padding: 4px;
 }
 .ar-item {
-  display: flex; align-items: center; gap: 10px; padding: 6px 10px;
-  border-radius: 6px; cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; flex-wrap: nowrap; gap: 10px;
+  padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px;
+  min-width: 0;
 }
 .ar-item:hover { background: #f1f5f9; }
-.ar-item input { margin: 0; }
-.ar-item-name { font-weight: 600; color: #0f1115; }
-.ar-item-email { color: #94a3b8; font-size: 11px; margin-left: auto; }
+.ar-item input { margin: 0; flex-shrink: 0; }
+.ar-item-name {
+  font-weight: 600; color: #0f1115;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+/* Defensive: the email span was removed from JSX but ensure any stale bundle
+   that still renders it shows nothing. */
+.ar-item-email { display: none; }
 .ar-empty { padding: 16px; text-align: center; font-size: 13px; }
 .cd-stage-select {
   padding: 6px 28px 6px 10px;
