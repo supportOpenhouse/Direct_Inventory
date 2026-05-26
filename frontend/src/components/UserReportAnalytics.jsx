@@ -76,6 +76,22 @@ function stageStyle(s, extra) {
   return out;
 }
 
+// Inline style for a chart-series swatch (tooltip dot, legend dot). Honors
+// the series' assigned color (stage OR user-palette colour, depending on the
+// group-by mode) and only swaps in the stripe pattern when the series IS
+// the 'rejected' stage. Without this, a user-keyed series falls into the
+// stageColor fallback and renders grey.
+function seriesStyle(s) {
+  if (s.key === 'rejected') {
+    return {
+      background: REJECTED_STRIPES_CSS,
+      outline: `1px solid ${REJECTED_STRIPE_COLOR}`,
+      outlineOffset: '-1px',
+    };
+  }
+  return { background: s.color };
+}
+
 // SVG fill — uses the in-defs <pattern id="stripes-rejected"> for rejected.
 // Hosts must embed `<RejectedStripesDef />` inside their <svg>.
 function svgStageFill(s) {
@@ -349,7 +365,7 @@ function DailyTrendChart({ days, chartType, groupBy, userNames }) {
             .filter((s) => (hover.values?.[s.key] || 0) > 0)
             .map((s) => (
               <div key={s.key} className="ura-tt-row">
-                <span className="stage-dot" style={stageStyle(s.key)} />
+                <span className="stage-dot" style={seriesStyle(s)} />
                 <span>{s.label}</span>
                 <strong>{hover.values[s.key]}</strong>
               </div>
@@ -359,7 +375,7 @@ function DailyTrendChart({ days, chartType, groupBy, userNames }) {
       <div className="ura-legend">
         {series.map((s) => (
           <span key={s.key} className="ura-legend-item">
-            <span className="stage-dot" style={stageStyle(s.key)} />
+            <span className="stage-dot" style={seriesStyle(s)} />
             {s.label}
           </span>
         ))}
