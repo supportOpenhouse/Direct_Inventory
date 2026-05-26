@@ -940,8 +940,21 @@ a { color: inherit; }
   .ura-ft-col-bar { display: none; }
 }
 
+/* Reload icon on the page-nav row — spins while a table refresh is in
+   flight, otherwise sits still. */
+.reload-btn { padding: 4px 10px; }
+.reload-icon {
+  display: inline-block; font-size: 18px; line-height: 1;
+  transform-origin: center;
+}
+.reload-icon-spinning { animation: reload-spin 0.8s linear infinite; }
+@keyframes reload-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 /* Top-right banner shown after the background POC backfill assigned new
-   leads — clicking it reloads the page. */
+   leads — clicking it refreshes the table (no full page reload). */
 .new-assigned-banner {
   position: fixed; top: 14px; right: 18px;
   background: #fef3c7; color: #92400e;

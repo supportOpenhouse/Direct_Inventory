@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { CITIES, STAGES, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
+import { downloadCSV } from '../utils/reportFilters.js';
 import InventoryTable from '../components/InventoryTable.jsx';
 import CardDetailModal from '../components/CardDetailModal.jsx';
 import AddInventoryModal from '../components/AddInventoryModal.jsx';
@@ -55,6 +56,10 @@ export default function Board() {
   // show a top-right banner asking the user to reload.
   const [newAssigned, setNewAssigned] = useState(0);
   const assignCheckedRef = useRef(false);
+
+  // Admin-only CSV export — paginates through the list endpoint with the
+  // currently-applied filters, builds the CSV client-side.
+  const [downloadingCsv, setDownloadingCsv] = useState(false);
 
   function makeParams() {
     const p = new URLSearchParams();
@@ -184,6 +189,76 @@ export default function Board() {
     }
   }
 
+  // Pulls every row matching the current filters (paginated at the API's
+  // 1000-row cap) and writes a CSV. Admin-only — gated in the UI.
+  async function downloadCsv() {
+    if (downloadingCsv) return;
+    setDownloadingCsv(true);
+    try {
+      const all = [];
+      const pageLimit = 1000;
+      let offset = 0;
+      // Loop until the server says we've seen them all. Cap at 50 pages so a
+      // runaway response can't spin forever.
+      for (let i = 0; i < 50; i += 1) {
+        const params = makeParams();
+        params.set('limit', String(pageLimit));
+        params.set('offset', String(offset));
+        const r = await api.get(`/api/inventory?${params}`);
+        const batch = r.items || [];
+        all.push(...batch);
+        if (batch.length < pageLimit || all.length >= (r.total || 0)) break;
+        offset += pageLimit;
+      }
+      const fmtDate = (d) => {
+        if (!d) return '';
+        const dt = new Date(d);
+        return Number.isNaN(dt.getTime()) ? '' : dt.toISOString().slice(0, 10);
+      };
+      const headers = [
+        'OH-ID', 'City', 'Locality', 'Society', 'BHK', 'Floor', 'Tower', 'Unit',
+        'Area (sqft)', 'Asking (Lakhs)', 'OH Price (Lakhs)', 'Variation %',
+        'Stage', 'Reject Reason', 'Seller', 'Phone', 'Posting Date', 'Created',
+        'Follow-up', 'Notes', 'Source', 'Listing Link',
+      ];
+      const rows = all.map((it) => {
+        const variation = it.price != null && it.oh_price
+          ? ((Number(it.price) - Number(it.oh_price)) / Number(it.oh_price) * 100).toFixed(1)
+          : '';
+        return [
+          it.oh_id,
+          it.city || '',
+          it.locality || '',
+          it.society || '',
+          it.bedrooms ?? '',
+          it.floor ?? '',
+          it.tower || '',
+          it.unit_no || '',
+          it.area_sqft ?? '',
+          it.price != null ? (Number(it.price) / 100000).toFixed(2) : '',
+          it.oh_price != null ? (Number(it.oh_price) / 100000).toFixed(2) : '',
+          variation,
+          stageLabel(it.stage),
+          it.reject_reason || '',
+          it.seller_name || '',
+          it.seller_phone || '',
+          fmtDate(it.posting_date),
+          fmtDate(it.created_at),
+          fmtDate(it.follow_up_at),
+          it.notes || '',
+          it.source || '',
+          it.listing_link || '',
+        ];
+      });
+      const filename = `inventory_${new Date().toISOString().slice(0, 10)}.csv`;
+      downloadCSV(filename, headers, rows);
+    } catch (e) {
+      alert('Download failed: ' + (e?.data?.error || e?.message || e));
+    } finally {
+      setDownloadingCsv(false);
+    }
+  }
+
   function onBulkDone(result) {
     clearSelection();
     setSelectMode(false);
@@ -220,10 +295,10 @@ export default function Board() {
         <button
           type="button"
           className="new-assigned-banner"
-          onClick={() => window.location.reload()}
-          title="Click to reload"
+          onClick={() => { setNewAssigned(0); refresh(page); refreshCounts(); }}
+          title="Click to reload the table"
         >
-          new leads assigned, please reload
+          NEW LEADS ASSIGNED, PLEASE RELOAD
         </button>
       )}
       <div className="board-toolbar">
@@ -319,6 +394,25 @@ export default function Board() {
           {' / '}{totalPages}
         </span>
         <button className="btn-ghost" disabled={page + 1 >= totalPages} onClick={() => setPage((p) => p + 1)}>Next →</button>
+        <button
+          className="btn-ghost reload-btn"
+          onClick={() => { refresh(page); refreshCounts(); }}
+          disabled={loading}
+          title="Reload the table (keeps current filters)"
+          aria-label="Reload"
+        >
+          <span className={`reload-icon ${loading ? 'reload-icon-spinning' : ''}`}>↻</span>
+        </button>
+        {user?.role === 'admin' && (
+          <button
+            className="btn-ghost"
+            onClick={downloadCsv}
+            disabled={downloadingCsv || total === 0}
+            title="Download all rows matching the current filters as CSV"
+          >
+            {downloadingCsv ? 'Downloading…' : 'Download CSV'}
+          </button>
+        )}
       </div>
 
       <InventoryTable
