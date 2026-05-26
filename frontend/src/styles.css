@@ -701,6 +701,13 @@ a { color: inherit; }
 .sms-item span { word-break: break-word; }
 .sms-item input { margin-top: 2px; flex-shrink: 0; }
 .sms-item:hover { background: #f1f5f9; }
+/* Single-select variant: rows are buttons (no checkbox), highlight when picked. */
+.sms-item-single {
+  width: 100%; text-align: left; background: transparent;
+  border: 0; color: inherit; font: inherit;
+}
+.sms-item-selected { background: #e0e7ff; color: #1e3a8a; }
+.sms-item-selected:hover { background: #c7d2fe; }
 .sms-empty, .sms-more { padding: 8px 6px; color: #94a3b8; font-size: 12px; }
 .sms-chips {
   display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;

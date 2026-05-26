@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { CITIES } from '../utils/format.js';
+import SearchableMultiSelect from './SearchableMultiSelect.jsx';
 
 const initial = {
   source: 'Website',
@@ -73,10 +74,17 @@ export default function AddInventoryModal({ onClose, onAdded }) {
     if (match && match.locality) set('locality', match.locality);
   }
 
-  // Distinct localities derived from the societies list — feeds the locality datalist.
-  const localityOptions = Array.from(new Set(
-    societies.map((s) => s.locality).filter(Boolean),
-  )).sort();
+  // Society + locality option lists for the searchable dropdowns. Society
+  // names are deduped (the master list can carry repeats with different
+  // localities); locality is the distinct set seen for the chosen city.
+  const societyOptions = useMemo(
+    () => Array.from(new Set(societies.map((s) => s.society).filter(Boolean))).sort(),
+    [societies],
+  );
+  const localityOptions = useMemo(
+    () => Array.from(new Set(societies.map((s) => s.locality).filter(Boolean))).sort(),
+    [societies],
+  );
 
   async function submit() {
     setError(null);
@@ -126,32 +134,26 @@ export default function AddInventoryModal({ onClose, onAdded }) {
           </div>
           <div>
             <label>Society <span className="req">*</span></label>
-            <input
-              list="society-options"
+            <SearchableMultiSelect
+              single
+              options={societyOptions}
               value={f.society}
-              onChange={(e) => handleSocietyChange(e.target.value)}
+              onChange={(v) => handleSocietyChange(v || '')}
               placeholder={loadingSocieties ? 'Loading…' : 'Type or pick…'}
+              disabled={loadingSocieties}
             />
-            <datalist id="society-options">
-              {societies.map((s) => (
-                <option key={`${s.society}|${s.locality || ''}`} value={s.society}>
-                  {s.locality ? `(${s.locality})` : ''}
-                </option>
-              ))}
-            </datalist>
           </div>
 
           <div>
             <label>Locality</label>
-            <input
-              list="locality-options"
+            <SearchableMultiSelect
+              single
+              options={localityOptions}
               value={f.locality}
-              onChange={(e) => set('locality', e.target.value)}
-              placeholder="Type or pick…"
+              onChange={(v) => set('locality', v || '')}
+              placeholder={loadingSocieties ? 'Loading…' : 'Type or pick…'}
+              disabled={loadingSocieties}
             />
-            <datalist id="locality-options">
-              {localityOptions.map((l) => <option key={l} value={l} />)}
-            </datalist>
           </div>
           <div>
             <label>BHK</label>

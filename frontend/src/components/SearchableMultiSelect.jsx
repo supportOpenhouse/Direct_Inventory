@@ -15,7 +15,18 @@ const LIST_CAP = 200;         // max rows rendered at once
 
 export default function SearchableMultiSelect({
   options, value, onChange, placeholder = 'Select…', disabled = false,
+  single = false,
 }) {
+  // single mode:
+  //   value is a string (or '' / null) and onChange receives the same shape.
+  //   Picking an option commits and closes; no checkboxes; no chips. Used
+  //   wherever the host field is conceptually one-of-many (e.g. society on
+  //   the Add Inventory modal).
+  const selected = single
+    ? (value || '')
+    : (Array.isArray(value) ? value : []);
+  const isSel = (opt) => single ? selected === opt : selected.includes(opt);
+  const selectedCount = single ? (selected ? 1 : 0) : selected.length;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [pos, setPos] = useState(null);   // { left, top?, bottom?, width }
@@ -75,12 +86,20 @@ export default function SearchableMultiSelect({
     return list.slice(0, LIST_CAP);
   }, [options, query]);
 
-  function toggle(opt) {
-    if (value.includes(opt)) onChange(value.filter((v) => v !== opt));
-    else onChange([...value, opt]);
+  function pick(opt) {
+    if (single) {
+      onChange(opt);
+      setOpen(false);
+      setQuery('');
+      return;
+    }
+    if (selected.includes(opt)) onChange(selected.filter((v) => v !== opt));
+    else onChange([...selected, opt]);
   }
 
-  const label = value.length === 0 ? placeholder : `${value.length} selected`;
+  const label = single
+    ? (selected || placeholder)
+    : (selectedCount === 0 ? placeholder : `${selectedCount} selected`);
 
   const menu = open && !disabled && pos
     ? createPortal(
@@ -102,22 +121,37 @@ export default function SearchableMultiSelect({
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
           />
-          {value.length > 0 && (
-            <button type="button" className="sms-clear" onClick={() => onChange([])}>
-              Clear {value.length} selected
+          {selectedCount > 0 && (
+            <button
+              type="button"
+              className="sms-clear"
+              onClick={() => { onChange(single ? '' : []); if (single) setOpen(false); }}
+            >
+              {single ? 'Clear selection' : `Clear ${selectedCount} selected`}
             </button>
           )}
           <div className="sms-list">
             {filtered.length === 0 && <div className="sms-empty">No matches.</div>}
             {filtered.map((opt) => (
-              <label key={opt} className="sms-item">
-                <input
-                  type="checkbox"
-                  checked={value.includes(opt)}
-                  onChange={() => toggle(opt)}
-                />
-                <span>{opt}</span>
-              </label>
+              single ? (
+                <button
+                  key={opt}
+                  type="button"
+                  className={`sms-item sms-item-single ${isSel(opt) ? 'sms-item-selected' : ''}`}
+                  onClick={() => pick(opt)}
+                >
+                  <span>{opt}</span>
+                </button>
+              ) : (
+                <label key={opt} className="sms-item">
+                  <input
+                    type="checkbox"
+                    checked={isSel(opt)}
+                    onChange={() => pick(opt)}
+                  />
+                  <span>{opt}</span>
+                </label>
+              )
             ))}
             {!query && options.length > filtered.length && (
               <div className="sms-more">
@@ -139,19 +173,19 @@ export default function SearchableMultiSelect({
         disabled={disabled}
         onClick={() => setOpen((s) => !s)}
       >
-        <span className={value.length ? '' : 'sms-placeholder'}>{label}</span>
+        <span className={selectedCount ? '' : 'sms-placeholder'}>{label}</span>
         <span className="sms-caret">▾</span>
       </button>
 
       {menu}
 
-      {value.length > 0 && (
+      {!single && selectedCount > 0 && (
         <div className="sms-chips">
-          {value.map((v) => (
+          {selected.map((v) => (
             <span key={v} className="sms-chip">
               {v}
               {!disabled && (
-                <button type="button" onClick={() => toggle(v)} aria-label={`Remove ${v}`}>×</button>
+                <button type="button" onClick={() => pick(v)} aria-label={`Remove ${v}`}>×</button>
               )}
             </span>
           ))}
