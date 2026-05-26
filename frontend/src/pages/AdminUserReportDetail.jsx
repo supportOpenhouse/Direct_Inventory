@@ -114,7 +114,7 @@ function DayLeadsModal({ email, date, onClose }) {
         {loading && <div className="al-empty">Loading…</div>}
         {error && <div className="modal-error">{error}</div>}
         {!loading && !error && leads.length === 0 && (
-          <div className="al-empty">No leads.</div>
+          <div className="al-empty">No actions.</div>
         )}
         {!loading && leads.length > 0 && (
           <table className="dr-table">
@@ -212,9 +212,9 @@ export default function AdminUserReportDetail() {
   }
 
   const totals = useMemo(() => {
-    let leads = 0;
-    for (const d of data.days) leads += d.total;
-    return { days: data.days.length, leads };
+    let actions = 0;
+    for (const d of data.days) actions += d.total;
+    return { days: data.days.length, actions };
   }, [data]);
 
   const allStages = useMemo(() => {
@@ -224,7 +224,7 @@ export default function AdminUserReportDetail() {
   }, [data]);
 
   function exportCSV() {
-    const headers = ['Date', 'Total Leads', ...allStages.map(stageLabel)];
+    const headers = ['Date', 'Actions', ...allStages.map(stageLabel)];
     const rows = data.days.map((d) => [
       d.day,
       d.total,
@@ -249,7 +249,7 @@ export default function AdminUserReportDetail() {
           </div>
         </div>
         <div className="al-result-count">
-          {totals.days} day{totals.days === 1 ? '' : 's'} · {totals.leads} lead{totals.leads === 1 ? '' : 's'}
+          {totals.days} day{totals.days === 1 ? '' : 's'} · {data.unique_leads || 0} Unique Lead{data.unique_leads === 1 ? '' : 's'} · {totals.actions} Action{totals.actions === 1 ? '' : 's'}
         </div>
       </div>
 
@@ -301,7 +301,7 @@ export default function AdminUserReportDetail() {
               <strong>{formatDateShort(d.day)}</strong>
             </div>
             <div className="dr-user-counts">
-              <span className="dr-total">{d.total} lead{d.total === 1 ? '' : 's'}</span>
+              <span className="dr-total">{d.total} Action{d.total === 1 ? '' : 's'}</span>
               <StageCountPills counts={d.counts} />
             </div>
           </button>

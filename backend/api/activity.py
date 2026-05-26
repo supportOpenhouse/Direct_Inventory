@@ -341,7 +341,7 @@ def user_report():
             extra_where = "AND a.actor_email = ANY(%s)" if emails else ""
             sql = (
                 _WINNERS_CTE.format(extra_where=extra_where) +
-                " SELECT w.actor_email, w.day, w.final_stage, "
+                " SELECT w.actor_email, w.day, w.final_stage, w.oh_id, "
                 "        u.name AS actor_name, u.role AS actor_role "
                 " FROM winners w LEFT JOIN users u ON u.email = w.actor_email"
             )
@@ -362,17 +362,24 @@ def user_report():
                 "actor_email": email,
                 "actor_name": r.get("actor_name"),
                 "actor_role": r.get("actor_role"),
+                # `total` is the action count (each winner row = one action).
+                # A lead actioned on multiple days counts as multiple actions
+                # but as ONE unique lead — see `_oh_ids` below.
                 "total": 0,
                 "counts": {},
                 "_days": set(),
+                "_oh_ids": set(),
             }
             users[email] = bucket
         bucket["total"] += 1
         stage = r["final_stage"] or "(none)"
         bucket["counts"][stage] = bucket["counts"].get(stage, 0) + 1
         bucket["_days"].add(r["day"])
+        if r.get("oh_id"):
+            bucket["_oh_ids"].add(r["oh_id"])
     for u in users.values():
         u["days_active"] = len(u.pop("_days"))
+        u["unique_leads"] = len(u.pop("_oh_ids"))
 
     ordered = sorted(
         users.values(),
@@ -558,7 +565,7 @@ def user_report_days():
 
     sql = (
         _WINNERS_CTE.format(extra_where="AND a.actor_email = %s") +
-        " SELECT w.day, w.final_stage, "
+        " SELECT w.day, w.final_stage, w.oh_id, "
         "        u.name AS actor_name, u.role AS actor_role "
         " FROM winners w LEFT JOIN users u ON u.email = w.actor_email"
     )
@@ -578,6 +585,7 @@ def user_report_days():
     days: dict = {}
     actor_name = None
     actor_role = None
+    unique_oh_ids: set = set()
     for r in rows:
         actor_name = actor_name or r.get("actor_name")
         actor_role = actor_role or r.get("actor_role")
@@ -589,6 +597,8 @@ def user_report_days():
         bucket["total"] += 1
         stage = r["final_stage"] or "(none)"
         bucket["counts"][stage] = bucket["counts"].get(stage, 0) + 1
+        if r.get("oh_id"):
+            unique_oh_ids.add(r["oh_id"])
 
     ordered = sorted(days.values(), key=lambda d: d["day"], reverse=True)
     return jsonify({
@@ -597,6 +607,9 @@ def user_report_days():
         "actor_role": actor_role,
         "from": date_from.isoformat(),
         "to": date_to.isoformat(),
+        # Distinct leads acted on across the whole range — differs from the
+        # sum of per-day totals when the same lead was actioned on >1 day.
+        "unique_leads": len(unique_oh_ids),
         "days": ordered,
     })
 

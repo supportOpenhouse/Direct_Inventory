@@ -124,9 +124,13 @@ export default function AdminUserReport() {
   }
 
   const totals = useMemo(() => {
-    let leads = 0;
-    for (const u of data.users) leads += u.total;
-    return { users: data.users.length, leads };
+    let actions = 0;
+    let uniqueLeads = 0;
+    for (const u of data.users) {
+      actions += u.total || 0;
+      uniqueLeads += u.unique_leads || 0;
+    }
+    return { users: data.users.length, actions, uniqueLeads };
   }, [data]);
 
   // Stable list of all distinct stages across the current result set — used
@@ -138,11 +142,16 @@ export default function AdminUserReport() {
   }, [data]);
 
   function exportCSV() {
-    const headers = ['Actor Email', 'Actor Name', 'Role', 'Total Leads', 'Days Active', ...allStages.map(stageLabel)];
+    const headers = [
+      'Actor Email', 'Actor Name', 'Role',
+      'Unique Leads', 'Actions', 'Days Active',
+      ...allStages.map(stageLabel),
+    ];
     const rows = data.users.map((u) => [
       u.actor_email,
       u.actor_name || '',
       u.actor_role || '',
+      u.unique_leads || 0,
       u.total,
       u.days_active,
       ...allStages.map((s) => u.counts[s] || 0),
@@ -170,7 +179,7 @@ export default function AdminUserReport() {
           </div>
         </div>
         <div className="al-result-count">
-          {totals.users} user{totals.users === 1 ? '' : 's'} · {totals.leads} lead{totals.leads === 1 ? '' : 's'}
+          {totals.users} user{totals.users === 1 ? '' : 's'} · {totals.uniqueLeads} Unique Lead{totals.uniqueLeads === 1 ? '' : 's'} · {totals.actions} Action{totals.actions === 1 ? '' : 's'}
         </div>
       </div>
 
@@ -245,7 +254,8 @@ export default function AdminUserReport() {
                     <div className="dr-user-email">{u.actor_email}</div>
                   </div>
                   <div className="dr-user-counts">
-                    <span className="dr-total">{u.total} lead{u.total === 1 ? '' : 's'}</span>
+                    <span className="dr-total">{u.unique_leads || 0} Unique Lead{u.unique_leads === 1 ? '' : 's'}</span>
+                    <span className="dr-total">{u.total} Action{u.total === 1 ? '' : 's'}</span>
                     <span className="dr-count-pill">{u.days_active} day{u.days_active === 1 ? '' : 's'} active</span>
                     <StageCountPills counts={u.counts} />
                   </div>

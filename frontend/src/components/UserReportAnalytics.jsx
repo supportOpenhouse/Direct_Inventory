@@ -257,11 +257,23 @@ function DailyTrendChart({ days, chartType, groupBy, userNames }) {
             const h = (v / niceMax) * innerH;
             yCursor -= h;
             segments.push(
-              <rect key={s.key} x={x} y={yCursor} width={barW} height={h}
-                    fill={svgStageFill(s.key)}
-                    stroke={s.key === 'rejected' ? REJECTED_STRIPE_COLOR : 'none'}
-                    strokeWidth={s.key === 'rejected' ? 1 : 0} />,
+              <rect key={`fill-${s.key}`} x={x} y={yCursor} width={barW} height={h}
+                    fill={svgStageFill(s.key)} />,
             );
+            // For rejected, draw the red border as an inset stroke-only rect
+            // so it sits entirely inside the segment (mirrors the leaderboard's
+            // CSS outline with outlineOffset:-1px). A centered SVG stroke would
+            // protrude 0.5px outside the bar and overlap the delta % label above.
+            if (s.key === 'rejected' && barW > 1 && h > 1) {
+              segments.push(
+                <rect key={`stroke-${s.key}`}
+                      x={x + 0.5} y={yCursor + 0.5}
+                      width={barW - 1} height={h - 1}
+                      fill="none"
+                      stroke={REJECTED_STRIPE_COLOR}
+                      strokeWidth={1} />,
+              );
+            }
           }
           return <g key={r.day}>{segments}</g>;
         })}
@@ -415,7 +427,7 @@ function StageDistribution({ totals }) {
           {total}
         </text>
         <text x={cx} y={cy + 14} textAnchor="middle" fontSize="11" fill="#64748b">
-          total leads
+          total actions
         </text>
       </svg>
       <div className="ura-donut-legend">
@@ -719,8 +731,9 @@ export default function UserReportAnalytics({ from, to, users, reportData }) {
       <section className="ura-card">
         <h3 className="ura-title">Activity by stage</h3>
         <div className="ura-subtitle">
-          Each user-day-lead action grouped by the stage it ended at. NOT
-          a count of leads — same lead worked on two days counts twice.
+          Each action (one user touching one lead on a given IST day) grouped
+          by the stage it ended at — the same lead worked on two days counts
+          as two actions, not one unique lead.
         </div>
         <StageDistribution totals={totals} />
       </section>
