@@ -182,6 +182,20 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [showColorPicker]);
 
+  // Esc closes the modal. Skip when a sub-modal (visit / reject) is open so
+  // its own Esc handling (or the sub-modal's close) takes precedence.
+  useEffect(() => {
+    if (showVisit || showReject) return undefined;
+    function onKey(e) {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose, showVisit, showReject]);
+
   useEffect(() => {
     if (!canSeeAssigned) return undefined;
     let alive = true;
