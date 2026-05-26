@@ -6,19 +6,22 @@ import UserEditModal from '../components/UserEditModal.jsx';
 const ROLES = ['admin', 'manager', 'rm'];
 const ROLE_LABELS = { admin: 'Admin', manager: 'Manager', rm: 'RM' };
 
-// One-line summary of a user's area scope, mirroring resolution precedence:
-// society > micro-market > city.
+// One-line summary of a user's area scope. Now that scope levels stack
+// (society + micro_market + cities can all be set on the same RM), every
+// non-empty level is listed instead of just the most-specific one.
 function scopeSummary(u) {
-  if ((u.society || []).length) {
-    return `Societies: ${u.society.length}`;
+  const parts = [];
+  const cities = u.cities || [];
+  if (cities.length) {
+    // Cities are typically few (1–3) so list them inline; for larger sets
+    // fall back to a count to keep the cell readable.
+    parts.push(cities.length <= 3
+      ? `Cities: ${cities.join(', ')}`
+      : `Cities: ${cities.length}`);
   }
-  if ((u.micro_market || []).length) {
-    return `Micro-markets: ${u.micro_market.length}`;
-  }
-  if ((u.cities || []).length) {
-    return `Cities: ${u.cities.join(', ')}`;
-  }
-  return '—';
+  if ((u.micro_market || []).length) parts.push(`Micro-markets: ${u.micro_market.length}`);
+  if ((u.society || []).length)      parts.push(`Societies: ${u.society.length}`);
+  return parts.length ? parts.join(' · ') : '—';
 }
 
 // Sortable header cell for the users table.

@@ -108,6 +108,22 @@ export default function Board() {
   // (Prev/Next, filter reset). Does not fire while the user is mid-typing.
   useEffect(() => { setPageInput(String(page + 1)); }, [page]);
 
+  // Esc while in select mode → exit it (and clear the current selection).
+  // Skipped when the property popup is open, since that modal has its own
+  // Esc handler and should consume the key first.
+  useEffect(() => {
+    if (!selectMode || openItem) return undefined;
+    function onKey(e) {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        exitSelectMode();
+      }
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectMode, openItem]);
+
   // Once the table has painted at least once, ask the backend to assign POCs
   // to any new leads with no RM. Runs once per page mount, in the background;
   // never blocks rendering. A non-zero result triggers the reload banner.

@@ -5,10 +5,24 @@ import {
 } from '../utils/format.js';
 
 const SORTABLE = new Set([
-  'oh_id', 'city', 'rm_name', 'society', 'bedrooms', 'floor', 'area_sqft',
+  'oh_id', 'city', 'society', 'bedrooms', 'floor', 'area_sqft',
   'price', 'oh_price', 'variation', 'stage', 'seller_name', 'seller_phone',
   'posting_date', 'created_at', 'follow_up_at',
 ]);
+
+// Compact RM-list label for the board's RM column: "First Name +N" when a
+// property has multiple RMs, just the name when one, "—" when unassigned.
+function formatAssignedRms(rms) {
+  if (!Array.isArray(rms) || rms.length === 0) return '—';
+  const first = rms[0];
+  const label = first.name || first.email || `#${first.id}`;
+  const extra = rms.length - 1;
+  return extra > 0 ? `${label} +${extra}` : label;
+}
+function assignedRmsTitle(rms) {
+  if (!Array.isArray(rms) || rms.length === 0) return '';
+  return rms.map((r) => r.name || r.email || `#${r.id}`).join(', ');
+}
 
 // Placeholder rows shown while a page is loading — keeps the table (and its
 // header) on screen instead of swapping in a "Loading…" message.
@@ -94,7 +108,7 @@ export default function InventoryTable({
             <th className="inv-th inv-th-star"></th>
             <SortableTh field="oh_id" label="OH-ID" sort={sort} onSort={onSort} />
             <SortableTh field="city" label="City" sort={sort} onSort={onSort} />
-            {showRmColumn && <SortableTh field="rm_name" label="RM" sort={sort} onSort={onSort} />}
+            {showRmColumn && <th className="inv-th">RM</th>}
             <SortableTh field="society" label="Society" sort={sort} onSort={onSort} />
             <SortableTh field="bedrooms" label="BHK" sort={sort} onSort={onSort} />
             <SortableTh field="floor" label="Floor" sort={sort} onSort={onSort} />
@@ -182,7 +196,11 @@ export default function InventoryTable({
                 </td>
                 <td className={`inv-td-id ${flagCls}`.trim()}>{item.oh_id}</td>
                 <td className={flagCls}><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></td>
-                {showRmColumn && <td className="inv-td-muted">{item.rm_name || '—'}</td>}
+                {showRmColumn && (
+                  <td className="inv-td-muted" title={assignedRmsTitle(item.assigned_rms)}>
+                    {formatAssignedRms(item.assigned_rms)}
+                  </td>
+                )}
                 <td className={`inv-td-society ${flagCls}`.trim()}>
                   {item.society || '—'}
                 </td>
