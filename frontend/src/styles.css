@@ -369,8 +369,10 @@ a { color: inherit; }
   padding: 3px 12px 3px 4px; font-size: 13px; font-weight: 600;
 }
 .cd-stage-select {
-  flex: 1; padding: 6px 10px; border: 1px solid #e5e7eb; border-radius: 8px;
+  padding: 6px 28px 6px 10px;
+  border: 1px solid #e5e7eb; border-radius: 8px;
   background: #fff; font-family: inherit; font-size: 13px;
+  min-width: 140px; width: auto;
 }
 .cd-reject-line {
   display: flex; gap: 12px; align-items: center; padding: 8px 12px; margin: 10px 0;
