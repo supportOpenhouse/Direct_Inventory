@@ -274,7 +274,7 @@ function DailyTrendChart({ days, chartType, groupBy, userNames }) {
             yCursor -= h;
             segments.push(
               <rect key={`fill-${s.key}`} x={x} y={yCursor} width={barW} height={h}
-                    fill={svgStageFill(s.key)} />,
+                    fill={s.key === 'rejected' ? 'url(#stripes-rejected)' : s.color} />,
             );
             // For rejected, draw the red border as an inset stroke-only rect
             // so it sits entirely inside the segment (mirrors the leaderboard's
