@@ -2,23 +2,17 @@ import { useState } from 'react';
 import { api } from '../api/client.js';
 import SearchableMultiSelect from './SearchableMultiSelect.jsx';
 
-// The three scope levels, in resolution-precedence order (society wins, then
-// micro-market, then city). An RM is scoped by exactly ONE level — the other
-// two are stored empty.
+// Area-scope fields. All three are independent — an RM can have any
+// combination (e.g. specific societies AND a fallback micro-market). Empty
+// arrays mean "no scope at that level"; one level being set never clears
+// another. Assignment matches society first, then micro-market.
 const SCOPE_LEVELS = [
-  { key: 'city',         label: 'City' },
-  { key: 'micro_market', label: 'Micro-market' },
-  { key: 'society',      label: 'Society' },
+  { key: 'city',         label: 'City',         field: 'cities' },
+  { key: 'micro_market', label: 'Micro-market', field: 'micro_market' },
+  { key: 'society',      label: 'Society',      field: 'society' },
 ];
 
-function initialScope(user) {
-  if ((user.society || []).length) return 'society';
-  if ((user.micro_market || []).length) return 'micro_market';
-  return 'city';
-}
-
 export default function UserEditModal({ user, managers, areas, onClose, onSaved }) {
-  const [scope, setScope] = useState(() => initialScope(user));
   const [cities, setCities] = useState(user.cities || []);
   const [microMarkets, setMicroMarkets] = useState(user.micro_market || []);
   const [societies, setSocieties] = useState(user.society || []);
@@ -39,14 +33,14 @@ export default function UserEditModal({ user, managers, areas, onClose, onSaved 
     setError(null);
     setSaving(true);
     try {
-      // Only the active scope level is persisted with values; the other two
-      // are explicitly cleared so the precedence logic stays unambiguous.
+      // Every scope level is sent independently. Setting society no longer
+      // wipes micro-market (and vice versa) — both can apply for the same RM.
       const body = {
         is_active: isActive,
         manager: manager ? Number(manager) : null,
-        cities:       scope === 'city'         ? cities       : [],
-        micro_market: scope === 'micro_market' ? microMarkets : [],
-        society:      scope === 'society'      ? societies    : [],
+        cities,
+        micro_market: microMarkets,
+        society: societies,
       };
       const r = await api.patch(`/api/users/${user.id}`, body);
       onSaved(r);
@@ -100,36 +94,27 @@ export default function UserEditModal({ user, managers, areas, onClose, onSaved 
         <div className="ue-section">
           <label className="ue-label">Area scope</label>
           <p className="ue-hint">
-            Choose <strong>one</strong> level. Visibility resolves society → micro-market
-            → city; the other two levels are cleared on save.
+            Set any combination. Assignment matches by society first, then falls
+            back to micro-market via the society → micro-market mapping. City is
+            used for manager visibility only.
           </p>
           <div className="ue-scope-grid">
-            {SCOPE_LEVELS.map((lvl) => {
-              const active = scope === lvl.key;
-              return (
-                <div key={lvl.key} className={`ue-scope-col ${active ? 'ue-scope-active' : ''}`}>
-                  <label className="ue-scope-head">
-                    <input
-                      type="radio"
-                      name="scope-level"
-                      checked={active}
-                      onChange={() => setScope(lvl.key)}
-                    />
-                    {lvl.label}
-                    <span className="ue-scope-count">
-                      {valueFor[lvl.key].length || ''}
-                    </span>
-                  </label>
-                  <SearchableMultiSelect
-                    options={optionsFor[lvl.key]}
-                    value={valueFor[lvl.key]}
-                    onChange={setterFor[lvl.key]}
-                    placeholder={`Select ${lvl.label.toLowerCase()}…`}
-                    disabled={!active}
-                  />
-                </div>
-              );
-            })}
+            {SCOPE_LEVELS.map((lvl) => (
+              <div key={lvl.key} className="ue-scope-col ue-scope-active">
+                <label className="ue-scope-head">
+                  {lvl.label}
+                  <span className="ue-scope-count">
+                    {valueFor[lvl.key].length || ''}
+                  </span>
+                </label>
+                <SearchableMultiSelect
+                  options={optionsFor[lvl.key]}
+                  value={valueFor[lvl.key]}
+                  onChange={setterFor[lvl.key]}
+                  placeholder={`Select ${lvl.label.toLowerCase()}…`}
+                />
+              </div>
+            ))}
           </div>
         </div>
 
