@@ -169,17 +169,19 @@ def assign_missing_batch(
     a cursor keeps re-processing the same first N rows on every call and
     never reaches matchable rows at higher ids.
 
-    Users mapping (society / micro_market → rm) is built once outside the
-    loop; a resolved-society cache is reused across chunks. So per chunk
-    we run at most one tiny master_societies query (only for societies not
-    seen yet) plus one bulk UPDATE.
+    For each property, this collects EVERY active RM whose society / micro-
+    market / city scope covers it — so a lead that matches one RM via society
+    and another via micro-market ends up assigned to both. Society matching
+    is case/whitespace-insensitive. Cities are expanded so 'Noida' matches
+    'Greater Noida' rows too.
 
     Returns: {"updated": N, "scanned": N, "remaining": N}.
     """
     import time
     started_at = time.monotonic()
 
-    # 1. Build user maps ONCE. Tiny table; reused across chunks.
+    # 1. Snapshot every active RM's scope, pre-built into fast lookup sets so
+    # per-row matching is O(rms) of cheap set membership checks.
     with conn.cursor() as cur:
         cur.execute(
             """SELECT id, manager, society, micro_market, cities FROM users
@@ -188,25 +190,17 @@ def assign_missing_batch(
         )
         rms_data = cur.fetchall()
 
-    soc_to_rm: dict[str, tuple[int, int | None]] = {}
-    micro_to_rm: dict[str, tuple[int, int | None]] = {}
-    city_to_rm: dict[str, tuple[int, int | None]] = {}
-    for rm in rms_data:
-        for s in (rm.get("society") or []):
-            s_lc = (s or "").strip().lower()
-            if s_lc and s_lc not in soc_to_rm:
-                soc_to_rm[s_lc] = (rm["id"], rm.get("manager"))
-        for m in (rm.get("micro_market") or []):
-            if m and m not in micro_to_rm:
-                micro_to_rm[m] = (rm["id"], rm.get("manager"))
-        for c in _expand_cities(rm.get("cities") or []):
-            if c and c not in city_to_rm:
-                city_to_rm[c] = (rm["id"], rm.get("manager"))
+    rm_scope = [{
+        "id":      rm["id"],
+        "manager": rm.get("manager"),
+        "soc_lc":  {(s or "").strip().lower() for s in (rm.get("society") or []) if s},
+        "micro":   set(rm.get("micro_market") or []),
+        "cities":  set(_expand_cities(rm.get("cities") or [])),
+    } for rm in rms_data]
 
-    # society_lc -> (rm_id, mgr_id) | None (None = no society/micro match yet
-    # — the city tier is still tried per-row below). Seeded with direct
-    # society hits so we don't even query master_societies for them.
-    resolved: dict[str, tuple[int, int | None] | None] = dict(soc_to_rm)
+    # society_lc -> set of micro_markets that contain it (per master_societies).
+    # Filled lazily per chunk; entries persist across chunks.
+    soc_to_micros: dict[str, set] = {}
 
     cursor_id = 0
     total_updated = 0
@@ -233,13 +227,11 @@ def assign_missing_batch(
             if not rows:
                 break
 
-            # Societies in this chunk we haven't resolved yet (cache miss).
+            # 2. master_societies lookup for any society we haven't resolved yet.
             chunk_socs = {(r["society"] or "").strip().lower() for r in rows}
             chunk_socs.discard("")
-            unknown = [s for s in chunk_socs if s not in resolved]
-
+            unknown = [s for s in chunk_socs if s not in soc_to_micros]
             if unknown:
-                soc_micros: dict[str, list[str]] = {}
                 try:
                     pconn = get_props_conn()
                     try:
@@ -252,33 +244,37 @@ def assign_missing_batch(
                                 (unknown,),
                             )
                             for r in pcur.fetchall():
-                                soc_micros.setdefault(r["s_lc"], []).append(r["micro_market"])
+                                soc_to_micros.setdefault(r["s_lc"], set()).add(r["micro_market"])
                     finally:
                         pconn.close()
                 except Exception:
                     log.exception("master_societies lookup failed in assign_missing_batch")
-
+                # Mark unknowns we didn't resolve so we don't re-query them.
                 for s_lc in unknown:
-                    match = None
-                    for m in soc_micros.get(s_lc, []):
-                        if m in micro_to_rm:
-                            match = micro_to_rm[m]
-                            break
-                    resolved[s_lc] = match  # may be None — caches "no match"
+                    soc_to_micros.setdefault(s_lc, set())
 
+            # 3. For each property, find EVERY matching RM and collect ids.
             updates: list[tuple] = []
             for r in rows:
-                s_lc = (r["society"] or "").strip().lower()
-                match = resolved.get(s_lc) if s_lc else None
-                if match is None:
-                    # City fallback — broadest tier. 'Noida' rows match an RM
-                    # scoped to either 'Noida' or 'Greater Noida' (and vv).
-                    c = r.get("city")
-                    if c:
-                        match = city_to_rm.get(c)
-                if match is not None:
-                    rm_id, mgr_id = match
-                    updates.append((r["id"], rm_id, mgr_id))
+                p_soc_lc = (r["society"] or "").strip().lower()
+                p_city = r.get("city")
+                p_micros = soc_to_micros.get(p_soc_lc, set())
+
+                matched_ids: list[int] = []
+                matched_mgr: int | None = None
+                for rm in rm_scope:
+                    hit = (
+                        (p_soc_lc and p_soc_lc in rm["soc_lc"])
+                        or (p_micros and bool(rm["micro"] & p_micros))
+                        or (p_city  and p_city in rm["cities"])
+                    )
+                    if hit:
+                        matched_ids.append(rm["id"])
+                        if matched_mgr is None:
+                            matched_mgr = rm["manager"]
+
+                if matched_ids:
+                    updates.append((r["id"], matched_ids, matched_mgr))
 
             if updates:
                 from psycopg2.extras import execute_values
@@ -286,12 +282,13 @@ def assign_missing_batch(
                 execute_values(
                     cur,
                     f"""UPDATE inventory AS i SET
-                           assigned_rm_ids = ARRAY[v.rm_id],
+                           assigned_rm_ids = v.rm_ids,
                            assigned_mgr_id = COALESCE(v.mgr_id, i.assigned_mgr_id)
-                       FROM (VALUES %s) AS v(id, rm_id, mgr_id)
+                       FROM (VALUES %s) AS v(id, rm_ids, mgr_id)
                        WHERE i.id = v.id
                          {update_guard}""",
                     updates,
+                    template="(%s, %s::INT[], %s)",
                 )
 
             total_scanned += len(rows)
