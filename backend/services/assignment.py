@@ -115,115 +115,140 @@ def resolve_assignment(cur, *, city: str, locality: str | None = None, society: 
     return (rm_id, mgr_id)
 
 
-def assign_missing_batch(conn, limit: int = 2000) -> dict:
+def assign_missing_batch(
+    conn,
+    chunk_size: int = 2000,
+    time_budget_s: float = 25.0,
+) -> dict:
     """Backfill `assigned_rm_id` / `assigned_mgr_id` for rows where the RM is
-    still NULL. Same society → micro_market logic as `resolve_assignment`,
-    but batched: all distinct societies in the chunk are resolved together in
-    two queries (users + master_societies), then one bulk UPDATE.
+    still NULL. Drains as much as fits within `time_budget_s` (kept under the
+    Vercel edge ~30s).
+
+    Each iteration scans `chunk_size` rows via an **id-cursor** —
+    `WHERE id > cursor` advancing to `max(id)` of each chunk. That matters
+    because unmatchable societies stay NULL: a `LIMIT N ORDER BY id` without
+    a cursor keeps re-processing the same first N rows on every call and
+    never reaches matchable rows at higher ids.
+
+    Users mapping (society / micro_market → rm) is built once outside the
+    loop; a resolved-society cache is reused across chunks. So per chunk
+    we run at most one tiny master_societies query (only for societies not
+    seen yet) plus one bulk UPDATE.
 
     Returns: {"updated": N, "scanned": N, "remaining": N}.
-
-    Cheap in steady state (zero NULL rows → returns immediately) and bounded
-    per call by `limit` so it stays well under any proxy timeout, even on the
-    initial bulk backfill of legacy rows.
     """
+    import time
+    started_at = time.monotonic()
+
+    # 1. Build user maps ONCE. Tiny table; reused across chunks.
     with conn.cursor() as cur:
         cur.execute(
-            """SELECT id, society FROM inventory
-               WHERE assigned_rm_id IS NULL
-                 AND society IS NOT NULL AND TRIM(society) <> ''
-               ORDER BY id
-               LIMIT %s""",
-            (limit,),
-        )
-        rows = cur.fetchall()
-        scanned = len(rows)
-        if not rows:
-            cur.execute(
-                """SELECT COUNT(*) AS n FROM inventory
-                   WHERE assigned_rm_id IS NULL
-                     AND society IS NOT NULL AND TRIM(society) <> ''"""
-            )
-            return {"updated": 0, "scanned": 0, "remaining": cur.fetchone()["n"]}
-
-        socs_lc = list({(r["society"] or "").strip().lower() for r in rows})
-
-        # 1. society_lc → (rm_id, mgr_id) from users.society[].
-        cur.execute(
-            """SELECT id, manager, society FROM users
+            """SELECT id, manager, society, micro_market FROM users
                WHERE role = 'rm' AND is_active = TRUE
                ORDER BY id"""
         )
-        soc_to_rm: dict[str, tuple[int, int | None]] = {}
-        for rm in cur.fetchall():
-            for s in (rm.get("society") or []):
-                s_lc = (s or "").strip().lower()
-                if s_lc and s_lc not in soc_to_rm:
-                    soc_to_rm[s_lc] = (rm["id"], rm.get("manager"))
+        rms_data = cur.fetchall()
 
-        # 2. For societies that didn't match directly, resolve via micro_market.
-        unmatched = [s for s in socs_lc if s not in soc_to_rm]
-        if unmatched:
-            soc_micros: dict[str, list[str]] = {}
-            try:
-                pconn = get_props_conn()
-                try:
-                    with pconn.cursor() as pcur:
-                        pcur.execute(
-                            """SELECT LOWER(TRIM(society_name)) AS s_lc, micro_market
-                               FROM master_societies
-                               WHERE LOWER(TRIM(society_name)) = ANY(%s)
-                                 AND micro_market IS NOT NULL""",
-                            (unmatched,),
-                        )
-                        for r in pcur.fetchall():
-                            soc_micros.setdefault(r["s_lc"], []).append(r["micro_market"])
-                finally:
-                    pconn.close()
-            except Exception:
-                log.exception("master_societies lookup failed in assign_missing_batch")
+    soc_to_rm: dict[str, tuple[int, int | None]] = {}
+    micro_to_rm: dict[str, tuple[int, int | None]] = {}
+    for rm in rms_data:
+        for s in (rm.get("society") or []):
+            s_lc = (s or "").strip().lower()
+            if s_lc and s_lc not in soc_to_rm:
+                soc_to_rm[s_lc] = (rm["id"], rm.get("manager"))
+        for m in (rm.get("micro_market") or []):
+            if m and m not in micro_to_rm:
+                micro_to_rm[m] = (rm["id"], rm.get("manager"))
 
-            if soc_micros:
-                cur.execute(
-                    """SELECT id, manager, micro_market FROM users
-                       WHERE role = 'rm' AND is_active = TRUE
-                       ORDER BY id"""
-                )
-                micro_to_rm: dict[str, tuple[int, int | None]] = {}
-                for rm in cur.fetchall():
-                    for m in (rm.get("micro_market") or []):
-                        if m and m not in micro_to_rm:
-                            micro_to_rm[m] = (rm["id"], rm.get("manager"))
+    # society_lc -> (rm_id, mgr_id) | None (None = definitively unmatchable).
+    # Seeded with direct society hits so we don't even query master_societies
+    # for them.
+    resolved: dict[str, tuple[int, int | None] | None] = dict(soc_to_rm)
 
-                for s_lc, micros in soc_micros.items():
-                    for m in micros:
-                        if m in micro_to_rm:
-                            soc_to_rm[s_lc] = micro_to_rm[m]
-                            break
+    cursor_id = 0
+    total_updated = 0
+    total_scanned = 0
 
-        # 3. Build updates: skip rows with no RM match — they stay NULL so the
-        # next scan retries (cheap), and they correctly count as "no POC".
-        updates: list[tuple] = []
-        for r in rows:
-            s_lc = (r["society"] or "").strip().lower()
-            match = soc_to_rm.get(s_lc)
-            if match is not None:
-                rm_id, mgr_id = match
-                updates.append((r["id"], rm_id, mgr_id))
+    while True:
+        if time.monotonic() - started_at > time_budget_s:
+            log.info("assign_missing_batch: time budget hit at cursor=%d", cursor_id)
+            break
 
-        if updates:
-            from psycopg2.extras import execute_values
-            execute_values(
-                cur,
-                """UPDATE inventory AS i SET
-                       assigned_rm_id = v.rm_id,
-                       assigned_mgr_id = COALESCE(v.mgr_id, i.assigned_mgr_id)
-                   FROM (VALUES %s) AS v(id, rm_id, mgr_id)
-                   WHERE i.id = v.id
-                     AND i.assigned_rm_id IS NULL""",
-                updates,
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT id, society FROM inventory
+                   WHERE assigned_rm_id IS NULL
+                     AND society IS NOT NULL AND TRIM(society) <> ''
+                     AND id > %s
+                   ORDER BY id
+                   LIMIT %s""",
+                (cursor_id, chunk_size),
             )
+            rows = cur.fetchall()
+            if not rows:
+                break
 
+            # Societies in this chunk we haven't resolved yet (cache miss).
+            chunk_socs = {(r["society"] or "").strip().lower() for r in rows}
+            chunk_socs.discard("")
+            unknown = [s for s in chunk_socs if s not in resolved]
+
+            if unknown:
+                soc_micros: dict[str, list[str]] = {}
+                try:
+                    pconn = get_props_conn()
+                    try:
+                        with pconn.cursor() as pcur:
+                            pcur.execute(
+                                """SELECT LOWER(TRIM(society_name)) AS s_lc, micro_market
+                                   FROM master_societies
+                                   WHERE LOWER(TRIM(society_name)) = ANY(%s)
+                                     AND micro_market IS NOT NULL""",
+                                (unknown,),
+                            )
+                            for r in pcur.fetchall():
+                                soc_micros.setdefault(r["s_lc"], []).append(r["micro_market"])
+                    finally:
+                        pconn.close()
+                except Exception:
+                    log.exception("master_societies lookup failed in assign_missing_batch")
+
+                for s_lc in unknown:
+                    match = None
+                    for m in soc_micros.get(s_lc, []):
+                        if m in micro_to_rm:
+                            match = micro_to_rm[m]
+                            break
+                    resolved[s_lc] = match  # may be None — caches "no match"
+
+            updates: list[tuple] = []
+            for r in rows:
+                s_lc = (r["society"] or "").strip().lower()
+                match = resolved.get(s_lc)
+                if match is not None:
+                    rm_id, mgr_id = match
+                    updates.append((r["id"], rm_id, mgr_id))
+
+            if updates:
+                from psycopg2.extras import execute_values
+                execute_values(
+                    cur,
+                    """UPDATE inventory AS i SET
+                           assigned_rm_id = v.rm_id,
+                           assigned_mgr_id = COALESCE(v.mgr_id, i.assigned_mgr_id)
+                       FROM (VALUES %s) AS v(id, rm_id, mgr_id)
+                       WHERE i.id = v.id
+                         AND i.assigned_rm_id IS NULL""",
+                    updates,
+                )
+
+            total_scanned += len(rows)
+            total_updated += len(updates)
+            cursor_id = rows[-1]["id"]
+
+        conn.commit()
+
+    with conn.cursor() as cur:
         cur.execute(
             """SELECT COUNT(*) AS n FROM inventory
                WHERE assigned_rm_id IS NULL
@@ -231,9 +256,9 @@ def assign_missing_batch(conn, limit: int = 2000) -> dict:
         )
         remaining = cur.fetchone()["n"]
 
-    conn.commit()
+    elapsed = time.monotonic() - started_at
     log.info(
-        "assign_missing_batch: scanned=%d updated=%d remaining=%d",
-        scanned, len(updates), remaining,
+        "assign_missing_batch: scanned=%d updated=%d remaining=%d in %.2fs",
+        total_scanned, total_updated, remaining, elapsed,
     )
-    return {"updated": len(updates), "scanned": scanned, "remaining": remaining}
+    return {"updated": total_updated, "scanned": total_scanned, "remaining": remaining}

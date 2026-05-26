@@ -730,9 +730,43 @@ def create_one():
                 return jsonify({"error": "listing already exists", "oh_id": existing["oh_id"]}), 409
 
             oh_id = next_oh_id(cur, fields["city"])
-            rm_id, mgr_id = resolve_assignment(
-                cur, city=fields["city"], locality=fields.get("locality"), society=fields.get("society"),
-            )
+
+            # POC assignment on create:
+            #   rm      — always self (their manager comes from users.manager).
+            #   admin   — optional explicit assigned_rm_id (any active rm);
+            #             else auto-resolve by society → micro_market.
+            #   manager — optional explicit assigned_rm_id but only one of
+            #             their own RMs; else auto-resolve.
+            requested_rm = body.get("assigned_rm_id")
+            if user["role"] == "rm":
+                cur.execute("SELECT manager FROM users WHERE id = %s", (user["id"],))
+                me = cur.fetchone()
+                rm_id = user["id"]
+                mgr_id = me["manager"] if me else None
+                assign_source = "self"
+            elif requested_rm not in (None, "", 0):
+                try:
+                    requested_rm = int(requested_rm)
+                except (TypeError, ValueError):
+                    return jsonify({"error": "invalid assigned_rm_id"}), 400
+                cur.execute(
+                    "SELECT id, manager FROM users "
+                    "WHERE id = %s AND role = 'rm' AND is_active = TRUE",
+                    (requested_rm,),
+                )
+                rm = cur.fetchone()
+                if not rm:
+                    return jsonify({"error": "invalid assigned_rm_id"}), 400
+                if user["role"] == "manager" and rm["manager"] != user["id"]:
+                    return jsonify({"error": "managers can only assign their own RMs"}), 403
+                rm_id, mgr_id = rm["id"], rm["manager"]
+                assign_source = "manual"
+            else:
+                rm_id, mgr_id = resolve_assignment(
+                    cur, city=fields["city"],
+                    locality=fields.get("locality"), society=fields.get("society"),
+                )
+                assign_source = "auto"
 
             cur.execute(
                 """
@@ -766,7 +800,12 @@ def create_one():
                 entity_type="inventory",
                 entity_id=oh_id,
                 action="create",
-                metadata={"source": fields["source"], "auto_assigned_rm": rm_id, "auto_assigned_mgr": mgr_id},
+                metadata={
+                    "source": fields["source"],
+                    "assigned_rm": rm_id,
+                    "assigned_mgr": mgr_id,
+                    "assign_source": assign_source,
+                },
             )
         return jsonify(row), 201
     finally:

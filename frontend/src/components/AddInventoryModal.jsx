@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { CITIES } from '../utils/format.js';
 
 const initial = {
@@ -19,13 +20,40 @@ const initial = {
 };
 
 export default function AddInventoryModal({ onClose, onAdded }) {
+  const { user } = useAuth();
+  // RMs auto-assign to themselves; admin/manager get an RM dropdown.
+  // Manager dropdown is filtered to RMs that report to them.
+  const canChooseRm = user?.role === 'admin' || user?.role === 'manager';
+
   const [f, setF] = useState(initial);
   const [societies, setSocieties] = useState([]);
   const [loadingSocieties, setLoadingSocieties] = useState(false);
+  const [rms, setRms] = useState([]);
+  const [assignedRmId, setAssignedRmId] = useState('');
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   function set(k, v) { setF((p) => ({ ...p, [k]: v })); }
+
+  // Load the RM dropdown (admin + manager only). Manager sees only their
+  // direct reports; admin sees every active RM. Auto-assignment by society
+  // still runs server-side when the dropdown is left blank.
+  useEffect(() => {
+    if (!canChooseRm) return undefined;
+    let alive = true;
+    api.get('/api/users?role=rm')
+      .then((r) => {
+        if (!alive) return;
+        let list = (r.items || []).filter((u) => u.is_active);
+        if (user.role === 'manager') {
+          list = list.filter((u) => u.manager === user.id);
+        }
+        list.sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+        setRms(list);
+      })
+      .catch(() => { if (alive) setRms([]); });
+    return () => { alive = false; };
+  }, [canChooseRm, user?.id, user?.role]);
 
   // Load societies for the selected city. Keeps any user-typed society value.
   useEffect(() => {
@@ -67,6 +95,11 @@ export default function AddInventoryModal({ onClose, onAdded }) {
         posting_date: f.posting_date || null,
         listing_link: (f.listing_link || '').trim() || null,
       };
+      // Explicit RM pick from admin/manager — backend validates that
+      // managers only assign their own RMs. Blank → server auto-resolves.
+      if (canChooseRm && assignedRmId) {
+        payload.assigned_rm_id = Number(assignedRmId);
+      }
       const r = await api.post('/api/inventory', payload);
       onAdded(r);
     } catch (e) {
@@ -176,6 +209,17 @@ export default function AddInventoryModal({ onClose, onAdded }) {
             <label>Listing link <span className="muted">(optional)</span></label>
             <input value={f.listing_link} onChange={(e) => set('listing_link', e.target.value)} placeholder="https://www.99acres.com/… (leave blank for manual entries)" />
           </div>
+          {canChooseRm && (
+            <div className="form-wide-2">
+              <label>Assign RM <span className="muted">(blank → auto-assign by society)</span></label>
+              <select value={assignedRmId} onChange={(e) => setAssignedRmId(e.target.value)}>
+                <option value="">— Auto-assign —</option>
+                {rms.map((u) => (
+                  <option key={u.id} value={String(u.id)}>{u.name || u.email}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
         {error && <div className="modal-error">{error}</div>}
         <div className="modal-actions">
