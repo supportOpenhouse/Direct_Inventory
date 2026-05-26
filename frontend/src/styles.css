@@ -402,7 +402,16 @@ a { color: inherit; }
   min-width: 0;
 }
 .ar-item:hover { background: #f1f5f9; }
-.ar-item input { margin: 0; flex-shrink: 0; }
+/* The modal's global `input { width:100%; margin-bottom:12px }` rule was
+   stretching the checkbox across the row and pushing the name onto a second
+   line. Lock the checkbox to a small square + zero margin. */
+.modal-assign-rm .ar-item input[type="checkbox"] {
+  width: 16px; height: 16px; min-width: 16px;
+  margin: 0; padding: 0; flex-shrink: 0; cursor: pointer;
+}
+.modal-assign-rm .ar-search {
+  margin: 6px 0 10px;
+}
 .ar-item-name {
   font-weight: 600; color: #0f1115;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
