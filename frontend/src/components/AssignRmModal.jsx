@@ -90,14 +90,13 @@ export default function AssignRmModal({ ohId, initialRmIds, onClose, onSaved }) 
             <div className="muted ar-empty">No matching RMs.</div>
           )}
           {!loading && filtered.map((u) => (
-            <label key={u.id} className="ar-item">
+            <label key={u.id} className="ar-item" title={u.email}>
               <input
                 type="checkbox"
                 checked={selected.has(u.id)}
                 onChange={() => toggle(u.id)}
               />
               <span className="ar-item-name">{u.name || u.email}</span>
-              {u.name && <span className="ar-item-email">{u.email}</span>}
             </label>
           ))}
         </div>
