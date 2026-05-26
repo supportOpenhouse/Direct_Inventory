@@ -7,6 +7,7 @@ import {
 } from '../utils/format.js';
 import VisitScheduleModal from './VisitScheduleModal.jsx';
 import RejectReasonModal from './RejectReasonModal.jsx';
+import AssignRmModal from './AssignRmModal.jsx';
 
 /**
  * Detail popup for a single inventory row — opened by clicking a row in the
@@ -161,16 +162,18 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
   const [showReject, setShowReject] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const colorPickerRef = useRef(null);
+  const [showAssignRm, setShowAssignRm] = useState(false);
 
   const canEdit = ['admin', 'manager', 'rm'].includes(role);
   const canSetPriority = ['admin', 'manager', 'rm'].includes(role);
   const canSeeAssigned = ['admin', 'manager'].includes(role);
+  // Only admin can change the per-property RM assignment.
+  const canReassignRm = role === 'admin';
 
-  // Assigned RM comes joined onto the inventory row (rm_name / rm_email),
-  // so the chip renders synchronously without a second fetch.
-  const assignedRm = item.assigned_rm_id
-    ? { id: item.assigned_rm_id, name: item.rm_name, email: item.rm_email }
-    : null;
+  // Assigned RMs come joined onto the inventory row (assigned_rms — a JSON
+  // array of {id, name, email}), so chips render synchronously, no fetch.
+  const assignedRms = Array.isArray(item.assigned_rms) ? item.assigned_rms : [];
+  const assignedRmIds = Array.isArray(item.assigned_rm_ids) ? item.assigned_rm_ids : [];
   const v = variation(item.price, item.oh_price);
   const isNearest = item.oh_price_match === 'nearest';
   const matchTag = isNearest ? '~' : '';
@@ -187,10 +190,10 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [showColorPicker]);
 
-  // Esc closes the modal. Skip when a sub-modal (visit / reject) is open so
-  // its own Esc handling (or the sub-modal's close) takes precedence.
+  // Esc closes the modal. Skip when a sub-modal (visit / reject / assign-rm)
+  // is open so its own close takes precedence.
   useEffect(() => {
-    if (showVisit || showReject) return undefined;
+    if (showVisit || showReject || showAssignRm) return undefined;
     function onKey(e) {
       if (e.key === 'Escape') {
         e.stopPropagation();
@@ -199,7 +202,7 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
     }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [onClose, showVisit, showReject]);
+  }, [onClose, showVisit, showReject, showAssignRm]);
 
   async function applyStage(newStage, extra = {}) {
     try {
@@ -436,14 +439,25 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
             {canSeeAssigned && (
               <div className="cd-row-actions-cell">
                 <span className="cd-lbl">Assigned RM</span>
-                {assignedRm ? (
-                  <span className="cd-rm-chip">
-                    <Avatar name={assignedRm.name} email={assignedRm.email} sizeClass="note-av-sm" />
-                    {assignedRm.name || assignedRm.email}
-                  </span>
-                ) : (
-                  <span className="muted">Unassigned</span>
-                )}
+                <button
+                  type="button"
+                  className={`cd-rm-chips ${canReassignRm ? 'cd-rm-chips-edit' : ''}`}
+                  onClick={canReassignRm ? () => setShowAssignRm(true) : undefined}
+                  disabled={!canReassignRm}
+                  title={canReassignRm ? 'Click to reassign RM(s)' : undefined}
+                >
+                  {assignedRms.length === 0 ? (
+                    <span className="muted">Unassigned</span>
+                  ) : (
+                    assignedRms.map((rm) => (
+                      <span key={rm.id} className="cd-rm-chip">
+                        <Avatar name={rm.name} email={rm.email} sizeClass="note-av-sm" />
+                        {rm.name || rm.email}
+                      </span>
+                    ))
+                  )}
+                  {canReassignRm && <span className="cd-rm-chips-edit-ic" aria-hidden>✎</span>}
+                </button>
               </div>
             )}
             {canEdit && (
@@ -495,6 +509,18 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
           onSelect={async (reason) => {
             await applyStage('rejected', { reject_reason: reason });
             setShowReject(false);
+          }}
+        />
+      )}
+
+      {showAssignRm && (
+        <AssignRmModal
+          ohId={item.oh_id}
+          initialRmIds={assignedRmIds}
+          onClose={() => setShowAssignRm(false)}
+          onSaved={(updated) => {
+            setShowAssignRm(false);
+            onUpdated(updated || { ...item });
           }}
         />
       )}

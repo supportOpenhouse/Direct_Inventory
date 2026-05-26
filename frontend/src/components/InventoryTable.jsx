@@ -35,9 +35,14 @@ function SortableTh({ field, label, sort, onSort, align = 'left', className = ''
 
 export default function InventoryTable({
   items, role, sort, onSort, onRowClick, onUpdated,
-  selectMode = false, selected, onToggleSelect,
+  selectMode = false, selected, onToggleSelect, onToggleSelectAll,
   showStageColumn = true, loading = false,
 }) {
+  // Header checkbox state — tristate over the currently visible (paged) rows.
+  const visibleIds = items.map((it) => it.oh_id);
+  const visibleSelectedCount = visibleIds.filter((id) => selected?.has?.(id)).length;
+  const allVisibleSelected = visibleIds.length > 0 && visibleSelectedCount === visibleIds.length;
+  const someVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected;
   const canSetPriority = ['admin', 'manager', 'rm'].includes(role);
   const showRmColumn = role === 'admin' || role === 'manager';
   // 15 base columns; +1 if selectMode, -1 if Stage hidden, +1 if RM column shown.
@@ -72,7 +77,20 @@ export default function InventoryTable({
       <table className="inv-table">
         <thead>
           <tr>
-            {selectMode && <th className="inv-th inv-th-sel"></th>}
+            {selectMode && (
+              <th className="inv-th inv-th-sel">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  ref={(el) => { if (el) el.indeterminate = someVisibleSelected; }}
+                  onChange={() => onToggleSelectAll?.(visibleIds)}
+                  title={allVisibleSelected
+                    ? 'Deselect all on this page'
+                    : 'Select all on this page'}
+                  aria-label="Select all rows on this page"
+                />
+              </th>
+            )}
             <th className="inv-th inv-th-star"></th>
             <SortableTh field="oh_id" label="OH-ID" sort={sort} onSort={onSort} />
             <SortableTh field="city" label="City" sort={sort} onSort={onSort} />

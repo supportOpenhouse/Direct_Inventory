@@ -36,7 +36,9 @@ export default function BulkActionBar({ selected, role, onCleared, onDone }) {
       }
     } else if (action === 'assign_rm') {
       if (!rmId) { setError('Pick an RM'); return; }
-      updates.assigned_rm_id = Number(rmId);
+      // Multi-RM column — send as a single-element array. Replaces any
+      // existing assignment on the selected rows.
+      updates.assigned_rm_ids = [Number(rmId)];
     } else if (action === 'follow_up') {
       if (!followUp) { setError('Pick a follow-up date'); return; }
       updates.follow_up_at = followUp;

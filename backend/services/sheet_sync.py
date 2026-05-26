@@ -143,7 +143,7 @@ def run_push_sync(conn, rows: list[dict], *, actor_email: str = "system:apps-scr
                         oh_id, source, city, locality, society, bedrooms, area_sqft,
                         floor, tower, unit_no,
                         price, seller_name, posting_date, listing_link,
-                        stage, assigned_rm_id, assigned_mgr_id, follow_up_at, last_synced_at
+                        stage, assigned_rm_ids, assigned_mgr_id, follow_up_at, last_synced_at
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s,
                               %s, %s, %s,
                               %s, %s, %s, %s,
@@ -155,7 +155,7 @@ def run_push_sync(conn, rows: list[dict], *, actor_email: str = "system:apps-scr
                         rec["bedrooms"], rec["area_sqft"], rec["floor"],
                         rec.get("tower"), rec.get("unit_no"),
                         rec["price"], rec["seller_name"], rec["posting_date"], rec["listing_link"],
-                        rm_id, mgr_id,
+                        [rm_id] if rm_id else [], mgr_id,
                     ),
                 )
                 cur.execute("RELEASE SAVEPOINT row_save")

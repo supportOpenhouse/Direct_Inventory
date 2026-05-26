@@ -37,6 +37,32 @@ function SortTh({ field, label, sort, onSort }) {
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
+  const [reassigning, setReassigning] = useState(false);
+
+  async function reassignAllLeads() {
+    if (reassigning) return;
+    const ok = window.confirm(
+      'Re-run RM assignment for ALL leads?\n\n'
+      + 'Every property will be re-evaluated against current users.society / '
+      + 'micro_market / cities scope and reassigned where a match is found. '
+      + 'Existing assignments WILL be overwritten on rows whose scope now '
+      + 'belongs to a different RM. This may take 20-30 seconds.',
+    );
+    if (!ok) return;
+    setReassigning(true);
+    try {
+      const r = await api.post('/api/inventory/assign-missing', { mode: 'all' });
+      window.alert(
+        `Done — ${r.updated} reassigned · ${r.scanned} scanned · `
+        + `${r.remaining} still without an RM.`,
+      );
+    } catch (e) {
+      window.alert('Reassign failed: ' + (e?.data?.error || e?.message || e));
+    } finally {
+      setReassigning(false);
+    }
+  }
+
   const [areas, setAreas] = useState({ cities: [], micro_markets: [], societies: [] });
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState({ email: '', name: '', phone: '', role: 'rm', cities: [] });
@@ -115,7 +141,17 @@ export default function AdminUsers() {
 
   return (
     <div className="admin-page">
-      <h2>Users</h2>
+      <div className="al-head">
+        <h2>Users</h2>
+        <button
+          className="btn-ghost"
+          onClick={reassignAllLeads}
+          disabled={reassigning}
+          title="Re-evaluate every property against the current society / micro_market / city scope and reassign RMs"
+        >
+          {reassigning ? 'Reassigning…' : 'Reassign Leads'}
+        </button>
+      </div>
 
       <div className="card-block">
         <h3>Add user</h3>

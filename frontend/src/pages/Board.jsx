@@ -147,6 +147,18 @@ export default function Board() {
       return next;
     });
   }
+  // Header checkbox handler — picks up every id on the currently rendered
+  // page. If they're all already selected, this acts as a deselect.
+  function toggleSelectAll(visibleIds) {
+    if (!visibleIds || visibleIds.length === 0) return;
+    setSelected((prev) => {
+      const allChecked = visibleIds.every((id) => prev.has(id));
+      const next = new Set(prev);
+      if (allChecked) visibleIds.forEach((id) => next.delete(id));
+      else visibleIds.forEach((id) => next.add(id));
+      return next;
+    });
+  }
   function clearSelection() { setSelected(new Set()); }
   function exitSelectMode() { setSelectMode(false); clearSelection(); }
 
@@ -425,6 +437,7 @@ export default function Board() {
         selectMode={selectMode}
         selected={selected}
         onToggleSelect={toggleSelect}
+        onToggleSelectAll={toggleSelectAll}
         showStageColumn={stageSel.size === 0}
       />
 

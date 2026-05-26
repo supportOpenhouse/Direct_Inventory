@@ -149,10 +149,19 @@ def assign_missing_batch(
     conn,
     chunk_size: int = 2000,
     time_budget_s: float = 25.0,
+    mode: str = "missing",
 ) -> dict:
-    """Backfill `assigned_rm_id` / `assigned_mgr_id` for rows where the RM is
-    still NULL. Drains as much as fits within `time_budget_s` (kept under the
-    Vercel edge ~30s).
+    """Backfill `assigned_rm_ids` / `assigned_mgr_id` on inventory.
+
+    mode:
+      'missing' (default) — only touch rows whose assigned_rm_ids is still
+                            empty. Cheap in steady state.
+      'all'              — re-evaluate every row and overwrite the assignment
+                            when the society/micro/city scope now matches an
+                            RM. Rows with no match are left untouched.
+
+    Drains as much as fits within `time_budget_s` (kept under the Vercel edge
+    ~30s).
 
     Each iteration scans `chunk_size` rows via an **id-cursor** —
     `WHERE id > cursor` advancing to `max(id)` of each chunk. That matters
@@ -208,15 +217,16 @@ def assign_missing_batch(
             log.info("assign_missing_batch: time budget hit at cursor=%d", cursor_id)
             break
 
+        unassigned_clause = "" if mode == "all" else "AND cardinality(assigned_rm_ids) = 0"
         with conn.cursor() as cur:
             cur.execute(
-                """SELECT id, society, city FROM inventory
-                   WHERE assigned_rm_id IS NULL
-                     AND ((society IS NOT NULL AND TRIM(society) <> '')
-                          OR (city IS NOT NULL AND TRIM(city) <> ''))
-                     AND id > %s
-                   ORDER BY id
-                   LIMIT %s""",
+                f"""SELECT id, society, city FROM inventory
+                    WHERE ((society IS NOT NULL AND TRIM(society) <> '')
+                           OR (city IS NOT NULL AND TRIM(city) <> ''))
+                      {unassigned_clause}
+                      AND id > %s
+                    ORDER BY id
+                    LIMIT %s""",
                 (cursor_id, chunk_size),
             )
             rows = cur.fetchall()
@@ -272,14 +282,15 @@ def assign_missing_batch(
 
             if updates:
                 from psycopg2.extras import execute_values
+                update_guard = "" if mode == "all" else "AND cardinality(i.assigned_rm_ids) = 0"
                 execute_values(
                     cur,
-                    """UPDATE inventory AS i SET
-                           assigned_rm_id = v.rm_id,
+                    f"""UPDATE inventory AS i SET
+                           assigned_rm_ids = ARRAY[v.rm_id],
                            assigned_mgr_id = COALESCE(v.mgr_id, i.assigned_mgr_id)
                        FROM (VALUES %s) AS v(id, rm_id, mgr_id)
                        WHERE i.id = v.id
-                         AND i.assigned_rm_id IS NULL""",
+                         {update_guard}""",
                     updates,
                 )
 
@@ -292,7 +303,7 @@ def assign_missing_batch(
     with conn.cursor() as cur:
         cur.execute(
             """SELECT COUNT(*) AS n FROM inventory
-               WHERE assigned_rm_id IS NULL
+               WHERE cardinality(assigned_rm_ids) = 0
                  AND ((society IS NOT NULL AND TRIM(society) <> '')
                       OR (city IS NOT NULL AND TRIM(city) <> ''))"""
         )

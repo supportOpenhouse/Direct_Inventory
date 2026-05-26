@@ -93,7 +93,7 @@ EDITABLE_RAW_FIELDS = {
 
 # Fields that bulk-update may set. Single-row PATCH allows more (notes, raw fields).
 BULK_ALLOWED_FIELDS = {
-    "stage", "reject_reason", "assigned_rm_id", "assigned_mgr_id", "follow_up_at",
+    "stage", "reject_reason", "assigned_rm_ids", "assigned_mgr_id", "follow_up_at",
     "priority",
 }
 
@@ -120,10 +120,10 @@ def _scope_clause(user: dict, alias: str = "") -> tuple[str, list]:
       admin    — sees everything.
       manager  — sees rows in their assigned cities (empty cities → nothing;
                  'Noida' expands to include 'Greater Noida').
-      rm       — sees only rows where `assigned_rm_id = me`. POC assignment is
-                 persisted on the row by `services.assignment.assign_missing_batch`
-                 (POST /api/inventory/assign-missing) — RM visibility no longer
-                 derives from users.society / micro_market / cities.
+      rm       — sees only rows where the user is in `assigned_rm_ids`. POCs
+                 are persisted on the row by `services.assignment.assign_missing_batch`
+                 (POST /api/inventory/assign-missing). Multi-RM supported —
+                 the same property can be assigned to several RMs.
 
     `alias` is the optional table alias prefix (e.g. 'i' if the query uses
     `inventory i`).
@@ -137,7 +137,7 @@ def _scope_clause(user: dict, alias: str = "") -> tuple[str, list]:
             return ("AND FALSE", [])
         return (f"AND {p}city = ANY(%s)", [_expand_cities(cities)])
     # rm
-    return (f"AND {p}assigned_rm_id = %s", [user["id"]])
+    return (f"AND %s = ANY({p}assigned_rm_ids)", [user["id"]])
 
 
 def _build_filters(user: dict, args, alias: str = ""):
@@ -184,14 +184,15 @@ def _build_filters(user: dict, args, alias: str = ""):
         else:
             base_filters.append(f"AND {p}city = %s")
             base_params.append(city)
-    # RM filter — direct column comparison now that POC is persisted on the row.
-    #   'none'  → rows with no POC assigned (assigned_rm_id IS NULL).
-    #   '<int>' → rows assigned to that RM.
+    # RM filter — direct array membership now that a property can have multiple
+    # RMs assigned (assigned_rm_ids INT[]).
+    #   'none'  → rows with no POC assigned (empty array).
+    #   '<int>' → rows where that RM is one of the assignees.
     rm_id = (args.get("rm_id") or "").strip()
     if rm_id == "none":
-        base_filters.append(f"AND {p}assigned_rm_id IS NULL")
+        base_filters.append(f"AND cardinality({p}assigned_rm_ids) = 0")
     elif rm_id.isdigit():
-        base_filters.append(f"AND {p}assigned_rm_id = %s")
+        base_filters.append(f"AND %s = ANY({p}assigned_rm_ids)")
         base_params.append(int(rm_id))
     if q:
         # Substring ("half") search: each whitespace-separated token must
@@ -312,10 +313,16 @@ _INVENTORY_WITH_PRICING_SQL = """
            p.area_sqft    AS oh_price_area,
            p.bhk          AS oh_price_bhk,
            p.match_kind   AS oh_price_match,
-           u_rm.name      AS rm_name,
-           u_rm.email     AS rm_email
+           COALESCE(
+               (SELECT json_agg(
+                           json_build_object('id', u.id, 'name', u.name, 'email', u.email)
+                           ORDER BY u.id
+                       )
+                FROM users u
+                WHERE u.id = ANY(i.assigned_rm_ids)),
+               '[]'::json
+           ) AS assigned_rms
     FROM inventory i
-    LEFT JOIN users u_rm ON u_rm.id = i.assigned_rm_id
     LEFT JOIN LATERAL (
         SELECT op.acq_price, op.area_sqft, op.bhk,
                CASE
@@ -571,16 +578,26 @@ def cp_match_scan():
 @require_auth()
 def assign_missing():
     """Background POC backfill — kicked off after the board first paints on
-    every page load. Walks the next chunk of rows where `assigned_rm_id` is
-    NULL and assigns POCs by society → micro_market (case-insensitive). Idle
-    when there's nothing to do; bounded per call so it stays well under any
-    proxy timeout.
+    every page load. Walks the next chunk of rows whose `assigned_rm_ids` is
+    empty and assigns POCs by society → micro_market → city.
 
-    Response: { updated, scanned, remaining }
+    Body (optional):
+      { "mode": "missing" }  — default; only touches empty assignments.
+      { "mode": "all" }      — admin: re-evaluates EVERY row, overwriting any
+                               existing assignment when the scope rules now
+                               match a different RM. Powers the Users page
+                               "Reassign Leads" button.
+
+    Response: { updated, scanned, remaining, mode }
     """
+    body = request.get_json(silent=True) or {}
+    mode = "all" if str(body.get("mode") or "").lower() == "all" else "missing"
+    if mode == "all" and g.user["role"] != "admin":
+        return jsonify({"error": "only admin can run mode=all"}), 403
     conn = get_conn()
     try:
-        result = assign_missing_batch(conn)
+        result = assign_missing_batch(conn, mode=mode)
+        result["mode"] = mode
         if result.get("updated"):
             with conn, conn.cursor() as cur:
                 log_activity(
@@ -596,6 +613,94 @@ def assign_missing():
     except Exception as e:
         log.exception("assign_missing failed")
         return jsonify({"error": f"{type(e).__name__}: {e}"}), 500
+    finally:
+        conn.close()
+
+
+@bp.put("/<oh_id>/assigned-rms")
+@require_auth("admin")
+def set_assigned_rms(oh_id: str):
+    """Admin-only: replace the RM(s) assigned to one property.
+
+    Body: { "rm_ids": [int, int, ...] }   (empty array = unassign)
+
+    Validates that every id refers to an active rm. Logs an `assigned_rms`
+    activity entry with before / after.
+    """
+    body = request.get_json(silent=True) or {}
+    raw = body.get("rm_ids")
+    if not isinstance(raw, list):
+        return jsonify({"error": "rm_ids must be a list of integers"}), 400
+    try:
+        rm_ids = [int(x) for x in raw]
+    except (TypeError, ValueError):
+        return jsonify({"error": "rm_ids must be integers"}), 400
+    # Dedup while preserving order.
+    seen = set()
+    rm_ids = [x for x in rm_ids if not (x in seen or seen.add(x))]
+
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT oh_id, assigned_rm_ids FROM inventory WHERE oh_id = %s FOR UPDATE",
+                (oh_id,),
+            )
+            existing = cur.fetchone()
+            if not existing:
+                return jsonify({"error": "not found"}), 404
+            before_ids = existing.get("assigned_rm_ids") or []
+
+            if rm_ids:
+                cur.execute(
+                    "SELECT id, manager FROM users "
+                    "WHERE id = ANY(%s) AND role = 'rm' AND is_active = TRUE",
+                    (rm_ids,),
+                )
+                rows = cur.fetchall()
+                found = {r["id"]: r["manager"] for r in rows}
+                bad = [x for x in rm_ids if x not in found]
+                if bad:
+                    return jsonify({"error": f"invalid or inactive rm ids: {bad}"}), 400
+                # Manager from the first assigned RM (lowest position in the list).
+                new_mgr = found.get(rm_ids[0])
+            else:
+                new_mgr = None
+
+            cur.execute(
+                "UPDATE inventory SET "
+                "  assigned_rm_ids = %s, "
+                "  assigned_mgr_id = COALESCE(%s, assigned_mgr_id) "
+                "WHERE oh_id = %s",
+                (rm_ids, new_mgr, oh_id),
+            )
+            log_activity(
+                cur,
+                actor_user_id=g.user["id"],
+                actor_email=g.user["email"],
+                entity_type="inventory",
+                entity_id=oh_id,
+                action="assigned_rms",
+                field="assigned_rm_ids",
+                before_value=json.dumps(list(before_ids)),
+                after_value=json.dumps(rm_ids),
+            )
+
+            # Return the full row in the same shape the list endpoint emits
+            # so the frontend can patch its cached item.
+            cur.execute(
+                "SELECT i.*, COALESCE("
+                "  (SELECT json_agg("
+                "      json_build_object('id', u.id, 'name', u.name, 'email', u.email)"
+                "      ORDER BY u.id"
+                "   ) FROM users u WHERE u.id = ANY(i.assigned_rm_ids)),"
+                "  '[]'::json"
+                ") AS assigned_rms "
+                "FROM inventory i WHERE i.oh_id = %s",
+                (oh_id,),
+            )
+            row = cur.fetchone()
+        return jsonify({"item": row})
     finally:
         conn.close()
 
@@ -651,10 +756,14 @@ def get_one(oh_id: str):
     try:
         with conn, conn.cursor() as cur:
             cur.execute(
-                "SELECT i.*, u_rm.name AS rm_name, u_rm.email AS rm_email "
-                "FROM inventory i "
-                "LEFT JOIN users u_rm ON u_rm.id = i.assigned_rm_id "
-                "WHERE i.oh_id = %s",
+                "SELECT i.*, COALESCE("
+                "  (SELECT json_agg("
+                "      json_build_object('id', u.id, 'name', u.name, 'email', u.email)"
+                "      ORDER BY u.id"
+                "   ) FROM users u WHERE u.id = ANY(i.assigned_rm_ids)),"
+                "  '[]'::json"
+                ") AS assigned_rms "
+                "FROM inventory i WHERE i.oh_id = %s",
                 (oh_id,),
             )
             row = cur.fetchone()
@@ -692,27 +801,26 @@ def visible_rms(oh_id: str):
     try:
         with conn, conn.cursor() as cur:
             cur.execute(
-                """SELECT i.oh_id, u.id, u.name, u.email
-                   FROM inventory i
-                   LEFT JOIN users u ON u.id = i.assigned_rm_id
-                   WHERE i.oh_id = %s""",
+                "SELECT oh_id, assigned_rm_ids FROM inventory WHERE oh_id = %s",
                 (oh_id,),
             )
-            row = cur.fetchone()
+            inv = cur.fetchone()
+            if inv is None:
+                return jsonify({"error": "not found"}), 404
+            ids = inv.get("assigned_rm_ids") or []
+            if not ids:
+                return jsonify({"oh_id": oh_id, "rms": []})
+            cur.execute(
+                "SELECT id, name, email FROM users WHERE id = ANY(%s) ORDER BY id",
+                (list(ids),),
+            )
+            rms = [
+                {"id": r["id"], "name": r["name"], "email": r["email"], "via": "assigned"}
+                for r in cur.fetchall()
+            ]
     finally:
         conn.close()
-
-    if row is None:
-        return jsonify({"error": "not found"}), 404
-    if row.get("id") is None:
-        return jsonify({"oh_id": oh_id, "rms": []})
-    return jsonify({
-        "oh_id": oh_id,
-        "rms": [{
-            "id": row["id"], "name": row["name"], "email": row["email"],
-            "via": "assigned",
-        }],
-    })
+    return jsonify({"oh_id": oh_id, "rms": rms})
 
 
 @bp.post("")
@@ -789,7 +897,7 @@ def create_one():
                     oh_id, source, city, locality, society, bedrooms, area_sqft,
                     floor, tower, unit_no,
                     price, seller_name, seller_phone, posting_date, listing_link,
-                    stage, assigned_rm_id, assigned_mgr_id, follow_up_at, last_synced_at
+                    stage, assigned_rm_ids, assigned_mgr_id, follow_up_at, last_synced_at
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s,
                           %s, %s, %s,
                           %s, %s, %s, %s, %s,
@@ -803,7 +911,7 @@ def create_one():
                     fields.get("floor"), fields.get("tower"), fields.get("unit_no"),
                     fields.get("price"), fields.get("seller_name"),
                     fields.get("seller_phone"), fields.get("posting_date"), fields["listing_link"],
-                    rm_id, mgr_id,
+                    [rm_id] if rm_id else [], mgr_id,
                 ),
             )
             row = cur.fetchone()
@@ -905,7 +1013,8 @@ def update_one(oh_id: str):
             # trail. Priority is the one exception — still admin/manager only,
             # enforced below.
             cross_assignment_edit = (
-                user["role"] == "rm" and existing["assigned_rm_id"] != user["id"]
+                user["role"] == "rm"
+                and user["id"] not in (existing.get("assigned_rm_ids") or [])
             ) or (
                 user["role"] == "manager"
                 and existing["city"] not in _expand_cities(user.get("cities") or [])
@@ -920,9 +1029,15 @@ def update_one(oh_id: str):
             # editable through this endpoint — comments live on `note_thread`
             # and go through POST /<oh_id>/notes instead.
             allowed = EDITABLE_RAW_FIELDS | {
-                "stage", "reject_reason", "assigned_rm_id", "assigned_mgr_id",
+                "stage", "reject_reason", "assigned_rm_ids", "assigned_mgr_id",
                 "follow_up_at", "priority", "star_color", "cp_match",
             }
+            # Accept the legacy single-id key as a one-element array.
+            if "assigned_rm_id" in body and "assigned_rm_ids" not in body:
+                v = body.get("assigned_rm_id")
+                body = dict(body)
+                body["assigned_rm_ids"] = [int(v)] if v else []
+                body.pop("assigned_rm_id", None)
             for k, v in body.items():
                 if k not in allowed:
                     continue
@@ -1043,7 +1158,7 @@ def bulk_update():
     try:
         with conn, conn.cursor() as cur:
             cur.execute(
-                "SELECT oh_id, city, stage, assigned_rm_id, follow_up_at, reject_reason, "
+                "SELECT oh_id, city, stage, assigned_rm_ids, follow_up_at, reject_reason, "
                 "assigned_mgr_id, priority "
                 "FROM inventory WHERE oh_id = ANY(%s) FOR UPDATE",
                 (oh_ids,),
@@ -1054,7 +1169,7 @@ def bulk_update():
             forbidden: list[str] = []
             allowed_ids: list[str] = []
             for oid, row in existing.items():
-                if user["role"] == "rm" and row["assigned_rm_id"] != user["id"]:
+                if user["role"] == "rm" and user["id"] not in (row.get("assigned_rm_ids") or []):
                     forbidden.append(oid); continue
                 if user["role"] == "manager" and row["city"] not in _expand_cities(user.get("cities") or []):
                     forbidden.append(oid); continue

@@ -368,6 +368,43 @@ a { color: inherit; }
   background: #f1f5f9; color: #0f172a; border-radius: 999px;
   padding: 3px 12px 3px 4px; font-size: 13px; font-weight: 600;
 }
+/* Wrapper that lays multiple chips out and (for admin) acts as a click
+   target opening the AssignRmModal. */
+.cd-rm-chips {
+  display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  background: transparent; border: 0; padding: 4px 8px;
+  border-radius: 10px; font: inherit; color: inherit; text-align: left;
+}
+.cd-rm-chips-edit {
+  cursor: pointer; border: 1px dashed transparent;
+}
+.cd-rm-chips-edit:hover {
+  background: #f8fafc; border-color: #cbd5e1;
+}
+.cd-rm-chips-edit-ic {
+  color: #94a3b8; font-size: 12px; margin-left: 4px;
+}
+.cd-rm-chips-edit:hover .cd-rm-chips-edit-ic { color: #475569; }
+
+/* Assign-RM modal — multi-select with search. */
+.modal-assign-rm { width: 480px; max-width: 92vw; max-height: 86vh; overflow: hidden; display: flex; flex-direction: column; }
+.ar-search {
+  width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px;
+  margin: 6px 0 10px; font-family: inherit; font-size: 13px; background: #fff;
+}
+.ar-list {
+  flex: 1; min-height: 200px; max-height: 50vh; overflow-y: auto;
+  border: 1px solid #f1f5f9; border-radius: 8px; padding: 4px;
+}
+.ar-item {
+  display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+  border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+.ar-item:hover { background: #f1f5f9; }
+.ar-item input { margin: 0; }
+.ar-item-name { font-weight: 600; color: #0f1115; }
+.ar-item-email { color: #94a3b8; font-size: 11px; margin-left: auto; }
+.ar-empty { padding: 16px; text-align: center; font-size: 13px; }
 .cd-stage-select {
   padding: 6px 28px 6px 10px;
   border: 1px solid #e5e7eb; border-radius: 8px;
