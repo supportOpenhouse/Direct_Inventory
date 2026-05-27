@@ -186,11 +186,14 @@ def _build_filters(user: dict, args, alias: str = ""):
             base_params.append(city)
     # RM filter — direct array membership now that a property can have multiple
     # RMs assigned (assigned_rm_ids INT[]).
-    #   'none'  → rows with no POC assigned (empty array).
-    #   '<int>' → rows where that RM is one of the assignees.
+    #   'none'     → rows with no POC assigned (empty array).
+    #   'multiple' → rows with more than one RM assigned.
+    #   '<int>'    → rows where that RM is one of the assignees.
     rm_id = (args.get("rm_id") or "").strip()
     if rm_id == "none":
         base_filters.append(f"AND cardinality({p}assigned_rm_ids) = 0")
+    elif rm_id == "multiple":
+        base_filters.append(f"AND cardinality({p}assigned_rm_ids) > 1")
     elif rm_id.isdigit():
         base_filters.append(f"AND %s = ANY({p}assigned_rm_ids)")
         base_params.append(int(rm_id))
