@@ -269,7 +269,7 @@ def _build_filters(user: dict, args, alias: str = ""):
         if truthy:
             base_filters.append(f"AND {p}priority = TRUE")
 
-    # Star filter (admin-only in the UI). Comma-separated list of effective
+    # Star filter. Comma-separated list of effective
     # star categories. The CASE mirrors the frontend starColor() resolution:
     # explicit star_color override wins, then priority, then cp_match.
     star = args.get("star")
