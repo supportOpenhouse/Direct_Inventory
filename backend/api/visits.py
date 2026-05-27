@@ -169,9 +169,13 @@ def schedule_visit():
                 None if inv.get("price") in (None, "") else float(inv["price"]) / 100000
             )
 
+            # Forms app's city enum treats Greater Noida as part of Noida.
+            inv_city = inv.get("city") or ""
+            payload_city = "Noida" if inv_city == "Greater Noida" else inv_city
+
             payload = {
                 "lead_id":        oh_id,
-                "city":           inv.get("city") or "",
+                "city":           payload_city,
                 # Forms accepts {"CP", "Direct", "CP Listing"}; rows scheduled
                 # from this portal are by definition Direct.
                 "source":         "Direct",
