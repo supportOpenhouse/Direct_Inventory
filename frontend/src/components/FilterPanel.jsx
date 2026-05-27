@@ -130,8 +130,8 @@ function ChipMultiSelect({ id, values, options, onChange, placeholder, disabled 
 }
 
 export default function FilterPanel({ initial, defaultCity = '', role, onApply, onClose }) {
-  const isAdmin = role === 'admin';
   // Admin + manager can filter by RM; an RM only ever sees their own rows.
+  // Star filter is available to all roles.
   const canFilterRm = role === 'admin' || role === 'manager';
   const [f, setF] = useState(() => ({
     ...EMPTY,
@@ -255,9 +255,7 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
     if (f.follow_up_from) out.follow_up_from = f.follow_up_from;
     if (f.follow_up_to)   out.follow_up_to   = f.follow_up_to;
     if (f.follow_up_empty) out.follow_up_empty = 1;
-    // Star filter is admin-only — don't emit it for non-admins even if stale
-    // state somehow carries a selection.
-    if (isAdmin && f.star.length) out.star = f.star.join(',');
+    if (f.star.length) out.star = f.star.join(',');
     onApply(out, f);  // raw form state preserved so panel reopens with same selection
   }
 
@@ -309,23 +307,21 @@ export default function FilterPanel({ initial, defaultCity = '', role, onApply, 
           </div>
         </div>
 
-        {isAdmin && (
-          <div className="filter-block">
-            <label>Star</label>
-            <div className="bhk-pills">
-              {STAR_OPTIONS.map((s) => (
-                <button
-                  key={s.key}
-                  type="button"
-                  className={f.star.includes(s.key) ? 'pill pill-on' : 'pill'}
-                  onClick={() => toggleStar(s.key)}
-                >
-                  <span style={{ color: s.color, marginRight: 4 }}>★</span>{s.label}
-                </button>
-              ))}
-            </div>
+        <div className="filter-block">
+          <label>Star</label>
+          <div className="bhk-pills">
+            {STAR_OPTIONS.map((s) => (
+              <button
+                key={s.key}
+                type="button"
+                className={f.star.includes(s.key) ? 'pill pill-on' : 'pill'}
+                onClick={() => toggleStar(s.key)}
+              >
+                <span style={{ color: s.color, marginRight: 4 }}>★</span>{s.label}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
         <div className="filter-block">
           <label>Asking price (₹, inclusive)</label>
