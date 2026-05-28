@@ -24,6 +24,37 @@ function assignedRmsTitle(rms) {
   return rms.map((r) => r.name || r.email || `#${r.id}`).join(', ');
 }
 
+// Pick the most recent note from a `note_thread` array (matches the ordering
+// used in CardDetailModal's NoteThread).
+function latestNote(thread) {
+  if (!Array.isArray(thread) || thread.length === 0) return null;
+  let best = null;
+  for (const n of thread) {
+    if (!n) continue;
+    if (!best || new Date(n.created_at).getTime() > new Date(best.created_at).getTime()) {
+      best = n;
+    }
+  }
+  return best;
+}
+
+// Avatar helpers — mirror CardDetailModal's Avatar so a person's initials and
+// tint stay consistent between the board column and the per-property popup.
+function initialsOf(name, email) {
+  const s = (name || (email || '').split('@')[0] || '').trim();
+  if (!s) return '?';
+  const parts = s.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return s.slice(0, 2).toUpperCase();
+}
+function avatarStyle(key) {
+  const s = String(key || '');
+  let h = 0;
+  for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  const hue = h % 360;
+  return { background: `hsl(${hue}, 65%, 88%)`, color: `hsl(${hue}, 55%, 28%)` };
+}
+
 // Placeholder rows shown while a page is loading — keeps the table (and its
 // header) on screen instead of swapping in a "Loading…" message.
 const SKELETON_ROWS = 10;
@@ -59,8 +90,8 @@ export default function InventoryTable({
   const someVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected;
   const canSetPriority = ['admin', 'manager', 'rm'].includes(role);
   const showRmColumn = role === 'admin' || role === 'manager';
-  // 15 base columns; +1 if selectMode, -1 if Stage hidden, +1 if RM column shown.
-  const colCount = 15 + (selectMode ? 1 : 0) - (showStageColumn ? 0 : 1) + (showRmColumn ? 1 : 0);
+  // 16 base columns; +1 if selectMode, -1 if Stage hidden, +1 if RM column shown.
+  const colCount = 16 + (selectMode ? 1 : 0) - (showStageColumn ? 0 : 1) + (showRmColumn ? 1 : 0);
 
   async function togglePriority(e, item) {
     e.stopPropagation();
@@ -121,6 +152,7 @@ export default function InventoryTable({
             <SortableTh field="seller_phone" label="Phone" sort={sort} onSort={onSort} />
             <SortableTh field="created_at" label="Posted" sort={sort} onSort={onSort} />
             <SortableTh field="follow_up_at" label="Follow-up" sort={sort} onSort={onSort} className="inv-th-date" />
+            <th className="inv-th">Notes</th>
           </tr>
         </thead>
         <tbody>
@@ -224,6 +256,22 @@ export default function InventoryTable({
                 <td className="inv-td-phone">{item.seller_phone || '—'}</td>
                 <td className="inv-td-muted">{item.created_at ? formatDateRel(item.created_at) : '—'}</td>
                 <td className="inv-td-muted inv-td-date">{formatDateShort(item.follow_up_at)}</td>
+                {(() => {
+                  const n = latestNote(item.note_thread);
+                  if (!n) return <td className="inv-td-notes">—</td>;
+                  const who = n.author_name || n.author_email || '';
+                  return (
+                    <td className="inv-td-notes" title={`${who}: ${n.body}`}>
+                      <span
+                        className="note-av note-av-sm inv-td-notes-av"
+                        style={avatarStyle(n.author_email || n.author_name)}
+                      >
+                        {initialsOf(n.author_name, n.author_email)}
+                      </span>
+                      <span className="inv-td-notes-body">{n.body}</span>
+                    </td>
+                  );
+                })()}
               </tr>
             );
           })}

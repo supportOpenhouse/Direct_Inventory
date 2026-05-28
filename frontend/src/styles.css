@@ -255,7 +255,12 @@ a { color: inherit; }
 .inv-th-date, .inv-td-date { white-space: nowrap; min-width: 130px; }
 .inv-td-notes {
   color: #475569; max-width: 260px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.inv-td-notes-av { vertical-align: middle; margin-right: 6px; }
+.inv-td-notes-body {
+  display: inline-block; vertical-align: middle;
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .inv-empty { padding: 28px; text-align: center; color: #94a3b8; }
 
