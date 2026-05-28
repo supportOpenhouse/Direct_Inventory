@@ -67,6 +67,33 @@ def list_assignees():
         conn.close()
 
 
+@bp.get("/society-units")
+@require_auth("admin", "manager", "rm")
+def list_society_units():
+    """Existing OpenHouse-owned units in the same society — surfaced as a
+    confirmation step before scheduling a visit. Reads the `properties.properties`
+    table; society match is case-insensitive (LOWER(TRIM(...))) mirroring
+    master_societies / cp_match.
+    """
+    society = (request.args.get("society") or "").strip()
+    if not society:
+        return jsonify({"items": []})
+    conn = get_props_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                """SELECT uid, tower_no, unit_no, area_sqft, configuration, floor
+                   FROM properties
+                   WHERE LOWER(TRIM(society_name)) = LOWER(TRIM(%s))
+                   ORDER BY tower_no NULLS LAST, unit_no NULLS LAST""",
+                (society,),
+            )
+            rows = cur.fetchall()
+        return jsonify({"items": rows})
+    finally:
+        conn.close()
+
+
 @bp.post("/schedule")
 @require_auth("admin", "manager", "rm")
 def schedule_visit():

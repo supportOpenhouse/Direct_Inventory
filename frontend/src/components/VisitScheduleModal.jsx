@@ -18,6 +18,10 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
   const [loadingAssignees, setLoadingAssignees] = useState(isAdmin);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  // When the society already has OpenHouse-owned units, we surface them as a
+  // confirmation step before sending the request to Forms. null = not yet
+  // checked, [] = checked & none found (auto-schedule), [...] = waiting on user.
+  const [pendingUnits, setPendingUnits] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -40,16 +44,7 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
     return () => { alive = false; };
   }, [isAdmin]);
 
-  async function submit() {
-    setError(null);
-    if (!date || !time || !execPhone) {
-      setError('Date, Time and Field Exec are required');
-      return;
-    }
-    if (isAdmin && !assignedBy) {
-      setError('Pick who this visit is assigned by');
-      return;
-    }
+  async function sendSchedule() {
     try {
       setSubmitting(true);
       const r = await api.post('/api/visits/schedule', {
@@ -61,6 +56,47 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
       });
       onScheduled(r);
     } catch (e) {
+      handleScheduleError(e);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function submit() {
+    setError(null);
+    if (!date || !time || !execPhone) {
+      setError('Date, Time and Field Exec are required');
+      return;
+    }
+    if (isAdmin && !assignedBy) {
+      setError('Pick who this visit is assigned by');
+      return;
+    }
+    const society = (item.society || '').trim();
+    if (!society) {
+      // No society to check against — just schedule.
+      await sendSchedule();
+      return;
+    }
+    try {
+      setSubmitting(true);
+      const r = await api.get(`/api/visits/society-units?society=${encodeURIComponent(society)}`);
+      const units = r.items || [];
+      if (units.length === 0) {
+        await sendSchedule();
+        return;
+      }
+      setPendingUnits(units);
+    } catch (e) {
+      // Don't block scheduling on the lookup — surface a non-fatal warning and
+      // let the user retry. The lookup is purely informational.
+      setError(`Couldn't check existing units: ${e.data?.error || e.message}`);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function handleScheduleError(e) {
       // 409: backend detected a visit already exists. Don't show the raw
       // error — surface the existing details and close gracefully.
       if (e.status === 409 && e.data?.existing_visit) {
@@ -88,9 +124,59 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
         parts.push(typeof fr === 'string' ? fr : JSON.stringify(fr));
       }
       setError(parts.filter(Boolean).join(' — '));
-    } finally {
-      setSubmitting(false);
-    }
+  }
+
+  if (pendingUnits && pendingUnits.length > 0) {
+    return (
+      <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal modal-visit" onClick={(e) => e.stopPropagation()}>
+          <h3>Existing OpenHouse units</h3>
+          <p className="modal-sub">
+            These units are already with OpenHouse in <strong>{item.society}</strong>.
+            Continue scheduling the visit?
+          </p>
+          <div className="society-units-wrap">
+            <table className="society-units-table">
+              <thead>
+                <tr>
+                  <th>UID</th>
+                  <th>Tower</th>
+                  <th>Unit</th>
+                  <th>Floor</th>
+                  <th>Config</th>
+                  <th>Area</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingUnits.map((u) => (
+                  <tr key={u.uid}>
+                    <td>{u.uid}</td>
+                    <td>{u.tower_no || '—'}</td>
+                    <td>{u.unit_no || '—'}</td>
+                    <td>{u.floor != null && u.floor !== '' ? u.floor : '—'}</td>
+                    <td>{u.configuration || '—'}</td>
+                    <td>{u.area_sqft != null ? `${u.area_sqft} sqft` : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {error && <div className="modal-error">{error}</div>}
+          <div className="modal-actions">
+            <button
+              className="btn-ghost"
+              onClick={() => setPendingUnits(null)}
+              disabled={submitting}
+            >
+              Back
+            </button>
+            <button className="btn-primary" onClick={sendSchedule} disabled={submitting}>
+              {submitting ? 'Scheduling…' : 'Confirm & Schedule'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -146,7 +232,7 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
         <div className="modal-actions">
           <button className="btn-ghost" onClick={onClose} disabled={submitting}>Cancel</button>
           <button className="btn-primary" onClick={submit} disabled={submitting}>
-            {submitting ? 'Scheduling…' : 'Schedule'}
+            {submitting ? 'Checking…' : 'Schedule'}
           </button>
         </div>
       </div>

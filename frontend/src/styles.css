@@ -585,6 +585,12 @@ a { color: inherit; }
   font-family: inherit; font-size: 14px; background: #fff;
 }
 .modal-error { color: #b91c1c; margin-bottom: 8px; font-size: 13px; }
+
+.society-units-wrap { max-height: 260px; overflow: auto; margin: 8px 0 12px; border: 1px solid #e5e7eb; border-radius: 6px; }
+.society-units-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.society-units-table th, .society-units-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+.society-units-table th { background: #f8fafc; color: #475569; font-weight: 600; position: sticky; top: 0; }
+.society-units-table tr:last-child td { border-bottom: none; }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
 
 /* form grid for add inventory */
