@@ -94,8 +94,8 @@ export default function InventoryTable({
   // assigned leads, and the popup still surfaces the OH-ID + city.
   const showIdColumn = role !== 'rm';
   const showCityColumn = role !== 'rm';
-  // 16 base columns; +1 if selectMode, -1 each for hidden OH-ID/City/Stage, +1 if RM column shown.
-  const colCount = 16
+  // 17 base columns; +1 if selectMode, -1 each for hidden OH-ID/City/Stage, +1 if RM column shown.
+  const colCount = 17
     + (selectMode ? 1 : 0)
     - (showIdColumn ? 0 : 1)
     - (showCityColumn ? 0 : 1)
@@ -160,7 +160,8 @@ export default function InventoryTable({
             <SortableTh field="follow_up_at" label="Follow-up" sort={sort} onSort={onSort} className="inv-th-date" />
             <SortableTh field="seller_name" label="Seller" sort={sort} onSort={onSort} />
             <SortableTh field="seller_phone" label="Phone" sort={sort} onSort={onSort} />
-            <SortableTh field="created_at" label="Posted" sort={sort} onSort={onSort} />
+            <SortableTh field="posting_date" label="Posted At" sort={sort} onSort={onSort} />
+            <SortableTh field="created_at" label="Created At" sort={sort} onSort={onSort} />
             <th className="inv-th">Notes</th>
           </tr>
         </thead>
@@ -268,6 +269,7 @@ export default function InventoryTable({
                 <td className="inv-td-muted inv-td-date">{formatDateShort(item.follow_up_at)}</td>
                 <td className="inv-td-seller">{item.seller_name || '—'}</td>
                 <td className="inv-td-phone">{item.seller_phone || '—'}</td>
+                <td className="inv-td-muted">{formatDateShort(item.posting_date)}</td>
                 <td className="inv-td-muted">{item.created_at ? formatDateRel(item.created_at) : '—'}</td>
                 {(() => {
                   const n = latestNote(item.note_thread);
