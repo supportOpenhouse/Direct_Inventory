@@ -90,8 +90,17 @@ export default function InventoryTable({
   const someVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected;
   const canSetPriority = ['admin', 'manager', 'rm'].includes(role);
   const showRmColumn = role === 'admin' || role === 'manager';
-  // 16 base columns; +1 if selectMode, -1 if Stage hidden, +1 if RM column shown.
-  const colCount = 16 + (selectMode ? 1 : 0) - (showStageColumn ? 0 : 1) + (showRmColumn ? 1 : 0);
+  // RMs don't need OH-ID / City / RM in the table — they only see their own
+  // assigned leads, and the popup still surfaces the OH-ID + city.
+  const showIdColumn = role !== 'rm';
+  const showCityColumn = role !== 'rm';
+  // 16 base columns; +1 if selectMode, -1 each for hidden OH-ID/City/Stage, +1 if RM column shown.
+  const colCount = 16
+    + (selectMode ? 1 : 0)
+    - (showIdColumn ? 0 : 1)
+    - (showCityColumn ? 0 : 1)
+    - (showStageColumn ? 0 : 1)
+    + (showRmColumn ? 1 : 0);
 
   async function togglePriority(e, item) {
     e.stopPropagation();
@@ -137,8 +146,8 @@ export default function InventoryTable({
               </th>
             )}
             <th className="inv-th inv-th-star"></th>
-            <SortableTh field="oh_id" label="OH-ID" sort={sort} onSort={onSort} />
-            <SortableTh field="city" label="City" sort={sort} onSort={onSort} />
+            {showIdColumn && <SortableTh field="oh_id" label="OH-ID" sort={sort} onSort={onSort} />}
+            {showCityColumn && <SortableTh field="city" label="City" sort={sort} onSort={onSort} />}
             {showRmColumn && <th className="inv-th">RM</th>}
             <SortableTh field="society" label="Society" sort={sort} onSort={onSort} />
             <SortableTh field="bedrooms" label="BHK" sort={sort} onSort={onSort} />
@@ -148,10 +157,10 @@ export default function InventoryTable({
             <SortableTh field="oh_price" label="OH Price" sort={sort} onSort={onSort} align="right" />
             <SortableTh field="variation" label="Variation" sort={sort} onSort={onSort} align="right" />
             {showStageColumn && <SortableTh field="stage" label="Stage" sort={sort} onSort={onSort} />}
+            <SortableTh field="follow_up_at" label="Follow-up" sort={sort} onSort={onSort} className="inv-th-date" />
             <SortableTh field="seller_name" label="Seller" sort={sort} onSort={onSort} />
             <SortableTh field="seller_phone" label="Phone" sort={sort} onSort={onSort} />
             <SortableTh field="created_at" label="Posted" sort={sort} onSort={onSort} />
-            <SortableTh field="follow_up_at" label="Follow-up" sort={sort} onSort={onSort} className="inv-th-date" />
             <th className="inv-th">Notes</th>
           </tr>
         </thead>
@@ -226,8 +235,12 @@ export default function InventoryTable({
                     >★</button>
                   )}
                 </td>
-                <td className={`inv-td-id ${flagCls}`.trim()}>{item.oh_id}</td>
-                <td className={flagCls}><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></td>
+                {showIdColumn && (
+                  <td className={`inv-td-id ${flagCls}`.trim()}>{item.oh_id}</td>
+                )}
+                {showCityColumn && (
+                  <td className={flagCls}><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></td>
+                )}
                 {showRmColumn && (
                   <td className="inv-td-muted" title={assignedRmsTitle(item.assigned_rms)}>
                     {formatAssignedRms(item.assigned_rms)}
@@ -252,10 +265,10 @@ export default function InventoryTable({
                     <span className="inv-td-stage-lbl">{stageLabel(item.stage)}</span>
                   </td>
                 )}
+                <td className="inv-td-muted inv-td-date">{formatDateShort(item.follow_up_at)}</td>
                 <td className="inv-td-seller">{item.seller_name || '—'}</td>
                 <td className="inv-td-phone">{item.seller_phone || '—'}</td>
                 <td className="inv-td-muted">{item.created_at ? formatDateRel(item.created_at) : '—'}</td>
-                <td className="inv-td-muted inv-td-date">{formatDateShort(item.follow_up_at)}</td>
                 {(() => {
                   const n = latestNote(item.note_thread);
                   if (!n) return <td className="inv-td-notes">—</td>;
