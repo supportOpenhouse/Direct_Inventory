@@ -26,7 +26,7 @@ CP_INVENTORY_TABLE    = os.environ.get("CP_INVENTORY_TABLE", "inventory")
 # Auth
 JWT_SECRET            = os.environ.get("JWT_SECRET", "dev-secret-do-not-use-in-prod")
 JWT_ALGORITHM         = "HS256"
-JWT_EXPIRY_HOURS      = 12
+JWT_EXPIRY_HOURS      = 24 * 7
 GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "")
 ALLOWED_EMAIL_DOMAIN  = os.environ.get("ALLOWED_EMAIL_DOMAIN", "openhouse.in")
 
