@@ -158,6 +158,7 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
   const [tower, setTower] = useState(item.tower || '');
   const [unitNo, setUnitNo] = useState(item.unit_no || '');
   const [areaSqft, setAreaSqft] = useState(item.area_sqft != null ? String(item.area_sqft) : '');
+  const [bedrooms, setBedrooms] = useState(item.bedrooms != null ? String(item.bedrooms) : '');
   const [savingField, setSavingField] = useState(null);
   const [savingStage, setSavingStage] = useState(false);
   const [showVisit, setShowVisit] = useState(false);
@@ -242,6 +243,16 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
         });
         return;
       }
+      // OpenHouse only takes 2BHK / 3BHK leads through Direct visits. Block
+      // here so the visit modal isn't even reachable for other configurations.
+      const bhk = Number(item.bedrooms);
+      if (bhk !== 2 && bhk !== 3) {
+        setToast({
+          kind: 'error',
+          title: 'Invalid BHK entry (Should be 2 or 3 BHK)',
+        });
+        return;
+      }
       setShowVisit(true);
       return;
     }
@@ -261,17 +272,17 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
     }
   }
 
-  // area_sqft is numeric on the backend; trim and coerce so a blank input clears
-  // it and digits become integers.
-  async function saveArea() {
-    const trimmed = (areaSqft || '').trim();
+  // Numeric fields — trim and coerce so a blank input clears the column and
+  // digits become integers. Reject non-positive values.
+  async function saveNumeric(field, raw, originalValue) {
+    const trimmed = (raw || '').trim();
     const next = trimmed === '' ? null : Number(trimmed);
     if (trimmed !== '' && (!Number.isFinite(next) || next <= 0)) return;
-    if ((next ?? null) === (item.area_sqft ?? null)) return;
+    if ((next ?? null) === (originalValue ?? null)) return;
     try {
-      setSavingField('area_sqft');
-      const r = await api.patch(`/api/inventory/${item.oh_id}`, { area_sqft: next });
-      onUpdated(r.item || { ...item, area_sqft: next });
+      setSavingField(field);
+      const r = await api.patch(`/api/inventory/${item.oh_id}`, { [field]: next });
+      onUpdated(r.item || { ...item, [field]: next });
     } finally {
       setSavingField(null);
     }
@@ -399,19 +410,38 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
               </div>
 
               <div>
-                <span className="cd-lbl">Area (sqft)</span>
-                <input
-                  className="cd-input"
-                  type="number"
-                  inputMode="numeric"
-                  min="1"
-                  value={areaSqft}
-                  onChange={(e) => setAreaSqft(e.target.value)}
-                  onBlur={saveArea}
-                  placeholder="e.g. 1450"
-                  disabled={!canEdit}
-                />
-                {savingField === 'area_sqft' && <span className="cd-saving"> saving…</span>}
+                <span className="cd-lbl">Area &amp; BHK</span>
+                <div className="cd-tower-unit">
+                  <input
+                    className="cd-input cd-input-sm"
+                    type="number"
+                    inputMode="numeric"
+                    min="1"
+                    value={areaSqft}
+                    onChange={(e) => setAreaSqft(e.target.value)}
+                    onBlur={() => saveNumeric('area_sqft', areaSqft, item.area_sqft)}
+                    placeholder="Area sqft"
+                    disabled={!canEdit}
+                  />
+                  <select
+                    className="cd-input cd-input-sm"
+                    value={bedrooms}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setBedrooms(next);
+                      saveNumeric('bedrooms', next, item.bedrooms);
+                    }}
+                    disabled={!canEdit}
+                  >
+                    <option value="">BHK…</option>
+                    {bedrooms !== '' && bedrooms !== '2' && bedrooms !== '3' && (
+                      <option value={bedrooms}>{bedrooms}BHK</option>
+                    )}
+                    <option value="2">2BHK</option>
+                    <option value="3">3BHK</option>
+                  </select>
+                </div>
+                {(savingField === 'area_sqft' || savingField === 'bedrooms') && <span className="cd-saving"> saving…</span>}
               </div>
               <div>
                 <span className="cd-lbl">Tower &amp; Unit</span>
