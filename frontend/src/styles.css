@@ -350,6 +350,8 @@ a { color: inherit; }
   font-family: inherit; font-size: 13px; background: #fff;
 }
 .cd-input:disabled { background: #f1f5f9; color: #64748b; }
+.cd-tower-unit { display: flex; gap: 8px; }
+.cd-tower-unit .cd-input-sm { flex: 1 1 0; min-width: 0; }
 .cd-link { color: #2563eb; word-break: break-all; font-size: 13px; }
 .cd-saving { color: #94a3b8; font-size: 11px; margin-left: 6px; }
 .cd-sub-line { color: #64748b; font-size: 11px; margin-top: 2px; }
@@ -585,6 +587,37 @@ a { color: inherit; }
   font-family: inherit; font-size: 14px; background: #fff;
 }
 .modal-error { color: #b91c1c; margin-bottom: 8px; font-size: 13px; }
+
+.di-toast-wrap {
+  position: fixed; top: 16px; right: 16px; z-index: 9999;
+  max-width: 360px; display: flex; flex-direction: column; gap: 8px;
+  pointer-events: none;
+}
+.di-toast {
+  position: relative;
+  background: #fff; border-radius: 8px; padding: 12px 36px 12px 14px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.10);
+  border: 1px solid #e5e7eb; border-left: 4px solid #94a3b8;
+  pointer-events: auto;
+  animation: di-toast-in 0.18s ease-out;
+}
+.di-toast-error { border-left-color: #dc2626; border-color: #fecaca; }
+.di-toast-warn  { border-left-color: #d97706; border-color: #fed7aa; }
+.di-toast-info  { border-left-color: #2563eb; border-color: #bfdbfe; }
+.di-toast-title { font-weight: 600; font-size: 13px; color: #0f1115; margin-bottom: 4px; }
+.di-toast-error .di-toast-title { color: #b91c1c; }
+.di-toast-body  { color: #475569; font-size: 13px; }
+.di-toast-list  { margin: 6px 0 0 18px; padding: 0; font-size: 13px; color: #475569; }
+.di-toast-close {
+  position: absolute; top: 6px; right: 8px;
+  background: transparent; border: 0; font-size: 18px; line-height: 1;
+  color: #94a3b8; cursor: pointer;
+}
+.di-toast-close:hover { color: #475569; }
+@keyframes di-toast-in {
+  from { transform: translateX(120%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
 
 .society-units-wrap { max-height: 260px; overflow: auto; margin: 8px 0 12px; border: 1px solid #e5e7eb; border-radius: 6px; }
 .society-units-table { width: 100%; border-collapse: collapse; font-size: 13px; }

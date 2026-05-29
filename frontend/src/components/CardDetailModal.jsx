@@ -8,6 +8,7 @@ import {
 import VisitScheduleModal from './VisitScheduleModal.jsx';
 import RejectReasonModal from './RejectReasonModal.jsx';
 import AssignRmModal from './AssignRmModal.jsx';
+import ScheduleToast, { collectMissingLeadFields, labelFor } from './ScheduleToast.jsx';
 
 /**
  * Detail popup for a single inventory row — opened by clicking a row in the
@@ -156,6 +157,7 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
   const [followUp, setFollowUp] = useState(item.follow_up_at ? item.follow_up_at.slice(0, 10) : '');
   const [tower, setTower] = useState(item.tower || '');
   const [unitNo, setUnitNo] = useState(item.unit_no || '');
+  const [areaSqft, setAreaSqft] = useState(item.area_sqft != null ? String(item.area_sqft) : '');
   const [savingField, setSavingField] = useState(null);
   const [savingStage, setSavingStage] = useState(false);
   const [showVisit, setShowVisit] = useState(false);
@@ -163,6 +165,7 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const colorPickerRef = useRef(null);
   const [showAssignRm, setShowAssignRm] = useState(false);
+  const [toast, setToast] = useState(null);
 
   const canEdit = ['admin', 'manager', 'rm'].includes(role);
   const canSetPriority = ['admin', 'manager', 'rm'].includes(role);
@@ -226,6 +229,19 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
         await applyStage('visit_scheduled');
         return;
       }
+      // Pre-flight: confirm the lead has everything Forms requires before we
+      // even open the visit modal. Avoids the "filled it all out, then told a
+      // field is missing" pain.
+      const missing = collectMissingLeadFields(item);
+      if (missing.length) {
+        setToast({
+          kind: 'error',
+          title: "Can't schedule visit — fill these in first",
+          message: 'These fields are needed before the visit can be scheduled:',
+          lines: missing.map(labelFor),
+        });
+        return;
+      }
       setShowVisit(true);
       return;
     }
@@ -240,6 +256,22 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
       const body = { [field]: value || null };
       const r = await api.patch(`/api/inventory/${item.oh_id}`, body);
       onUpdated(r.item || { ...item, [field]: value });
+    } finally {
+      setSavingField(null);
+    }
+  }
+
+  // area_sqft is numeric on the backend; trim and coerce so a blank input clears
+  // it and digits become integers.
+  async function saveArea() {
+    const trimmed = (areaSqft || '').trim();
+    const next = trimmed === '' ? null : Number(trimmed);
+    if (trimmed !== '' && (!Number.isFinite(next) || next <= 0)) return;
+    if ((next ?? null) === (item.area_sqft ?? null)) return;
+    try {
+      setSavingField('area_sqft');
+      const r = await api.patch(`/api/inventory/${item.oh_id}`, { area_sqft: next });
+      onUpdated(r.item || { ...item, area_sqft: next });
     } finally {
       setSavingField(null);
     }
@@ -367,28 +399,41 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
               </div>
 
               <div>
-                <span className="cd-lbl">Tower</span>
+                <span className="cd-lbl">Area (sqft)</span>
                 <input
                   className="cd-input"
-                  value={tower}
-                  onChange={(e) => setTower(e.target.value)}
-                  onBlur={() => saveField('tower', tower, item.tower)}
-                  placeholder="e.g. T3"
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  value={areaSqft}
+                  onChange={(e) => setAreaSqft(e.target.value)}
+                  onBlur={saveArea}
+                  placeholder="e.g. 1450"
                   disabled={!canEdit}
                 />
-                {savingField === 'tower' && <span className="cd-saving"> saving…</span>}
+                {savingField === 'area_sqft' && <span className="cd-saving"> saving…</span>}
               </div>
               <div>
-                <span className="cd-lbl">Unit no.</span>
-                <input
-                  className="cd-input"
-                  value={unitNo}
-                  onChange={(e) => setUnitNo(e.target.value)}
-                  onBlur={() => saveField('unit_no', unitNo, item.unit_no)}
-                  placeholder="e.g. 1502"
-                  disabled={!canEdit}
-                />
-                {savingField === 'unit_no' && <span className="cd-saving"> saving…</span>}
+                <span className="cd-lbl">Tower &amp; Unit</span>
+                <div className="cd-tower-unit">
+                  <input
+                    className="cd-input cd-input-sm"
+                    value={tower}
+                    onChange={(e) => setTower(e.target.value)}
+                    onBlur={() => saveField('tower', tower, item.tower)}
+                    placeholder="Tower"
+                    disabled={!canEdit}
+                  />
+                  <input
+                    className="cd-input cd-input-sm"
+                    value={unitNo}
+                    onChange={(e) => setUnitNo(e.target.value)}
+                    onBlur={() => saveField('unit_no', unitNo, item.unit_no)}
+                    placeholder="Unit"
+                    disabled={!canEdit}
+                  />
+                </div>
+                {(savingField === 'tower' || savingField === 'unit_no') && <span className="cd-saving"> saving…</span>}
               </div>
             </div>
           </div>
@@ -499,8 +544,11 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
           item={item}
           onClose={() => setShowVisit(false)}
           onScheduled={(updated) => { setShowVisit(false); onUpdated(updated); }}
+          onToast={setToast}
         />
       )}
+
+      <ScheduleToast toast={toast} onClose={() => setToast(null)} />
 
       {showReject && (
         <RejectReasonModal

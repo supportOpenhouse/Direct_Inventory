@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { labelFor } from './ScheduleToast.jsx';
 
-export default function VisitScheduleModal({ item, onClose, onScheduled }) {
+export default function VisitScheduleModal({ item, onClose, onScheduled, onToast }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -97,33 +98,58 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
   }
 
   function handleScheduleError(e) {
-      // 409: backend detected a visit already exists. Don't show the raw
-      // error — surface the existing details and close gracefully.
-      if (e.status === 409 && e.data?.existing_visit) {
-        const ev = e.data.existing_visit;
-        const when = ev.visit_at ? new Date(ev.visit_at).toLocaleString() : 'previously';
-        alert(`Visit already scheduled for ${item.oh_id} on ${when}.\nNo new request was sent.`);
-        onClose();
-        return;
+    // 409: backend detected a visit already exists. Don't show the raw
+    // error — surface the existing details and close gracefully.
+    if (e.status === 409 && e.data?.existing_visit) {
+      const ev = e.data.existing_visit;
+      const when = ev.visit_at ? new Date(ev.visit_at).toLocaleString() : 'previously';
+      alert(`Visit already scheduled for ${item.oh_id} on ${when}.\nNo new request was sent.`);
+      onClose();
+      return;
+    }
+    const fr = e.data?.forms_response;
+    // Forms-side missing-fields rejection. Shape: { error: "Missing required
+    // fields", missing: ["contact_no", ...] }. Surface each missing field by
+    // its human label so the user knows exactly what to fix.
+    if (
+      fr && typeof fr === 'object'
+      && fr.error === 'Missing required fields'
+      && Array.isArray(fr.missing)
+    ) {
+      onToast?.({
+        kind: 'error',
+        title: 'Forms rejected the visit — fields are missing',
+        message: 'Close this dialog, fill the highlighted fields on the lead, and try again:',
+        lines: fr.missing.map(labelFor),
+      });
+      return;
+    }
+    // Forms-side slot conflict: the field exec already has a booking at this
+    // time. Pull message + suggested times into the toast.
+    if (e.data?.forms_status === 409 && fr && typeof fr === 'object' && fr.error === 'Slot conflict') {
+      const lines = [];
+      if (fr.message) lines.push(fr.message);
+      if (Array.isArray(fr.suggested_times) && fr.suggested_times.length) {
+        lines.push(`Suggested times: ${fr.suggested_times.join(', ')}`);
       }
-      // Forms-side slot conflict: the field exec already has a booking at this
-      // time. Tell the user to pick something else and show Forms' suggestions.
-      const fr = e.data?.forms_response;
-      if (e.data?.forms_status === 409 && fr && typeof fr === 'object' && fr.error === 'Slot conflict') {
-        const lines = ['Choose a different time or date.'];
-        if (fr.message) lines.push(fr.message);
-        if (Array.isArray(fr.suggested_times) && fr.suggested_times.length) {
-          lines.push(`Suggested times: ${fr.suggested_times.join(', ')}`);
-        }
-        setError(lines.join(' '));
-        return;
-      }
-      const parts = [e.data?.error || e.message];
-      if (e.data?.forms_status) parts.push(`(status ${e.data.forms_status})`);
-      if (fr) {
-        parts.push(typeof fr === 'string' ? fr : JSON.stringify(fr));
-      }
-      setError(parts.filter(Boolean).join(' — '));
+      onToast?.({
+        kind: 'error',
+        title: 'Field exec is not available at this time',
+        message: 'Pick a different date / time or another exec.',
+        lines,
+      });
+      return;
+    }
+    // Catch-all — anything else we don't recognise. Show the raw Forms body
+    // so unknown failures aren't silent.
+    const parts = [e.data?.error || e.message];
+    if (e.data?.forms_status) parts.push(`(status ${e.data.forms_status})`);
+    if (fr) parts.push(typeof fr === 'string' ? fr : JSON.stringify(fr));
+    onToast?.({
+      kind: 'error',
+      title: 'Could not schedule the visit',
+      message: parts.filter(Boolean).join(' — '),
+    });
   }
 
   if (pendingUnits && pendingUnits.length > 0) {
