@@ -104,6 +104,18 @@ def schedule_visit():
     schedule_date = body.get("schedule_date")
     schedule_time = body.get("schedule_time")
     field_exec_phone = body.get("field_exec_phone")
+    # User-editable ask price in lakhs. None / missing → derive from inv.price.
+    # Must round to INT because Forms' demand_price column is integer.
+    raw_dp = body.get("demand_price")
+    if raw_dp is None or raw_dp == "":
+        body_demand_price = None
+    else:
+        try:
+            body_demand_price = round(float(raw_dp))
+            if body_demand_price < 0:
+                raise ValueError("negative")
+        except (TypeError, ValueError):
+            return jsonify({"error": f"invalid demand_price: {raw_dp!r}"}), 400
 
     # "Assigned By" — for managers/RMs this is implicitly themselves. Admins
     # don't usually own leads, so the modal forces them to pick a manager/RM
@@ -192,9 +204,16 @@ def schedule_visit():
             configuration = (
                 f"{inv['bedrooms']}BHK" if inv.get("bedrooms") is not None else ""
             )
-            demand_price_lakhs = (
-                None if inv.get("price") in (None, "") else float(inv["price"]) / 100000
-            )
+            # Forms' demand_price column is INT lakhs. User-supplied value wins
+            # (modal lets them override per visit); fall back to the lead's own
+            # price rounded to lakhs. round() also fixes float division noise
+            # like 9_999_999 / 100000 = 99.99999, which Postgres would reject.
+            if body_demand_price is not None:
+                demand_price_lakhs = body_demand_price
+            elif inv.get("price") in (None, ""):
+                demand_price_lakhs = None
+            else:
+                demand_price_lakhs = round(float(inv["price"]) / 100000)
 
             # Forms app's city enum treats Greater Noida as part of Noida.
             inv_city = inv.get("city") or ""

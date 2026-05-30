@@ -11,6 +11,11 @@ export default function VisitScheduleModal({ item, onClose, onScheduled, onToast
   const [time, setTime] = useState('');
   const [execs, setExecs] = useState([]);
   const [execPhone, setExecPhone] = useState('');
+  // Forms' demand_price column is INT lakhs. Pre-fill with the lead's rounded
+  // value but let the user override before sending.
+  const [askLakhs, setAskLakhs] = useState(
+    item?.price != null && item.price !== '' ? String(Math.round(Number(item.price) / 100000)) : '',
+  );
   const [loadingExecs, setLoadingExecs] = useState(true);
   // Admin-only — pick which manager/RM the visit is being scheduled on
   // behalf of. Required for the Forms app to attribute the assignment.
@@ -53,6 +58,7 @@ export default function VisitScheduleModal({ item, onClose, onScheduled, onToast
         schedule_date: date,
         schedule_time: time,
         field_exec_phone: execPhone,
+        demand_price: askLakhs === '' ? null : Math.round(Number(askLakhs)),
         ...(isAdmin ? { assigned_by_email: assignedBy } : {}),
       });
       onScheduled(r);
@@ -68,6 +74,13 @@ export default function VisitScheduleModal({ item, onClose, onScheduled, onToast
     if (!date || !time || !execPhone) {
       setError('Date, Time and Field Exec are required');
       return;
+    }
+    if (askLakhs !== '') {
+      const n = Number(askLakhs);
+      if (!Number.isFinite(n) || n < 0) {
+        setError('Ask (in Lakhs) must be a non-negative number');
+        return;
+      }
     }
     if (isAdmin && !assignedBy) {
       setError('Pick who this visit is assigned by');
@@ -230,6 +243,16 @@ export default function VisitScheduleModal({ item, onClose, onScheduled, onToast
             </option>
           ))}
         </select>
+
+        <label>Ask (in Lakhs)</label>
+        <input
+          type="number"
+          min="0"
+          step="1"
+          value={askLakhs}
+          onChange={(e) => setAskLakhs(e.target.value)}
+          placeholder="e.g. 65"
+        />
 
         {isAdmin ? (
           <>
