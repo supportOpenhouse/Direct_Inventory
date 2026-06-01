@@ -24,3 +24,4 @@ backend/.pytest_cache/
 CLAUDE.md
 .claude/
 frontend-example
+backend-example
