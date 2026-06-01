@@ -23,3 +23,4 @@ backend/.pytest_cache/
 # Personal/local Claude Code session notes.
 CLAUDE.md
 .claude/
+frontend-example
