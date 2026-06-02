@@ -1,7 +1,7 @@
 import { api } from '../api/client.js';
 import {
-  displayCity, formatDateRel, formatDateShort, formatPrice, rowFlag, starColor,
-  STAGE_DOT_COLOR, stageLabel, variation,
+  displayCity, formatDateRel, formatDateShort, formatPrice, ohMatchInfo, rowFlag,
+  starColor, STAGE_DOT_COLOR, stageLabel, variation,
 } from '../utils/format.js';
 
 const SORTABLE = new Set([
@@ -178,7 +178,6 @@ export default function InventoryTable({
           )}
           {!loading && items.map((item) => {
             const v = variation(item.price, item.oh_price);
-            const isNearest = item.oh_price_match === 'nearest';
             const isSel = selected?.has?.(item.oh_id);
             const color = starColor(item);
             // Overdue follow-up (yellow) / stale Lead (red) — colours the
@@ -254,9 +253,19 @@ export default function InventoryTable({
                 <td>{item.floor != null && item.floor !== '' ? item.floor : '—'}</td>
                 <td>{item.area_sqft != null ? `${item.area_sqft} sqft` : '—'}</td>
                 <td className="inv-td-num val-orange">{formatPrice(item.price)}</td>
-                <td className={`inv-td-num ${item.oh_price ? (isNearest ? 'val-amber' : 'val-green') : 'muted'}`}>
-                  {item.oh_price ? `${isNearest ? '~' : ''}${formatPrice(item.oh_price)}` : '—'}
-                </td>
+                {(() => {
+                  const oh = ohMatchInfo(item);
+                  return (
+                    <td
+                      className={`inv-td-num ${item.oh_price ? 'val-green' : 'val-check'}`}
+                      title={oh.title}
+                    >
+                      {item.oh_price ? formatPrice(item.oh_price) : (
+                        <>Check Price<span className="oh-reason">{oh.sub}</span></>
+                      )}
+                    </td>
+                  );
+                })()}
                 <td className={`inv-td-num ${v ? `val-var-${v.sign}` : 'muted'}`}>
                   {v ? v.label : '—'}
                 </td>

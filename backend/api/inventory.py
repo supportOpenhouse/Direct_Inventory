@@ -316,6 +316,19 @@ _INVENTORY_WITH_PRICING_SQL = """
            p.area_sqft    AS oh_price_area,
            p.bhk          AS oh_price_bhk,
            p.match_kind   AS oh_price_match,
+           d.near_diff    AS oh_near_diff,
+           -- Why is there no strict price? Drives the "Check Price" sub-text/tooltip.
+           --   match    : a strict price was found (oh_price is set)
+           --   no_match : no priced row for this society + BHK at all
+           --   no_area  : listing has no area, so it can't be area-matched
+           --   area_off : a priced society+BHK row exists but nearest area is >50 sqft off
+           CASE
+             WHEN p.acq_price IS NOT NULL THEN 'match'
+             WHEN d.has_row IS NOT TRUE   THEN 'no_match'
+             WHEN i.area_sqft IS NULL     THEN 'no_area'
+             WHEN d.near_diff IS NOT NULL THEN 'area_off'
+             ELSE 'no_area'
+           END            AS oh_price_reason,
            COALESCE(
                (SELECT json_agg(
                            json_build_object('id', u.id, 'name', u.name, 'email', u.email)
@@ -327,23 +340,36 @@ _INVENTORY_WITH_PRICING_SQL = """
            ) AS assigned_rms
     FROM inventory i
     LEFT JOIN LATERAL (
-        SELECT op.acq_price, op.area_sqft, op.bhk,
-               CASE
-                 WHEN i.area_sqft IS NULL OR op.area_sqft IS NULL THEN 'no_area'
-                 WHEN ABS(op.area_sqft - i.area_sqft) <= 150       THEN 'exact'
-                 ELSE 'nearest'
-               END AS match_kind
+        -- Strict match only: same society + same BHK + area within ±50 sqft.
+        -- If nothing qualifies, p is NULL and the UI shows "Check Price".
+        -- We no longer fall back to a nearest-area row (the old '~' behaviour).
+        SELECT op.acq_price, op.area_sqft, op.bhk, 'exact' AS match_kind
         FROM oh_pricing op
         WHERE op.society_norm = LOWER(TRIM(i.society))
           AND op.acq_price IS NOT NULL
-          AND (op.bhk IS NULL OR i.bedrooms IS NULL OR op.bhk = i.bedrooms)
-        ORDER BY
-          (CASE WHEN op.bhk = i.bedrooms THEN 0 ELSE 1 END),
-          (CASE WHEN op.area_sqft IS NULL OR i.area_sqft IS NULL
-                THEN 9999
-                ELSE ABS(op.area_sqft - i.area_sqft) END)
+          AND op.bhk = i.bedrooms
+          AND i.area_sqft IS NOT NULL
+          AND op.area_sqft IS NOT NULL
+          AND ABS(op.area_sqft - i.area_sqft) <= 50
+        ORDER BY ABS(op.area_sqft - i.area_sqft)
         LIMIT 1
     ) p ON TRUE
+    LEFT JOIN LATERAL (
+        -- Diagnostic only (never sets the price): the nearest priced row for this
+        -- society + BHK, ignoring the ±50 gate. Lets the UI explain a "Check Price":
+        --   has_row  -> at least one priced society+BHK row exists
+        --   near_diff -> area gap to the closest such row (NULL if either area unknown)
+        SELECT TRUE AS has_row,
+               CASE WHEN i.area_sqft IS NULL OR op.area_sqft IS NULL THEN NULL
+                    ELSE ABS(op.area_sqft - i.area_sqft) END AS near_diff
+        FROM oh_pricing op
+        WHERE op.society_norm = LOWER(TRIM(i.society))
+          AND op.acq_price IS NOT NULL
+          AND op.bhk = i.bedrooms
+        ORDER BY (CASE WHEN i.area_sqft IS NULL OR op.area_sqft IS NULL THEN 999999
+                       ELSE ABS(op.area_sqft - i.area_sqft) END)
+        LIMIT 1
+    ) d ON TRUE
 """
 
 

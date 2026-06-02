@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import {
-  displayCity, formatPrice, REJECT_REASONS, STAGE_DOT_COLOR, STAGES,
+  displayCity, formatPrice, ohMatchInfo, REJECT_REASONS, STAGE_DOT_COLOR, STAGES,
   stageLabel, starColor, todayISO, variation,
 } from '../utils/format.js';
 import VisitScheduleModal from './VisitScheduleModal.jsx';
@@ -179,8 +179,7 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
   const assignedRms = Array.isArray(item.assigned_rms) ? item.assigned_rms : [];
   const assignedRmIds = Array.isArray(item.assigned_rm_ids) ? item.assigned_rm_ids : [];
   const v = variation(item.price, item.oh_price);
-  const isNearest = item.oh_price_match === 'nearest';
-  const matchTag = isNearest ? '~' : '';
+  const ohInfo = ohMatchInfo(item);
   const color = starColor(item);
 
   useEffect(() => {
@@ -477,14 +476,16 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
               </div>
               <div>
                 <span className="cd-lbl">OH price</span>
-                <span className={item.oh_price ? (isNearest ? 'val-amber' : 'val-green') : 'muted'}>
-                  {item.oh_price ? `${matchTag}${formatPrice(item.oh_price)}` : 'no match'}
+                <span className={item.oh_price ? 'val-green' : 'val-check'} title={ohInfo.title}>
+                  {item.oh_price ? formatPrice(item.oh_price) : 'Check Price'}
                 </span>
-                {item.oh_price && item.oh_price_area && (
-                  <div className="cd-sub-line">
-                    {isNearest ? 'nearest' : 'matched'} {item.oh_price_bhk}BHK, {item.oh_price_area}sqft
-                  </div>
-                )}
+                {item.oh_price
+                  ? item.oh_price_area && (
+                      <div className="cd-sub-line">
+                        matched {item.oh_price_bhk}BHK, {item.oh_price_area}sqft
+                      </div>
+                    )
+                  : ohInfo.sub && <div className="cd-sub-line">{ohInfo.sub}</div>}
               </div>
 
               <div>

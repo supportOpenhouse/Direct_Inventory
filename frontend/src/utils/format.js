@@ -171,3 +171,32 @@ export function variation(asking, oh) {
   const label = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
   return { pct, label, sign };
 }
+
+// OH-price match presentation. A row either has a strict price (society + BHK +
+// area within ±50 sqft) or it shows "Check Price" with a reason. Returns
+// { sub, title } — `sub` is the small grey label under "Check Price" (empty when
+// matched), `title` is the cell hover tooltip for both states.
+export function ohMatchInfo(item) {
+  if (item.oh_price) {
+    const a = Number(item.area_sqft);
+    const oa = Number(item.oh_price_area);
+    const diff = (Number.isFinite(a) && Number.isFinite(oa)) ? Math.abs(oa - a) : null;
+    const title = `Matched ${item.oh_price_bhk}BHK ${item.oh_price_area}sqft`
+      + (diff != null ? ` (±${diff} sqft)` : '');
+    return { sub: '', title };
+  }
+  switch (item.oh_price_reason) {
+    case 'area_off':
+      return {
+        sub: 'area off',
+        title: item.oh_near_diff != null
+          ? `Nearest priced area is ${item.oh_near_diff} sqft off (>50) — open card to verify`
+          : 'Nearest priced area is >50 sqft off — open card to verify',
+      };
+    case 'no_area':
+      return { sub: 'no area', title: 'Listing has no area, so it can’t be area-matched' };
+    case 'no_match':
+    default:
+      return { sub: 'no match', title: 'No OH price for this society + BHK' };
+  }
+}

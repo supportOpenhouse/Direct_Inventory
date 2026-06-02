@@ -162,6 +162,8 @@ a { color: inherit; }
 .val-orange { color: #ea580c; font-weight: 700; }
 .val-green { color: #16a34a; font-weight: 700; }
 .val-amber { color: #b45309; font-weight: 700; }
+.val-check { color: #7c4a21; font-weight: 700; }   /* "Check Price" — no strict OH match */
+.oh-reason { display: block; font-size: 10px; font-weight: 600; color: #a08763; }  /* reason under "Check Price" */
 .muted { color: #94a3b8; }
 .val-var-pos  { color: #dc2626; font-weight: 700; }
 .val-var-neg  { color: #16a34a; font-weight: 700; }
