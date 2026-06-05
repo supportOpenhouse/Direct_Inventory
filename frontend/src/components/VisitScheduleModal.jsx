@@ -1,9 +1,36 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { labelFor } from './ScheduleToast.jsx';
+import { stageLabel } from '../utils/format.js';
+import { IconClose } from './icons.jsx';
 
-export default function VisitScheduleModal({ item, onClose, onScheduled, onToast }) {
+// Inventory fields the Forms payload needs (first_name, contact_no, …). The
+// backend pulls these off the row, so if any are blank the Forms app rejects —
+// we check up-front and name the missing ones so the user can fill them via
+// "Edit Details" first.
+const REQUIRED_INV_FIELDS = [
+  ['seller_name', 'Seller Name'],
+  ['seller_phone', 'Contact No.'],
+  ['society', 'Society'],
+  ['locality', 'Locality'],
+  ['area_sqft', 'Area (sqft)'],
+  ['price', 'Demand Price'],
+  ['bedrooms', 'Configuration (BHK)'],
+];
+
+function fmtDateTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+/**
+ * Visit-schedule flow (ported). Date + time + field exec (+ assigned-by for
+ * admin). Before sending, checks for existing OpenHouse units in the society
+ * and asks for confirmation. Talks to /api/visits/*.
+ */
+export default function VisitScheduleModal({ item, onClose, onScheduled }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -11,23 +38,27 @@ export default function VisitScheduleModal({ item, onClose, onScheduled, onToast
   const [time, setTime] = useState('');
   const [execs, setExecs] = useState([]);
   const [execPhone, setExecPhone] = useState('');
-  // Forms' demand_price column is INT lakhs. Pre-fill with the lead's rounded
-  // value but let the user override before sending.
-  const [askLakhs, setAskLakhs] = useState(
-    item?.price != null && item.price !== '' ? String(Math.round(Number(item.price) / 100000)) : '',
-  );
   const [loadingExecs, setLoadingExecs] = useState(true);
-  // Admin-only — pick which manager/RM the visit is being scheduled on
-  // behalf of. Required for the Forms app to attribute the assignment.
   const [assignees, setAssignees] = useState([]);
   const [assignedBy, setAssignedBy] = useState('');
-  const [loadingAssignees, setLoadingAssignees] = useState(isAdmin);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  // When the society already has OpenHouse-owned units, we surface them as a
-  // confirmation step before sending the request to Forms. null = not yet
-  // checked, [] = checked & none found (auto-schedule), [...] = waiting on user.
   const [pendingUnits, setPendingUnits] = useState(null);
+  const [existing, setExisting] = useState(null);
+
+  // Required fields that are currently blank — form inputs + inventory fields.
+  function missingFields() {
+    const miss = [];
+    if (!date) miss.push('Date');
+    if (!time) miss.push('Time');
+    if (!execPhone) miss.push('Field Exec');
+    if (isAdmin && !assignedBy) miss.push('Assigned By');
+    for (const [k, label] of REQUIRED_INV_FIELDS) {
+      const v = item?.[k];
+      if (v === null || v === undefined || String(v).trim() === '') miss.push(label);
+    }
+    return miss;
+  }
 
   useEffect(() => {
     let alive = true;
@@ -39,14 +70,9 @@ export default function VisitScheduleModal({ item, onClose, onScheduled, onToast
   }, []);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isAdmin) return undefined;
     let alive = true;
-    // Pulled from properties.users — same source the Forms app validates
-    // assigned_by against — so we can only ever pick an email it will accept.
-    api.get('/api/visits/assignees')
-      .then((r) => { if (alive) setAssignees(r.items || []); })
-      .catch((e) => { if (alive) setError(`Couldn't load assignees: ${e.data?.error || e.message}`); })
-      .finally(() => { if (alive) setLoadingAssignees(false); });
+    api.get('/api/visits/assignees').then((r) => { if (alive) setAssignees(r.items || []); }).catch(() => {});
     return () => { alive = false; };
   }, [isAdmin]);
 
@@ -54,165 +80,65 @@ export default function VisitScheduleModal({ item, onClose, onScheduled, onToast
     try {
       setSubmitting(true);
       const r = await api.post('/api/visits/schedule', {
-        oh_id: item.oh_id,
-        schedule_date: date,
-        schedule_time: time,
-        field_exec_phone: execPhone,
-        demand_price: askLakhs === '' ? null : Math.round(Number(askLakhs)),
+        oh_id: item.oh_id, schedule_date: date, schedule_time: time, field_exec_phone: execPhone,
         ...(isAdmin ? { assigned_by_email: assignedBy } : {}),
       });
       onScheduled(r);
     } catch (e) {
-      handleScheduleError(e);
-    } finally {
-      setSubmitting(false);
-    }
+      if (e.status === 409 && e.data?.existing_visit) { setExisting(e.data.existing_visit); return; }
+      setError(e.data?.error || e.message || 'Could not schedule the visit');
+    } finally { setSubmitting(false); }
   }
 
   async function submit() {
     setError(null);
-    if (!date || !time || !execPhone) {
-      setError('Date, Time and Field Exec are required');
-      return;
-    }
-    if (askLakhs !== '') {
-      const n = Number(askLakhs);
-      if (!Number.isFinite(n) || n < 0) {
-        setError('Ask (in Lakhs) must be a non-negative number');
-        return;
-      }
-    }
-    if (isAdmin && !assignedBy) {
-      setError('Pick who this visit is assigned by');
-      return;
-    }
+    const miss = missingFields();
+    if (miss.length) { setError(`Missing required field${miss.length > 1 ? 's' : ''}: ${miss.join(', ')}`); return; }
     const society = (item.society || '').trim();
-    if (!society) {
-      // No society to check against — just schedule.
-      await sendSchedule();
-      return;
-    }
+    if (!society) { await sendSchedule(); return; }
     try {
       setSubmitting(true);
       const r = await api.get(`/api/visits/society-units?society=${encodeURIComponent(society)}`);
       const units = r.items || [];
-      if (units.length === 0) {
-        await sendSchedule();
-        return;
-      }
+      if (units.length === 0) { await sendSchedule(); return; }
       setPendingUnits(units);
     } catch (e) {
-      // Don't block scheduling on the lookup — surface a non-fatal warning and
-      // let the user retry. The lookup is purely informational.
       setError(`Couldn't check existing units: ${e.data?.error || e.message}`);
-    } finally {
-      setSubmitting(false);
-    }
+    } finally { setSubmitting(false); }
   }
 
-  function handleScheduleError(e) {
-    // 409: backend detected a visit already exists. Don't show the raw
-    // error — surface the existing details and close gracefully.
-    if (e.status === 409 && e.data?.existing_visit) {
-      const ev = e.data.existing_visit;
-      const when = ev.visit_at ? new Date(ev.visit_at).toLocaleString() : 'previously';
-      alert(`Visit already scheduled for ${item.oh_id} on ${when}.\nNo new request was sent.`);
-      onClose();
-      return;
-    }
-    const fr = e.data?.forms_response;
-    // Forms-side missing-fields rejection. Shape: { error: "Missing required
-    // fields", missing: ["contact_no", ...] }. Surface each missing field by
-    // its human label so the user knows exactly what to fix.
-    if (
-      fr && typeof fr === 'object'
-      && fr.error === 'Missing required fields'
-      && Array.isArray(fr.missing)
-    ) {
-      onToast?.({
-        kind: 'error',
-        title: 'Forms rejected the visit — fields are missing',
-        message: 'Close this dialog, fill the highlighted fields on the lead, and try again:',
-        lines: fr.missing.map(labelFor),
-      });
-      return;
-    }
-    // Forms-side slot conflict: the field exec already has a booking at this
-    // time. Pull message + suggested times into the toast.
-    if (e.data?.forms_status === 409 && fr && typeof fr === 'object' && fr.error === 'Slot conflict') {
-      const lines = [];
-      if (fr.message) lines.push(fr.message);
-      if (Array.isArray(fr.suggested_times) && fr.suggested_times.length) {
-        lines.push(`Suggested times: ${fr.suggested_times.join(', ')}`);
-      }
-      onToast?.({
-        kind: 'error',
-        title: 'Field exec is not available at this time',
-        message: 'Pick a different date / time or another exec.',
-        lines,
-      });
-      return;
-    }
-    // Catch-all — anything else we don't recognise. Show the raw Forms body
-    // so unknown failures aren't silent.
-    const parts = [e.data?.error || e.message];
-    if (e.data?.forms_status) parts.push(`(status ${e.data.forms_status})`);
-    if (fr) parts.push(typeof fr === 'string' ? fr : JSON.stringify(fr));
-    onToast?.({
-      kind: 'error',
-      title: 'Could not schedule the visit',
-      message: parts.filter(Boolean).join(' — '),
-    });
+  if (existing) {
+    return (
+      <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-head-row"><h3>Visit Already Scheduled</h3><button className="modal-close" onClick={onClose}><IconClose /></button></div>
+          <p className="modal-sub">A visit is already booked for <strong>{item.oh_id}</strong>{item.society ? ` · ${item.society}` : ''}.</p>
+          <div className="field-grid-2" style={{ marginTop: 6 }}>
+            <div className="field-row"><span className="field-lbl">Scheduled for</span><span className="field-val">{fmtDateTime(existing.visit_at)}</span></div>
+            <div className="field-row"><span className="field-lbl">Field exec</span><span className="field-val">{existing.visit_exec || '—'}</span></div>
+            <div className="field-row"><span className="field-lbl">Stage</span><span className="field-val">{existing.stage ? stageLabel(existing.stage) : '—'}</span></div>
+            <div className="field-row"><span className="field-lbl">Visit ID</span><span className="field-val">{existing.forms_visit_id || '—'}</span></div>
+          </div>
+          <div className="modal-actions"><span style={{ flex: 1 }} /><button className="btn-primary" onClick={onClose}>Close</button></div>
+        </div>
+      </div>
+    );
   }
 
   if (pendingUnits && pendingUnits.length > 0) {
     return (
       <div className="modal-backdrop" onClick={onClose}>
-        <div className="modal modal-visit" onClick={(e) => e.stopPropagation()}>
-          <h3>Existing OpenHouse units</h3>
-          <p className="modal-sub">
-            These units are already with OpenHouse in <strong>{item.society}</strong>.
-            Continue scheduling the visit?
-          </p>
-          <div className="society-units-wrap">
-            <table className="society-units-table">
-              <thead>
-                <tr>
-                  <th>UID</th>
-                  <th>Tower</th>
-                  <th>Unit</th>
-                  <th>Floor</th>
-                  <th>Config</th>
-                  <th>Area</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingUnits.map((u) => (
-                  <tr key={u.uid}>
-                    <td>{u.uid}</td>
-                    <td>{u.tower_no || '—'}</td>
-                    <td>{u.unit_no || '—'}</td>
-                    <td>{u.floor != null && u.floor !== '' ? u.floor : '—'}</td>
-                    <td>{u.configuration || '—'}</td>
-                    <td>{u.area_sqft != null ? `${u.area_sqft} sqft` : '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
+        <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-head-row"><h3>Existing OpenHouse units</h3><button className="modal-close" onClick={onClose}><IconClose /></button></div>
+          <p className="modal-sub">These units are already with OpenHouse in <strong>{item.society}</strong>. Continue?</p>
+          <div className="inv-table-wrap" style={{ maxHeight: 240 }}>
+            <table className="inv-table">
+              <thead><tr><th className="inv-th">UID</th><th className="inv-th">Tower</th><th className="inv-th">Unit</th><th className="inv-th">Config</th></tr></thead>
+              <tbody>{pendingUnits.map((u) => <tr key={u.uid} className="inv-row"><td>{u.uid}</td><td>{u.tower_no || '—'}</td><td>{u.unit_no || '—'}</td><td>{u.configuration || '—'}</td></tr>)}</tbody>
             </table>
           </div>
           {error && <div className="modal-error">{error}</div>}
-          <div className="modal-actions">
-            <button
-              className="btn-ghost"
-              onClick={() => setPendingUnits(null)}
-              disabled={submitting}
-            >
-              Back
-            </button>
-            <button className="btn-primary" onClick={sendSchedule} disabled={submitting}>
-              {submitting ? 'Scheduling…' : 'Confirm & Schedule'}
-            </button>
-          </div>
+          <div className="modal-actions"><button className="btn-ghost" onClick={() => setPendingUnits(null)} disabled={submitting}>Back</button><span style={{ flex: 1 }} /><button className="btn-primary" onClick={sendSchedule} disabled={submitting}>{submitting ? 'Scheduling…' : 'Confirm & Schedule'}</button></div>
         </div>
       </div>
     );
@@ -220,70 +146,33 @@ export default function VisitScheduleModal({ item, onClose, onScheduled, onToast
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal modal-visit" onClick={(e) => e.stopPropagation()}>
-        <h3>Schedule Visit</h3>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head-row"><h3>Schedule Visit</h3><button className="modal-close" onClick={onClose}><IconClose /></button></div>
         <p className="modal-sub">{item.oh_id} · {item.society || '—'}</p>
 
         <label>Date <span className="req">*</span></label>
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-
-        <label>Time <span className="req">*</span></label>
+        <label style={{ marginTop: 10 }}>Time <span className="req">*</span></label>
         <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-
-        <label>Field Exec <span className="req">*</span></label>
-        <select
-          value={execPhone}
-          onChange={(e) => setExecPhone(e.target.value)}
-          disabled={loadingExecs}
-        >
+        <label style={{ marginTop: 10 }}>Field Exec <span className="req">*</span></label>
+        <select value={execPhone} onChange={(e) => setExecPhone(e.target.value)} disabled={loadingExecs}>
           <option value="">{loadingExecs ? 'Loading…' : 'Select…'}</option>
-          {execs.map((u) => (
-            <option key={u.id} value={u.phone}>
-              {u.name} {u.phone ? `(${u.phone})` : ''}
-            </option>
-          ))}
+          {execs.map((u) => <option key={u.id} value={u.phone}>{u.name} {u.phone ? `(${u.phone})` : ''}</option>)}
         </select>
-
-        <label>Ask (in Lakhs)</label>
-        <input
-          type="number"
-          min="0"
-          step="1"
-          value={askLakhs}
-          onChange={(e) => setAskLakhs(e.target.value)}
-          placeholder="e.g. 65"
-        />
-
         {isAdmin ? (
           <>
-            <label>Assigned By <span className="req">*</span></label>
-            <select
-              value={assignedBy}
-              onChange={(e) => setAssignedBy(e.target.value)}
-              disabled={loadingAssignees}
-            >
-              <option value="">{loadingAssignees ? 'Loading…' : 'Select manager / RM…'}</option>
-              {assignees.map((u) => (
-                <option key={u.id} value={u.email}>
-                  {u.name || u.email}
-                </option>
-              ))}
+            <label style={{ marginTop: 10 }}>Assigned By <span className="req">*</span></label>
+            <select value={assignedBy} onChange={(e) => setAssignedBy(e.target.value)}>
+              <option value="">Select manager / RM…</option>
+              {assignees.map((u) => <option key={u.id} value={u.email}>{u.name || u.email}</option>)}
             </select>
           </>
         ) : (
-          <div className="assigned-by">
-            Assigned by: <strong>{user?.name || user?.email || '—'}</strong>
-          </div>
+          <div className="muted" style={{ marginTop: 10, fontSize: 13 }}>Assigned by: <strong>{user?.name || user?.email || '—'}</strong></div>
         )}
 
         {error && <div className="modal-error">{error}</div>}
-
-        <div className="modal-actions">
-          <button className="btn-ghost" onClick={onClose} disabled={submitting}>Cancel</button>
-          <button className="btn-primary" onClick={submit} disabled={submitting}>
-            {submitting ? 'Checking…' : 'Schedule'}
-          </button>
-        </div>
+        <div className="modal-actions"><span style={{ flex: 1 }} /><button className="btn-ghost" onClick={onClose} disabled={submitting}>Cancel</button><button className="btn-primary" onClick={submit} disabled={submitting}>{submitting ? 'Checking…' : 'Schedule'}</button></div>
       </div>
     </div>
   );

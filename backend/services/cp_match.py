@@ -259,9 +259,6 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
     UPDATE settles leftover NULL rows (NULL society / bedrooms — unmatchable)
     to 'none'.
 
-    oh_id assignment is handled at insert time + by migration 013's trigger;
-    legacy rows are backfilled once via `python -m backend.scripts.backfill_oh_ids`.
-
     To force a full rescan, run `UPDATE inventory SET cp_match = NULL` first.
     """
     if not config.CP_DB_URL:

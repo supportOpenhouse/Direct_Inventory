@@ -1,19 +1,17 @@
 import { useState } from 'react';
 import { api } from '../api/client.js';
+import { foldCities } from '../utils/format.js';
 import SearchableMultiSelect from './SearchableMultiSelect.jsx';
+import { IconClose } from './icons.jsx';
 
-// Area-scope fields. All three are independent — an RM can have any
-// combination (e.g. specific societies AND a fallback micro-market). Empty
-// arrays mean "no scope at that level"; one level being set never clears
-// another. Assignment matches society first, then micro-market.
 const SCOPE_LEVELS = [
-  { key: 'city',         label: 'City',         field: 'cities' },
-  { key: 'micro_market', label: 'Micro-market', field: 'micro_market' },
-  { key: 'society',      label: 'Society',      field: 'society' },
+  { key: 'city', label: 'City' },
+  { key: 'micro_market', label: 'Micro-market' },
+  { key: 'society', label: 'Society' },
 ];
 
 export default function UserEditModal({ user, managers, areas, onClose, onSaved }) {
-  const [cities, setCities] = useState(user.cities || []);
+  const [cities, setCities] = useState(foldCities(user.cities));
   const [microMarkets, setMicroMarkets] = useState(user.micro_market || []);
   const [societies, setSocieties] = useState(user.society || []);
   const [manager, setManager] = useState(user.manager || '');
@@ -23,109 +21,52 @@ export default function UserEditModal({ user, managers, areas, onClose, onSaved 
 
   const valueFor = { city: cities, micro_market: microMarkets, society: societies };
   const setterFor = { city: setCities, micro_market: setMicroMarkets, society: setSocieties };
-  const optionsFor = {
-    city: areas.cities || [],
-    micro_market: areas.micro_markets || [],
-    society: areas.societies || [],
-  };
+  const optionsFor = { city: foldCities(areas.cities), micro_market: areas.micro_markets || [], society: areas.societies || [] };
 
   async function save() {
-    setError(null);
-    setSaving(true);
+    setError(null); setSaving(true);
     try {
-      // Every scope level is sent independently. Setting society no longer
-      // wipes micro-market (and vice versa) — both can apply for the same RM.
-      const body = {
-        is_active: isActive,
-        manager: manager ? Number(manager) : null,
-        cities,
-        micro_market: microMarkets,
-        society: societies,
-      };
-      const r = await api.patch(`/api/users/${user.id}`, body);
-      onSaved(r);
-    } catch (e) {
-      setError(e.data?.error || e.message);
-    } finally {
-      setSaving(false);
-    }
+      const body = { is_active: isActive, manager: manager ? Number(manager) : null, cities, micro_market: microMarkets, society: societies };
+      onSaved(await api.patch(`/api/users/${user.id}`, body));
+    } catch (e) { setError(e.data?.error || e.message); } finally { setSaving(false); }
   }
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal modal-user-edit" onClick={(e) => e.stopPropagation()}>
-        <div className="card-detail-head">
-          <div className="card-detail-title">
-            <strong>{user.name || user.email}</strong>
-            <span className="role-chip">{user.role}</span>
-            <span className="oh-id">{user.email}</span>
-          </div>
-          <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
-        </div>
+      <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head-row"><h3>{user.name || user.email}</h3><span className="role-chip">{user.role}</span><span className="muted" style={{ fontSize: 12 }}>{user.email}</span><button className="modal-close" onClick={onClose}><IconClose /></button></div>
 
-        <div className="ue-section">
-          <label className="ue-label">Status</label>
-          <label className="ue-toggle">
-            <input
-              type="checkbox"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-            />
+        <div style={{ marginBottom: 16 }}>
+          <label>Status</label>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 500 }}>
+            <input type="checkbox" style={{ width: 'auto' }} checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
             <span>{isActive ? 'Active' : 'Inactive'}</span>
           </label>
         </div>
 
-        <div className="ue-section">
-          <label className="ue-label">Manager</label>
-          <select
-            className="ue-manager-select role-select"
-            value={manager}
-            onChange={(e) => setManager(e.target.value)}
-          >
+        <div style={{ marginBottom: 16 }}>
+          <label>Manager</label>
+          <select className="role-select" value={manager} onChange={(e) => setManager(e.target.value)}>
             <option value="">— none —</option>
-            {managers
-              .filter((m) => m.id !== user.id)
-              .map((m) => (
-                <option key={m.id} value={m.id}>{m.name || m.email}</option>
-              ))}
+            {managers.filter((m) => m.id !== user.id).map((m) => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}
           </select>
         </div>
 
-        <div className="ue-section">
-          <label className="ue-label">Area scope</label>
-          <p className="ue-hint">
-            Set any combination. Assignment matches by society first, then falls
-            back to micro-market via the society → micro-market mapping. City is
-            used for manager visibility only.
-          </p>
-          <div className="ue-scope-grid">
+        <div>
+          <label>Area scope</label>
+          <p className="page-hint">Set any combination. Assignment matches society first, then micro-market. City is used for manager visibility.</p>
+          <div className="form-grid">
             {SCOPE_LEVELS.map((lvl) => (
-              <div key={lvl.key} className="ue-scope-col ue-scope-active">
-                <label className="ue-scope-head">
-                  {lvl.label}
-                  <span className="ue-scope-count">
-                    {valueFor[lvl.key].length || ''}
-                  </span>
-                </label>
-                <SearchableMultiSelect
-                  options={optionsFor[lvl.key]}
-                  value={valueFor[lvl.key]}
-                  onChange={setterFor[lvl.key]}
-                  placeholder={`Select ${lvl.label.toLowerCase()}…`}
-                />
+              <div key={lvl.key}>
+                <label>{lvl.label} <span className="muted">{valueFor[lvl.key].length || ''}</span></label>
+                <SearchableMultiSelect options={optionsFor[lvl.key]} value={valueFor[lvl.key]} onChange={setterFor[lvl.key]} placeholder={`Select ${lvl.label.toLowerCase()}…`} />
               </div>
             ))}
           </div>
         </div>
 
         {error && <div className="modal-error">{error}</div>}
-
-        <div className="modal-actions">
-          <button className="btn-ghost" onClick={onClose} disabled={saving}>Cancel</button>
-          <button className="btn-primary" onClick={save} disabled={saving}>
-            {saving ? 'Saving…' : 'Save'}
-          </button>
-        </div>
+        <div className="modal-actions"><span style={{ flex: 1 }} /><button className="btn-ghost" onClick={onClose} disabled={saving}>Cancel</button><button className="btn-primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button></div>
       </div>
     </div>
   );

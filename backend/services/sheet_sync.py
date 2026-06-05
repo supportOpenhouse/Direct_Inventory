@@ -3,6 +3,10 @@
 The backend just receives JSON, dedups by listing_link, upserts raw fields,
 assigns OH-IDs + RMs to new rows. Workflow fields (stage, notes, assignments,
 oh_id) are NEVER touched by sync. Removed-from-sheet rows stay in the DB.
+
+New rows land in the `lead` stage — unacted intake. An RM works the lead from
+there (lead → active → qualified → call_not_received / follow_up /
+visit_scheduled / rejected).
 """
 from __future__ import annotations
 
@@ -74,6 +78,7 @@ def _normalize_row(raw: dict) -> dict | None:
         "unit_no":      _txt(["unit_no", "unit", "flat_no", "flat_number"]),
         "price":        _parse_int(rec.get("price")),
         "seller_name":  (rec.get("seller_name") or "").strip() or None,
+        "seller_phone": _txt(["seller_phone", "phone", "contact", "contact_no", "mobile"]),
         "posting_date": _parse_date(rec.get("posting_date")),
         "listing_link": listing,
     }
@@ -117,7 +122,9 @@ def run_push_sync(conn, rows: list[dict], *, actor_email: str = "system:apps-scr
                             bedrooms = %s, area_sqft = %s, floor = %s,
                             tower = COALESCE(%s, tower),
                             unit_no = COALESCE(%s, unit_no),
-                            price = %s, seller_name = %s, posting_date = %s,
+                            price = %s, seller_name = %s,
+                            seller_phone = COALESCE(%s, seller_phone),
+                            posting_date = %s,
                             last_synced_at = NOW()
                         WHERE listing_link = %s
                         """,
@@ -125,7 +132,8 @@ def run_push_sync(conn, rows: list[dict], *, actor_email: str = "system:apps-scr
                             rec["source"], rec["city"], rec["locality"], rec["society"],
                             rec["bedrooms"], rec["area_sqft"], rec["floor"],
                             rec.get("tower"), rec.get("unit_no"),
-                            rec["price"], rec["seller_name"], rec["posting_date"],
+                            rec["price"], rec["seller_name"], rec.get("seller_phone"),
+                            rec["posting_date"],
                             rec["listing_link"],
                         ),
                     )
@@ -142,11 +150,11 @@ def run_push_sync(conn, rows: list[dict], *, actor_email: str = "system:apps-scr
                     INSERT INTO inventory (
                         oh_id, source, city, locality, society, bedrooms, area_sqft,
                         floor, tower, unit_no,
-                        price, seller_name, posting_date, listing_link,
+                        price, seller_name, seller_phone, posting_date, listing_link,
                         stage, assigned_rm_ids, assigned_mgr_id, follow_up_at, last_synced_at
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s,
                               %s, %s, %s,
-                              %s, %s, %s, %s,
+                              %s, %s, %s, %s, %s,
                               'lead', %s, %s,
                               (NOW() AT TIME ZONE 'Asia/Kolkata')::DATE, NOW())
                     """,
@@ -154,7 +162,8 @@ def run_push_sync(conn, rows: list[dict], *, actor_email: str = "system:apps-scr
                         oh_id, rec["source"], rec["city"], rec["locality"], rec["society"],
                         rec["bedrooms"], rec["area_sqft"], rec["floor"],
                         rec.get("tower"), rec.get("unit_no"),
-                        rec["price"], rec["seller_name"], rec["posting_date"], rec["listing_link"],
+                        rec["price"], rec["seller_name"], rec.get("seller_phone"),
+                        rec["posting_date"], rec["listing_link"],
                         [rm_id] if rm_id else [], mgr_id,
                     ),
                 )

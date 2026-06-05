@@ -12,6 +12,56 @@ bp = Blueprint("users", __name__, url_prefix="/api/users")
 VALID_ROLES = {"admin", "manager", "rm"}
 
 
+@bp.get("/profile")
+@require_auth()
+def my_profile():
+    """The signed-in user's own profile: identity + scope + manager + team.
+
+    `team` = users who report to me (manager = my id) — relevant for admin and
+    manager. `manager` = the user my `manager` column points at (managers/rm).
+    Any authenticated role may read their own profile. Admins may pass
+    `?user_id=<id>` to view another user's profile (the "view as" POV).
+    """
+    uid = g.user["id"]
+    req_uid = request.args.get("user_id", type=int)
+    if req_uid and req_uid != uid:
+        if g.user["role"] != "admin":
+            return jsonify({"error": "forbidden"}), 403
+        uid = req_uid
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT u.id, u.email, u.name, u.phone, u.role, u.cities, u.society, "
+                "       u.micro_market, u.is_active, "
+                "       m.id AS manager_id, m.name AS manager_name, m.email AS manager_email "
+                "FROM users u LEFT JOIN users m ON m.id = u.manager "
+                "WHERE u.id = %s",
+                (uid,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return jsonify({"error": "user not found"}), 404
+            cur.execute(
+                "SELECT id, name, email, role, is_active FROM users "
+                "WHERE manager = %s ORDER BY role, name, email",
+                (uid,),
+            )
+            team = cur.fetchall()
+        manager = None
+        if row.get("manager_id"):
+            manager = {"id": row["manager_id"], "name": row["manager_name"], "email": row["manager_email"]}
+        return jsonify({
+            "id": row["id"], "email": row["email"], "name": row["name"],
+            "phone": row["phone"], "role": row["role"],
+            "cities": row["cities"] or [], "society": row["society"] or [],
+            "micro_market": row["micro_market"] or [],
+            "manager": manager, "team": team,
+        })
+    finally:
+        conn.close()
+
+
 @bp.get("")
 @require_auth("admin", "manager")
 def list_users():

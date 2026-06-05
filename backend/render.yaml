@@ -10,21 +10,27 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
-      - key: DATABASE_URL
-        sync: false
-      - key: PROPERTIES_DB_URL
-        sync: false
-      - key: JWT_SECRET
-        generateValue: true
-      - key: GOOGLE_OAUTH_CLIENT_ID
-        sync: false
       - key: ALLOWED_EMAIL_DOMAIN
         value: openhouse.in
-      - key: SYNC_TOKEN
-        generateValue: true
+      - key: CP_DB_URL
+        sync: false
+      - key: CP_INVENTORY_TABLE
+        value: submissions
+      - key: DATABASE_URL
+        sync: false
       - key: FORMS_APP_URL
         sync: false
-      - key: INTERNAL_API_KEY
-        sync: false
       - key: FRONTEND_ORIGIN
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: LOG_LEVEL
+        value: INFO
+      - key: PROPERTIES_DB_URL
+        sync: false
+      - key: SYNC_TOKEN
+        generateValue: true
+      - key: JWT_SECRET
+        generateValue: true
+      - key: INTERNAL_API_KEY
         sync: false

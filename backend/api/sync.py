@@ -8,10 +8,6 @@ and POSTs the full sheet contents:
   X-Sync-Token: <SYNC_TOKEN>
   Content-Type: application/json
   { "rows": [ { "source": "...", "city": "...", ... }, ... ] }
-
-Admin can also trigger by re-running the Apps Script's `runSync` function from
-the script editor — no admin UI button (we don't have a way to fire Apps Script
-remotely without yet more auth).
 """
 from __future__ import annotations
 
@@ -19,8 +15,8 @@ from flask import Blueprint, jsonify, request
 
 from .. import config
 from ..db import get_conn
-from ..services.sheet_sync import run_push_sync
 from ..services.oh_pricing_sync import run_pricing_sync
+from ..services.sheet_sync import run_push_sync
 
 bp = Blueprint("sync", __name__, url_prefix="/api/sync")
 

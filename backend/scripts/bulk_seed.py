@@ -214,38 +214,42 @@ def main(csv_path: str):
             update_records = [r for r in normalized if r["listing_link"] in existing]
             print(f"  new: {len(new_records)} | already-present (will UPDATE): {len(update_records)}")
 
-            print("fetching rm_mapping + counters ...")
-            mappings = fetch_rm_mappings(cur)
+            print("fetching counters ...")
             counters = fetch_counters(cur)
-            print(f"  rm_mappings: {len(mappings)} | counters: {counters}")
+            print(f"  counters: {counters}")
 
             print("allocating OH-IDs ...")
             ids, new_counters = allocate_oh_ids(new_records, counters)
 
-            print("resolving RM assignments ...")
+            # POC assignment is no longer resolved at seed time. The rm_mapping
+            # table was retired in migration 016; RMs now resolve from the
+            # users table (society → micro_market → city). New rows land with an
+            # empty assigned_rm_ids and stage 'lead'; run the assign-missing
+            # backfill afterwards to populate POCs:
+            #     POST /api/inventory/assign-missing  (or it runs on board load).
+            print("building insert tuples ...")
             tuples = []
             for rec, oh_id in zip(new_records, ids):
-                rm_id, mgr_id = resolve(mappings, city=rec["city"],
-                                        locality=rec["locality"], society=rec["society"])
                 tuples.append((
                     oh_id, rec["source"], rec["city"], rec["locality"], rec["society"],
                     rec["bedrooms"], rec["area_sqft"], rec["floor"], rec["price"],
                     rec["seller_name"], rec["posting_date"], rec["listing_link"],
-                    "lead", rm_id, mgr_id,
+                    "lead",
                 ))
 
             if tuples:
                 print(f"bulk INSERT of {len(tuples)} rows ...")
-                # follow_up_at defaults to today (IST) — matches created_at's date
-                # and the Board's "Posted" column.
+                # assigned_rm_ids defaults to '{}'; follow_up_at defaults to
+                # today (IST) — matches created_at's date and the Board's
+                # "Posted" column.
                 execute_values(cur, """
                     INSERT INTO inventory (
                         oh_id, source, city, locality, society, bedrooms, area_sqft,
                         floor, price, seller_name, posting_date, listing_link,
-                        stage, assigned_rm_id, assigned_mgr_id, follow_up_at, last_synced_at
+                        stage, follow_up_at, last_synced_at
                     ) VALUES %s
                 """, tuples,
-                template="(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+                template="(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
                          "(NOW() AT TIME ZONE 'Asia/Kolkata')::DATE, NOW())",
                 page_size=500)
 

@@ -3,8 +3,9 @@ import { api } from '../api/client.js';
 import { REJECT_REASONS, STAGES, stageLabel, todayISO } from '../utils/format.js';
 
 /**
- * Floating bar shown when the user is in select-mode and has ≥1 cards selected.
- * Supports: change stage (with stage_reason picker), assign RM, set follow-up date.
+ * Floating bar shown in select-mode with ≥1 rows selected. Supports: change
+ * stage (with reject-reason picker), assign RM, set follow-up date, toggle
+ * priority. One POST /api/inventory/bulk-update for the whole selection.
  */
 export default function BulkActionBar({ selected, role, onCleared, onDone }) {
   const [action, setAction] = useState('');     // 'stage' | 'assign_rm' | 'follow_up' | 'priority_on' | 'priority_off'
@@ -25,7 +26,7 @@ export default function BulkActionBar({ selected, role, onCleared, onDone }) {
     setError(null);
     const oh_ids = Array.from(selected);
     if (!oh_ids.length) return;
-    let updates = {};
+    const updates = {};
     if (action === 'stage') {
       if (!stage) { setError('Pick a stage'); return; }
       if (stage === 'visit_scheduled') { setError('Visit Scheduled needs the per-row modal'); return; }
@@ -36,9 +37,7 @@ export default function BulkActionBar({ selected, role, onCleared, onDone }) {
       }
     } else if (action === 'assign_rm') {
       if (!rmId) { setError('Pick an RM'); return; }
-      // Multi-RM column — send as a single-element array. Replaces any
-      // existing assignment on the selected rows.
-      updates.assigned_rm_ids = [Number(rmId)];
+      updates.assigned_rm_ids = [Number(rmId)]; // replaces any existing assignment
     } else if (action === 'follow_up') {
       if (!followUp) { setError('Pick a follow-up date'); return; }
       updates.follow_up_at = followUp;

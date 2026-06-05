@@ -71,11 +71,11 @@ def read_csv_rejected(path: str) -> dict:
 
 
 def fetch_db_state(cur, ids: list[int]) -> dict:
-    """Return {id: {'oh_id':..., 'stage':..., 'stage_reason':...}} for given ids."""
+    """Return {id: {'oh_id':..., 'stage':..., 'reject_reason':...}} for given ids."""
     if not ids:
         return {}
     cur.execute(
-        "SELECT id, oh_id, stage, stage_reason FROM inventory WHERE id = ANY(%s)",
+        "SELECT id, oh_id, stage, stage_reason AS reject_reason FROM inventory WHERE id = ANY(%s)",
         (ids,),
     )
     return {r["id"]: dict(r) for r in cur.fetchall()}
@@ -141,8 +141,8 @@ def main():
                     oh_id_mismatch.append((rid, csv_oh, row["oh_id"]))
                     continue
                 db_stage  = row["stage"]
-                db_reason = row["stage_reason"]
-                if db_stage == "lead":
+                db_reason = row["reject_reason"]
+                if db_stage == "qualified":
                     to_update.append((rid, row["oh_id"], csv_reason, db_stage, db_reason))
                 elif db_stage == "rejected":
                     if db_reason == csv_reason:
@@ -233,7 +233,7 @@ def main():
                        updated_at = NOW()
                   FROM _stage_cleanup c
                  WHERE i.id = c.id
-                   AND i.stage = 'lead'
+                   AND i.stage = 'qualified'
             """)
             updated = cur.rowcount
             print(f"  rows updated: {updated}")
@@ -248,7 +248,7 @@ def main():
                 "VALUES (%s, 'inventory', 'bulk_stage_cleanup', %s::jsonb)",
                 (
                     "system:csv_cleanup",
-                    f'{{"updated": {updated}, "from_stage": "lead", "to_stage": "rejected", '
+                    f'{{"updated": {updated}, "from_stage": "qualified", "to_stage": "rejected", '
                     f'"csv": "{os.path.basename(args.csv_path)}"}}',
                 ),
             )

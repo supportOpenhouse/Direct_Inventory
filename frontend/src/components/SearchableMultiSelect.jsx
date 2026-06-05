@@ -1,37 +1,26 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-/**
- * Multiselect with a type-to-filter box and selected-chips. Built for long
- * lists (hundreds/thousands of societies).
- *
- * The popup is rendered in a portal with fixed positioning so it is never
- * clipped by the narrow grid column it lives in. It always opens downward;
- * its height is capped to the space available below so it stays on-screen.
- * (The host modal is pinned near the top of the viewport to leave room.)
- */
-const MENU_MIN_WIDTH = 380;   // px — wide enough for long society names
-const LIST_CAP = 200;         // max rows rendered at once
+const MENU_MIN_WIDTH = 320;
+const LIST_CAP = 200;
 
+/**
+ * Type-to-filter multiselect with selected chips, rendered in a portal so it
+ * is never clipped. `single` mode commits + closes on pick (used for one-of
+ * fields like society on Add Inventory).
+ */
 export default function SearchableMultiSelect({
-  options, value, onChange, placeholder = 'Select…', disabled = false,
-  single = false,
+  options, value, onChange, placeholder = 'Select…', disabled = false, single = false,
 }) {
-  // single mode:
-  //   value is a string (or '' / null) and onChange receives the same shape.
-  //   Picking an option commits and closes; no checkboxes; no chips. Used
-  //   wherever the host field is conceptually one-of-many (e.g. society on
-  //   the Add Inventory modal).
-  const selected = single
-    ? (value || '')
-    : (Array.isArray(value) ? value : []);
-  const isSel = (opt) => single ? selected === opt : selected.includes(opt);
+  const selected = single ? (value || '') : (Array.isArray(value) ? value : []);
+  const isSel = (opt) => (single ? selected === opt : selected.includes(opt));
   const selectedCount = single ? (selected ? 1 : 0) : selected.length;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [pos, setPos] = useState(null);   // { left, top?, bottom?, width }
+  const [pos, setPos] = useState(null);
   const btnRef = useRef(null);
   const menuRef = useRef(null);
+  const inputRef = useRef(null);
 
   const computePos = useCallback(() => {
     const btn = btnRef.current;
@@ -39,16 +28,11 @@ export default function SearchableMultiSelect({
     const r = btn.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-
     const width = Math.min(Math.max(r.width, MENU_MIN_WIDTH), vw - 16);
     let left = r.left;
     if (left + width > vw - 8) left = Math.max(8, vw - 8 - width);
-
-    // Always open downward; cap the height to whatever room is below the
-    // button so the popup never runs off the bottom of the screen.
     const top = r.bottom + 4;
     const maxHeight = Math.max(180, vh - top - 12);
-
     setPos({ left, width, top, maxHeight });
   }, []);
 
@@ -58,10 +42,7 @@ export default function SearchableMultiSelect({
     const onMove = () => computePos();
     window.addEventListener('scroll', onMove, true);
     window.addEventListener('resize', onMove);
-    return () => {
-      window.removeEventListener('scroll', onMove, true);
-      window.removeEventListener('resize', onMove);
-    };
+    return () => { window.removeEventListener('scroll', onMove, true); window.removeEventListener('resize', onMove); };
   }, [open, computePos]);
 
   useEffect(() => {
@@ -69,15 +50,12 @@ export default function SearchableMultiSelect({
     function onDoc(e) {
       if (btnRef.current?.contains(e.target)) return;
       if (menuRef.current?.contains(e.target)) return;
-      setOpen(false);
+      setOpen(false); setQuery('');
     }
-    function onKey(e) { if (e.key === 'Escape') setOpen(false); }
+    function onKey(e) { if (e.key === 'Escape') { setOpen(false); setQuery(''); } }
     document.addEventListener('mousedown', onDoc);
     document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDoc);
-      document.removeEventListener('keydown', onKey);
-    };
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
   }, [open]);
 
   const filtered = useMemo(() => {
@@ -87,76 +65,35 @@ export default function SearchableMultiSelect({
   }, [options, query]);
 
   function pick(opt) {
-    if (single) {
-      onChange(opt);
-      setOpen(false);
-      setQuery('');
-      return;
-    }
+    if (single) { onChange(opt); setOpen(false); setQuery(''); return; }
     if (selected.includes(opt)) onChange(selected.filter((v) => v !== opt));
     else onChange([...selected, opt]);
   }
 
-  const label = single
-    ? (selected || placeholder)
-    : (selectedCount === 0 ? placeholder : `${selectedCount} selected`);
+  const label = single ? (selected || placeholder) : (selectedCount === 0 ? placeholder : `${selectedCount} selected`);
 
   const menu = open && !disabled && pos
     ? createPortal(
-        <div
-          ref={menuRef}
-          className="sms-menu"
-          style={{
-            position: 'fixed',
-            left: pos.left,
-            top: pos.top,
-            width: pos.width,
-            maxHeight: pos.maxHeight,
-          }}
-        >
-          <input
-            className="sms-search"
-            placeholder="Search…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            autoFocus
-          />
+        <div ref={menuRef} className="sms-menu" style={{ position: 'fixed', left: pos.left, top: pos.top, width: pos.width, maxHeight: pos.maxHeight }}>
           {selectedCount > 0 && (
-            <button
-              type="button"
-              className="sms-clear"
-              onClick={() => { onChange(single ? '' : []); if (single) setOpen(false); }}
-            >
+            <button type="button" className="sms-clear" onClick={() => { onChange(single ? '' : []); if (single) setOpen(false); }}>
               {single ? 'Clear selection' : `Clear ${selectedCount} selected`}
             </button>
           )}
           <div className="sms-list">
             {filtered.length === 0 && <div className="sms-empty">No matches.</div>}
-            {filtered.map((opt) => (
-              single ? (
-                <button
-                  key={opt}
-                  type="button"
-                  className={`sms-item sms-item-single ${isSel(opt) ? 'sms-item-selected' : ''}`}
-                  onClick={() => pick(opt)}
-                >
-                  <span>{opt}</span>
-                </button>
-              ) : (
-                <label key={opt} className="sms-item">
-                  <input
-                    type="checkbox"
-                    checked={isSel(opt)}
-                    onChange={() => pick(opt)}
-                  />
-                  <span>{opt}</span>
-                </label>
-              )
-            ))}
+            {filtered.map((opt) => (single ? (
+              <button key={opt} type="button" className={`sms-item sms-item-single ${isSel(opt) ? 'sms-item-selected' : ''}`} onClick={() => pick(opt)}>
+                <span>{opt}</span>
+              </button>
+            ) : (
+              <label key={opt} className="sms-item">
+                <input type="checkbox" checked={isSel(opt)} onChange={() => pick(opt)} />
+                <span>{opt}</span>
+              </label>
+            )))}
             {!query && options.length > filtered.length && (
-              <div className="sms-more">
-                Showing first {filtered.length} of {options.length} — type to search.
-              </div>
+              <div className="sms-more">Showing first {filtered.length} of {options.length} — type to search.</div>
             )}
           </div>
         </div>,
@@ -164,30 +101,34 @@ export default function SearchableMultiSelect({
       )
     : null;
 
+  function toggle() {
+    setOpen((s) => {
+      const next = !s;
+      if (next) { setTimeout(() => inputRef.current?.focus(), 0); } else { setQuery(''); }
+      return next;
+    });
+  }
+
   return (
     <div className={`sms ${disabled ? 'sms-disabled' : ''}`}>
-      <button
-        type="button"
-        ref={btnRef}
-        className="sms-btn"
-        disabled={disabled}
-        onClick={() => setOpen((s) => !s)}
-      >
-        <span className={selectedCount ? '' : 'sms-placeholder'}>{label}</span>
-        <span className="sms-caret">▾</span>
-      </button>
-
+      <div ref={btnRef} className="sms-control">
+        <input
+          ref={inputRef}
+          type="text"
+          className="sms-input"
+          disabled={disabled}
+          value={query}
+          placeholder={label}
+          onFocus={() => setOpen(true)}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+        />
+        <span className="sms-caret" role="button" tabIndex={-1} onMouseDown={(e) => { e.preventDefault(); if (!disabled) toggle(); }}>▾</span>
+      </div>
       {menu}
-
       {!single && selectedCount > 0 && (
         <div className="sms-chips">
-          {selected.map((v) => (
-            <span key={v} className="sms-chip">
-              {v}
-              {!disabled && (
-                <button type="button" onClick={() => pick(v)} aria-label={`Remove ${v}`}>×</button>
-              )}
-            </span>
+          {selected.map((vv) => (
+            <span key={vv} className="sms-chip">{vv}{!disabled && <button type="button" onClick={() => pick(vv)} aria-label={`Remove ${vv}`}>×</button>}</span>
           ))}
         </div>
       )}

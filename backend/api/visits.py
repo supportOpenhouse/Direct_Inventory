@@ -7,6 +7,8 @@ which forwards to FORMS_APP_URL/api/external/schedule with INTERNAL_API_KEY.
 Inbound webhook: Forms app calls
   POST /api/visits/forms-webhook  (X-Internal-Key)
 to mark visits as completed (or rescheduled/cancelled) and flip our stage.
+
+This is the ONLY backend connection the Pipeline / acquisition flow has today.
 """
 from __future__ import annotations
 
@@ -195,19 +197,12 @@ def schedule_visit():
             field_exec_name = fx["name"]
 
             # Adapt Direct columns to Forms' canonical schema.
-            #   lead_id      — oh_id (e.g. OHLGD0123); Forms keys on this.
-            #   first_name   — full seller name; Forms has no last_name field.
-            #   area_sqft    — string in Forms' schema.
-            #   demand_price — in lakhs (rupees / 100000), matching the
-            #                  `demand_price` column convention in Forms'
-            #                  properties table.
             configuration = (
                 f"{inv['bedrooms']}BHK" if inv.get("bedrooms") is not None else ""
             )
             # Forms' demand_price column is INT lakhs. User-supplied value wins
             # (modal lets them override per visit); fall back to the lead's own
-            # price rounded to lakhs. round() also fixes float division noise
-            # like 9_999_999 / 100000 = 99.99999, which Postgres would reject.
+            # price rounded to lakhs. round() also fixes float division noise.
             if body_demand_price is not None:
                 demand_price_lakhs = body_demand_price
             elif inv.get("price") in (None, ""):
@@ -275,16 +270,21 @@ def schedule_visit():
                 }), 502
 
             visit_id = forms_response.get("visit_id")
+            # `prev` captures the pre-update stage in the same statement (CTEs see
+            # the snapshot before the UPDATE), so we can log a proper stage_change.
             cur.execute(
-                """UPDATE inventory SET
+                """WITH prev AS (SELECT stage FROM inventory WHERE oh_id = %s)
+                   UPDATE inventory SET
                        stage = 'visit_scheduled',
                        forms_visit_id = %s,
                        visit_at = %s,
                        visit_exec = %s
-                   WHERE oh_id = %s RETURNING *""",
-                (visit_id, visit_at, field_exec_phone, oh_id),
+                   WHERE oh_id = %s
+                   RETURNING *, (SELECT stage FROM prev) AS prev_stage""",
+                (oh_id, visit_id, visit_at, field_exec_phone, oh_id),
             )
             row = cur.fetchone()
+            old_stage = row.pop("prev_stage", None)
             log_activity(
                 cur,
                 actor_user_id=g.user["id"],
@@ -302,27 +302,22 @@ def schedule_visit():
                     "forms_visit_id": visit_id,
                 },
             )
-            # Companion stage_change row. The user report and conversion funnel
-            # are built solely from action='stage_change' rows (see
-            # api/activity.py _WINNERS_CTE and the funnel query) — scheduling a
-            # visit moves the stage directly here without ever going through the
-            # inventory PATCH that normally emits stage_change, so without this
-            # the RM gets no credit for the visit and the funnel's
-            # visit_scheduled count stays empty. The rich 'visit_scheduled' row
-            # above still drives the activity-feed display; this one exists only
-            # so the reports see the lead → visit_scheduled transition.
-            log_activity(
-                cur,
-                actor_user_id=g.user["id"],
-                actor_email=g.user["email"],
-                entity_type="inventory",
-                entity_id=oh_id,
-                action="stage_change",
-                field="stage",
-                before_value=inv.get("stage"),
-                after_value="visit_scheduled",
-                metadata={"via": "visit_schedule"},
-            )
+            # Also log the stage transition as a stage_change so it's visible to
+            # the morning-cohort / NEW-badge reconstructions (which key on
+            # before/after_value). Skip if the stage didn't actually change.
+            if old_stage and old_stage != "visit_scheduled":
+                log_activity(
+                    cur,
+                    actor_user_id=g.user["id"],
+                    actor_email=g.user["email"],
+                    entity_type="inventory",
+                    entity_id=oh_id,
+                    action="stage_change",
+                    field="stage",
+                    before_value=old_stage,
+                    after_value="visit_scheduled",
+                    metadata={"via": "visit_schedule"},
+                )
         return jsonify(row)
     finally:
         conn.close()
@@ -345,7 +340,7 @@ def forms_webhook():
     if status == "completed":
         new_stage = "visit_completed"
     elif status == "cancelled":
-        new_stage = "lead"  # back to top of pipeline; admin can re-route
+        new_stage = "qualified"  # back to top of pipeline; admin can re-route
     elif status == "rescheduled":
         new_stage = "visit_scheduled"
 

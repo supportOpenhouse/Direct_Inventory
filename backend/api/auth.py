@@ -38,6 +38,16 @@ def _issue_jwt(user_row: dict) -> str:
     return jwt.encode(payload, config.JWT_SECRET, algorithm=config.JWT_ALGORITHM)
 
 
+def _public_user(user: dict) -> dict:
+    return {
+        "id": user["id"],
+        "email": user["email"],
+        "name": user["name"],
+        "role": user["role"],
+        "cities": user["cities"] or [],
+    }
+
+
 @bp.post("/google")
 def google_login():
     body = request.get_json(silent=True) or {}
@@ -109,16 +119,7 @@ def google_login():
             )
 
             token_str = _issue_jwt(user)
-            return jsonify({
-                "token": token_str,
-                "user": {
-                    "id": user["id"],
-                    "email": user["email"],
-                    "name": user["name"],
-                    "role": user["role"],
-                    "cities": user["cities"] or [],
-                },
-            })
+            return jsonify({"token": token_str, "user": _public_user(user)})
     finally:
         conn.close()
 
@@ -126,7 +127,7 @@ def google_login():
 def require_auth(*allowed_roles: str):
     """Decorator: require a valid JWT and (optionally) one of allowed_roles.
 
-    On success, sets `g.user = {id, email, role, cities}`.
+    On success, sets `g.user = {id, email, role, cities, ...}`.
     """
     def deco(fn):
         @wraps(fn)

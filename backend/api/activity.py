@@ -1,14 +1,19 @@
-"""Read-only activity log endpoints.
+"""Read-only activity log endpoints + per-user reports.
 
-Admin/manager only. Filters (all optional, AND-combined):
+Activity list is admin/manager only. Filters (all optional, AND-combined):
   q              — UID prefix/substring (matches activity_log.entity_id)
   action         — slug e.g. 'login', 'update', 'stage_change'
   entity_type    — 'auth' | 'inventory' | 'user' | 'sync' …
-  actor_email    — exact match
+  actor_email    — exact match (or the 'apps-script:*' grouping sentinel)
   from / to      — ISO date inclusive (server time)
   sort, dir      — whitelisted sort
 
 LEFT JOIN against users so we can show actor name alongside email.
+
+The user-report endpoints dedupe to the LATEST stage_change per (actor, IST
+day, lead) — the "winner" — then aggregate. A winner whose final stage is the
+intake stage `lead` is dropped: moving a lead back to the intake stage is not
+work done.
 """
 from __future__ import annotations
 
@@ -77,8 +82,16 @@ def list_activity():
     params: list = []
 
     if q:
-        where.append("a.entity_id ILIKE %s")
-        params.append(f"%{q}%")
+        # Free-text search across actor (name + email), action, category,
+        # UID, the changed field, before/after values, and the details blob.
+        like = f"%{q}%"
+        where.append(
+            "(a.entity_id ILIKE %s OR a.actor_email ILIKE %s OR u.name ILIKE %s "
+            "OR a.action ILIKE %s OR a.entity_type ILIKE %s OR a.field ILIKE %s "
+            "OR a.before_value ILIKE %s OR a.after_value ILIKE %s "
+            "OR a.metadata::text ILIKE %s)"
+        )
+        params.extend([like] * 9)
     if action:
         where.append("a.action = %s")
         params.append(action)
@@ -148,10 +161,9 @@ def filter_options():
             cur.execute("SELECT DISTINCT entity_type FROM activity_log WHERE entity_type IS NOT NULL ORDER BY entity_type")
             entity_types = [r["entity_type"] for r in cur.fetchall()]
             # Every Apps-Script batch posts under a distinct synthetic actor_email
-            # (e.g. apps-script:direct-inventory:batch-5/77). Don't dump all of those
-            # into the dropdown — collapse them into a single "Apps Script Sync"
-            # entry whose value is the sentinel `apps-script:*`. The list endpoint
-            # special-cases that value to a LIKE 'apps-script:%' filter.
+            # (e.g. apps-script:direct-inventory:batch-5/77). Collapse them into a
+            # single "Apps Script Sync" entry whose value is the sentinel
+            # `apps-script:*`. The list endpoint special-cases that value.
             cur.execute(
                 "SELECT DISTINCT a.actor_email AS email, u.name "
                 "FROM activity_log a LEFT JOIN users u ON u.email = a.actor_email "
@@ -160,7 +172,6 @@ def filter_options():
                 "ORDER BY a.actor_email"
             )
             actors = cur.fetchall()
-            # Add the single grouped entry if any apps-script:* row exists.
             cur.execute(
                 "SELECT 1 FROM activity_log WHERE actor_email LIKE 'apps-script:%' LIMIT 1"
             )
@@ -221,12 +232,11 @@ def _parse_ist_range(default_to_today: bool = True):
 # Joins are done in the outer query so each endpoint can pull what it needs.
 #
 # Lead-days whose LATEST action was moving to 'lead' are dropped
-# entirely. Moving a lead back to the 'lead' stage (from rejected, follow_up,
-# etc.) is not "work done" on the lead — the user shouldn't be credited
-# with that lead for that day. Filtering here, AFTER the DISTINCT ON,
-# means we don't silently fall back to an earlier non-lead action;
-# we simply omit the lead-day. The filter is in the CTE so every endpoint
-# (per-user summary, per-day, leads detail, analytics) stays consistent.
+# entirely. Moving a lead back to the intake stage is not "work done" on the
+# lead — the user shouldn't be credited for that lead that day. Filtering here,
+# AFTER the DISTINCT ON, means we omit the lead-day rather than silently falling
+# back to an earlier action. The filter lives in the CTE so every endpoint stays
+# consistent.
 _WINNERS_CTE = """
     WITH winners AS (
         SELECT * FROM (
@@ -251,7 +261,7 @@ _WINNERS_CTE = """
                      a.entity_id,
                      a.created_at DESC
         ) latest
-        WHERE latest.final_stage IS DISTINCT FROM 'lead'
+        WHERE latest.final_stage <> 'lead'
     )
 """
 
@@ -306,8 +316,6 @@ def user_report():
            users=email1,email2 (optional filter).
     Admin sees every user; a manager sees only their own RMs; an RM
     sees only themselves.
-    Response: { from, to, users: [{ actor_email, actor_name, actor_role,
-                total, counts, days_active }] }
     """
     try:
         date_from, date_to, start_utc, end_utc = _parse_ist_range()
@@ -320,8 +328,6 @@ def user_report():
     try:
         with conn, conn.cursor() as cur:
             if g.user["role"] == "manager":
-                # A manager only ever sees their RMs — intersect any explicit
-                # users= filter with that set.
                 rm_emails = _manager_rm_emails(cur, g.user["id"])
                 if emails:
                     emails = [e for e in emails if e.strip().lower() in rm_emails]
@@ -334,8 +340,6 @@ def user_report():
                         "users": [],
                     })
             elif g.user["role"] == "rm":
-                # An RM can only ever see themselves — ignore any users=
-                # filter the client sent and force self.
                 emails = [(g.user["email"] or "").strip().lower()]
 
             extra_where = "AND a.actor_email = ANY(%s)" if emails else ""
@@ -362,9 +366,6 @@ def user_report():
                 "actor_email": email,
                 "actor_name": r.get("actor_name"),
                 "actor_role": r.get("actor_role"),
-                # `total` is the action count (each winner row = one action).
-                # A lead actioned on multiple days counts as multiple actions
-                # but as ONE unique lead — see `_oh_ids` below.
                 "total": 0,
                 "counts": {},
                 "_days": set(),
@@ -397,19 +398,14 @@ def user_report():
 def user_report_analytics():
     """Daily trend aggregated across all selected users (or all users in scope).
 
-    Same filters as /user-report (from, to, users). The per-user leaderboard,
-    overall stage distribution, and funnel rates are derived FE-side from
-    /user-report — this endpoint only adds the cross-user daily series which
-    can't be cheaply recomputed from that response.
-
-    Funnel reports DISTINCT leads that reached each canonical pipeline stage
-    in the period — `daily_trend` can double-count one lead across days,
-    which is wrong for a conversion funnel.
+    Same filters as /user-report (from, to, users). Adds the cross-user daily
+    series and a strict period-cohort funnel.
 
     Response: {
       from, to,
-      daily_trend: [{ day, total, counts: {stage: n} }],
-      funnel: { lead, visit_scheduled, visit_completed, offer_given },
+      daily_trend: [{ day, total, counts: {stage: n}, by_user: {email: n} }],
+      funnel: { qualified, visit_scheduled, visit_completed, offer_given },
+      user_names: { email: name },
     }
     """
     try:
@@ -455,30 +451,22 @@ def user_report_analytics():
 
             # Funnel — strict period-dependent cohort.
             #
-            # Cohort = leads that became assigned to the filtered users
-            # DURING the selected period. Practically that's
-            # `inventory.created_at IN period AND assigned_rm_id IN
-            # filtered_users` — auto-assignment runs at row creation in
-            # services/sheet_sync.py and api/inventory.py, so creation
-            # time is the assignment time for the common case.
+            # Cohort = leads created during the selected period that are
+            # assigned to the filtered users. Lead count comes from
+            # inventory.created_at (the assignment time for the common case),
+            # NEVER from activity_log — a user moving a lead back to the intake
+            # stage must not bump the new-lead count. For each subsequent
+            # pipeline stage we count how many cohort leads ever reached it
+            # (strict cohort → no >100% conversions).
             #
-            # The period DOES apply to the funnel (per Ashish: "In April,
-            # zero leads were assigned, the funnel should reflect that.
-            # In May, whatever new leads were assigned, it should count
-            # that.").
-            #
-            # Lead count NEVER comes from activity_log.after_value =
-            # 'lead' — a user moving a lead back to the 'lead' stage must
-            # not bump the new-lead count. Sourcing from inventory.created
-            # _at sidesteps the activity_log path entirely.
-            #
-            # For each subsequent pipeline stage we count how many of the
-            # cohort leads have ever reached that stage — strict cohort
-            # so stage_count <= cohort_size, no >100% conversions.
+            # Multi-RM: a lead is in the cohort if ANY of its assigned_rm_ids
+            # belongs to a filtered user.
             if emails:
                 cohort_user_clause = (
-                    "AND i.assigned_rm_id IN ("
-                    "  SELECT id FROM users WHERE LOWER(email) = ANY(%s)"
+                    "AND EXISTS ("
+                    "  SELECT 1 FROM users u "
+                    "  WHERE u.id = ANY(i.assigned_rm_ids) "
+                    "    AND LOWER(u.email) = ANY(%s)"
                     ")"
                 )
                 cohort_params: list = [
@@ -494,7 +482,7 @@ def user_report_analytics():
                 f"  {cohort_user_clause}",
                 cohort_params,
             )
-            lead_count = cur.fetchone()["leads"]
+            qualified_count = cur.fetchone()["leads"]
 
             cur.execute(
                 "WITH cohort AS ("
@@ -522,8 +510,6 @@ def user_report_analytics():
         d = r["day"]
         bucket = days.get(d)
         if bucket is None:
-            # by_user is keyed on actor_email so the FE can pick its own
-            # ordering / top-N and look up display names from user_names.
             bucket = {"day": d.isoformat(), "total": 0, "counts": {}, "by_user": {}}
             days[d] = bucket
         bucket["total"] += 1
@@ -536,7 +522,7 @@ def user_report_analytics():
 
     ordered = sorted(days.values(), key=lambda d: d["day"])
     funnel = {r["stage"]: r["leads"] for r in funnel_rows}
-    funnel["lead"] = lead_count
+    funnel["qualified"] = qualified_count
     return jsonify({
         "from": date_from.isoformat(),
         "to": date_to.isoformat(),
@@ -552,9 +538,6 @@ def user_report_days():
     """Per-day summary for a single user across an IST date range.
 
     Query: email (required), from, to (both default to today IST).
-    Response: { email, actor_name, actor_role, from, to, days: [{ day,
-                total, counts }] }
-
     Access: admin → any user; manager → themselves or one of their RMs;
     rm → only themselves.
     """
@@ -607,8 +590,6 @@ def user_report_days():
         "actor_role": actor_role,
         "from": date_from.isoformat(),
         "to": date_to.isoformat(),
-        # Distinct leads acted on across the whole range — differs from the
-        # sum of per-day totals when the same lead was actioned on >1 day.
         "unique_leads": len(unique_oh_ids),
         "days": ordered,
     })
@@ -620,10 +601,6 @@ def user_report_leads():
     """Full lead detail for one user on one IST day. Powers the drill-down modal.
 
     Query: email (required), date=YYYY-MM-DD (required).
-    Response: { email, date, leads: [{ oh_id, society, city, seller_name,
-                from_stage, final_stage, current_stage, stage_reason,
-                last_change_at }] }
-
     Access: admin → any user; manager → themselves or one of their RMs;
     rm → only themselves.
     """
@@ -644,7 +621,16 @@ def user_report_leads():
         _WINNERS_CTE.format(extra_where="AND a.actor_email = %s") +
         " SELECT w.oh_id, w.from_stage, w.final_stage, w.last_change_at, "
         "        i.society, i.city, i.seller_name, "
-        "        i.stage AS current_stage, i.stage_reason, i.notes "
+        "        i.stage AS current_stage, i.stage_reason, "
+        # Latest note authored ON this IST day (note_thread carries UTC
+        # timestamps; the day's start/end UTC bounds delimit the IST calendar day).
+        "        ( SELECT jsonb_build_object("
+        "                   'body', n->>'body', 'author_name', n->>'author_name', "
+        "                   'author_email', n->>'author_email', 'created_at', n->>'created_at') "
+        "          FROM jsonb_array_elements(COALESCE(i.note_thread, '[]'::jsonb)) AS n "
+        "          WHERE (n->>'created_at')::timestamptz >= %s "
+        "            AND (n->>'created_at')::timestamptz <  %s "
+        "          ORDER BY (n->>'created_at')::timestamptz DESC LIMIT 1 ) AS day_note "
         " FROM winners w LEFT JOIN inventory i ON i.oh_id = w.oh_id "
         " ORDER BY w.last_change_at DESC"
     )
@@ -656,7 +642,7 @@ def user_report_leads():
                 return err
             if not email:
                 return jsonify({"error": "email and date are required"}), 400
-            cur.execute(sql, (start_utc, end_utc, email))
+            cur.execute(sql, (start_utc, end_utc, email, start_utc, end_utc))
             rows = cur.fetchall()
     finally:
         conn.close()

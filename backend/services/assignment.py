@@ -1,8 +1,8 @@
 """POC (point-of-contact) assignment for inventory rows.
 
-POC is persisted on the inventory row (`assigned_rm_id` / `assigned_mgr_id`)
-and is the sole driver of RM visibility (see `_scope_clause` in inventory.py).
-Two paths populate it:
+POC is persisted on the inventory row (`assigned_rm_ids` / `assigned_mgr_id`)
+and is the sole driver of RM visibility (see `_scope_clause` in
+api/inventory/_common.py). Two paths populate it:
 
   - `resolve_assignment(cur, ...)`   — single new row at create / sync time.
   - `assign_missing_batch(conn, ...)` — periodic backfill for rows that came
@@ -16,7 +16,7 @@ RM resolution rules — first match wins:
      PROPERTIES_DB.master_societies, contains the lead's society.
   3. Active rm whose `cities[]` contains the lead's city ('Noida' expands to
      include 'Greater Noida' to match the city-tab convention).
-  4. Otherwise — no RM (assigned_rm_id stays NULL).
+  4. Otherwise — no RM (assigned_rm_ids stays empty).
 
 Manager comes from the matched RM's `users.manager`. At create time only,
 falls back to an active manager whose `cities[]` contains the row's city when
@@ -165,7 +165,7 @@ def assign_missing_batch(
 
     Each iteration scans `chunk_size` rows via an **id-cursor** —
     `WHERE id > cursor` advancing to `max(id)` of each chunk. That matters
-    because unmatchable societies stay NULL: a `LIMIT N ORDER BY id` without
+    because unmatchable societies stay empty: a `LIMIT N ORDER BY id` without
     a cursor keeps re-processing the same first N rows on every call and
     never reaches matchable rows at higher ids.
 

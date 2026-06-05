@@ -1,6 +1,5 @@
 // Local "today" as YYYY-MM-DD (good for <input type="date" min={...}>).
-// Using local date (not UTC) so users in IST don't see the wrong floor
-// in the early-morning hours.
+// Local date (not UTC) so IST users don't see the wrong floor in the early hours.
 export function todayISO() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -10,15 +9,14 @@ export function formatPrice(p) {
   if (p == null) return '—';
   const n = Number(p);
   if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(2)} Cr`;
-  if (n >= 1_00_000)    return `₹${(n / 1_00_000).toFixed(2)} L`;
+  if (n >= 1_00_000) return `₹${(n / 1_00_000).toFixed(2)} L`;
   return `₹${n.toLocaleString('en-IN')}`;
 }
 
-// Format a date as "DD MMM YYYY" with a 3-letter month. Accepts either
-// RFC 2822 ("Thu, 14 May 2026 00:00:00 GMT", what Flask jsonifies datetimes to)
-// or YYYY-MM-DD. DATE columns serialize to UTC midnight, so we read UTC parts
-// to avoid the value drifting a day in IST.
-const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// "DD MMM YYYY" with a 3-letter month. Accepts RFC-2822 (what Flask jsonifies
+// datetimes to) or YYYY-MM-DD. DATE columns serialize to UTC midnight, so read
+// UTC parts to avoid drifting a day in IST.
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 export function formatDateShort(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -27,37 +25,49 @@ export function formatDateShort(iso) {
   return `${day} ${MONTHS_SHORT[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
-// A DATE column (follow_up_at) serializes to UTC midnight, so reading UTC
-// parts gives its calendar date. True when that date is strictly before the
-// local (IST) today; compared as YYYY-MM-DD strings.
-function isDateBeforeToday(iso) {
-  if (!iso) return false;
+// A DATE column (follow_up_at) serializes to UTC midnight; reading UTC parts
+// gives its calendar date. As a YYYY-MM-DD string for cheap comparisons.
+export function dateOnly(iso) {
+  if (!iso) return null;
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return false;
-  const day = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-  return day < todayISO();
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
 }
 
-// Whole days between `iso` and now, floored. 0 means within the last 24h —
-// exactly when formatDateRel() labels it "Today". null on an unparseable date.
+export function isDateBeforeToday(iso) {
+  const day = dateOnly(iso);
+  return day != null && day < todayISO();
+}
+export function isDateToday(iso) {
+  return dateOnly(iso) === todayISO();
+}
+export function isDateAfterToday(iso) {
+  const day = dateOnly(iso);
+  return day != null && day > todayISO();
+}
+
+// Whole days between `iso` and now, floored. 0 = within the last 24h.
 function daysAgo(iso) {
   const then = new Date(iso);
   if (Number.isNaN(then.getTime())) return null;
   return Math.floor((Date.now() - then.getTime()) / 86400_000);
 }
 
-// Attention flag for a row's OH-ID / City / Society cells. Returns one of:
-//   'yellow' — Follow Up stage and the follow-up date has already passed.
-//   'red'    — Lead stage that came in before today (a stale,
-//              unworked lead). Driven by created_at via the same day-count as
-//              the "Posted" column, so a row showing "Posted: Today" is never
-//              red.
-//   null     — neither.
-// The two stages are disjoint, so the rules never conflict.
+// True when created_at is on today's local calendar date — drives the "NEW"
+// badge on the Leads board.
+export function isCreatedToday(iso) {
+  if (!iso) return false;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return false;
+  const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return local === todayISO();
+}
+
+// Attention flag for a row's identity cells. See InventoryTable.
 export function rowFlag(item) {
   if (!item) return null;
   if (item.stage === 'follow_up' && isDateBeforeToday(item.follow_up_at)) return 'yellow';
-  if (item.stage === 'lead') {
+  if (item.stage === 'lead' || item.stage === 'unqualified' || item.stage === 'active') {
     const d = daysAgo(item.created_at);
     if (d != null && d >= 1) return 'red';
   }
@@ -77,13 +87,20 @@ export function formatDateRel(iso) {
 export function stageLabel(s) {
   return ({
     lead: 'Lead',
+    active: 'Active Lead',
+    qualified: 'Qualified',
     call_not_received: 'Call Not Received',
     follow_up: 'Follow Up',
     visit_scheduled: 'Visit Scheduled',
     rejected: 'Rejected',
-    // Legacy stage labels — kept so historical activity-log entries and any
-    // rows still sitting in these stages render with the right name.
-    qualified: 'Lead',          // renamed to 'lead'; kept for pre-migration rows
+    // Supply Closure Tracker stages (post-visit acquisition funnel).
+    pipeline: 'Pipeline',
+    token_to_ama: 'Token to AMA',
+    onboarded: 'Onboarded',
+    rejected_post_visit: 'Rejected Post Visit',
+    cancelled_post_token: 'Cancelled Post Token',
+    // Legacy — historical rows still render.
+    unqualified: 'Lead',
     follow_up_cnr: 'Follow Up (CNR)',
     visit_completed: 'Visit Completed',
     offer_given: 'Offer Given',
@@ -91,10 +108,14 @@ export function stageLabel(s) {
   })[s] || s;
 }
 
-// Board-visible stages, in display order. Drives kanban columns, count pills,
-// and the stage dropdown on the card detail modal.
+// Board-visible stages, in display + flow order. Drives count pills, stage
+// dropdowns and analytics order.
+//   lead -> active -> qualified -> {call_not_received, follow_up,
+//                                   visit_scheduled, rejected}
 export const STAGES = [
   'lead',
+  'active',
+  'qualified',
   'call_not_received',
   'follow_up',
   'visit_scheduled',
@@ -102,52 +123,159 @@ export const STAGES = [
 ];
 
 export const STAGE_DOT_COLOR = {
-  lead: '#a78bfa',
+  lead: '#fa541c',
+  active: '#f59e0b',
+  unqualified: '#fa541c',
+  qualified: '#16a34a',
   call_not_received: '#facc15',
   follow_up: '#f97316',
   visit_scheduled: '#a855f7',
   rejected: '#ef4444',
-  // Legacy stages — used by stage-dot rendering on any stray rows.
-  qualified: '#a78bfa',         // renamed to 'lead'; kept for pre-migration rows
+  // Supply Closure Tracker stages
+  pipeline: '#0ea5e9',
+  token_to_ama: '#8b5cf6',
+  onboarded: '#16a34a',
+  rejected_post_visit: '#ef4444',
+  cancelled_post_token: '#64748b',
+  // Legacy
+  lead: '#fa541c',
   follow_up_cnr: '#facc15',
   visit_completed: '#22c55e',
   offer_given: '#fb923c',
   unreachable: '#94a3b8',
 };
 
-export const REJECT_REASONS = [
-  { value: 'not_interested',   label: 'Not Interested' },
+// ── Supply Closure Tracker (post-visit acquisition funnel) ───────────────────
+// Synced from PROPERTIES_DB.cp_inventory_status: direct_stage → inventory.stage,
+// supply_status → inventory.stage_reason (both slugified, e.g. "Token to AMA"
+// → "token_to_ama"). These stages live alongside the lead stages.
+export const SUPPLY_STAGES = ['pipeline', 'token_to_ama', 'onboarded', 'rejected_post_visit', 'cancelled_post_token'];
+
+export const SUPPLY_STAGE_REASONS = {
+  pipeline: [
+    { value: 'visit_completed', label: 'Visit Completed' },
+    { value: 'followup', label: 'Followup' },
+    { value: 'negotiation', label: 'Negotiation' },
+    { value: 'hold', label: 'Hold' },
+    { value: 'future_prospect', label: 'Future Prospect' },
+  ],
+  token_to_ama: [
+    { value: 'token_requested', label: 'Token Requested' },
+    { value: 'token_transferred', label: 'Token Transferred' },
+    { value: 'ama_req', label: 'AMA Req' },
+    { value: 'ama_signed', label: 'AMA Signed' },
+  ],
+  onboarded: [
+    { value: 'key_handover', label: 'Key Handover' },
+    { value: 'listed', label: 'Listed' },
+  ],
+  rejected_post_visit: [
+    { value: 'duplicacy', label: 'Duplicacy' },
+    { value: 'dead_sold', label: 'Dead - Sold' },
+    { value: 'oh_rejected', label: 'OH Rejected' },
+    { value: 'dead_not_interested', label: 'Dead - Not Interested' },
+    { value: 'seller_rejected', label: 'Seller Rejected' },
+    { value: 'dead_legal', label: 'Dead - Legal' },
+  ],
+  cancelled_post_token: [
+    { value: 'cancelled_post_token', label: 'Cancelled Post Token' },
+  ],
+};
+
+export const ALL_SUPPLY_REASONS = Object.values(SUPPLY_STAGE_REASONS).flat();
+
+export function supplyReasonLabel(code) {
+  if (!code) return '';
+  return ALL_SUPPLY_REASONS.find((r) => r.value === code)?.label
+    || code.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// Reject reasons come in two context sets, both written to
+// inventory.stage_reason alongside stage='rejected':
+//   - UNQUALIFIED_REJECT_REASONS — shown when rejecting an unqualified/intake
+//     lead (listing-quality reasons).
+//   - REJECT_REASONS — shown when rejecting from a worked stage (qualified /
+//     call_not_received / follow_up / visit_scheduled). These are the
+//     engagement reasons already present in the live DB.
+// A duplicate listing uses the SAME `invalid_duplicate` value in both contexts
+// (the older intake-only `duplicate` value was folded into it) so it lands in a
+// single category in breakdowns/reports.
+export const UNQUALIFIED_REJECT_REASONS = [
+  { value: 'ground_floor', label: 'Ground Floor' },
+  { value: 'listing_removed', label: 'Listing Removed' },
   { value: 'invalid_duplicate', label: 'Invalid / Duplicate' },
-  { value: 'future_prospect',  label: 'Future Prospect' },
-  { value: 'oh_rejected',      label: 'OH Rejected' },
-  { value: 'sold',             label: 'Sold' },
-  { value: 'broker_listing',   label: 'Broker Listing' },
 ];
 
-// Greater Noida is rolled up into Noida everywhere in the UI.
-// Order matters: this is the order shown in city tabs and dropdowns.
-export const CITIES = ['Gurgaon', 'Noida', 'Ghaziabad'];
+export const REJECT_REASONS = [
+  { value: 'not_interested', label: 'Not Interested' },
+  { value: 'invalid_duplicate', label: 'Invalid / Duplicate' },
+  { value: 'future_prospect', label: 'Future Prospect' },
+  { value: 'oh_rejected', label: 'OH Rejected' },
+  { value: 'sold', label: 'Sold' },
+  { value: 'broker_listing', label: 'Broker Listing' },
+];
 
+// Active-lead rejects — contact-quality reasons shown when rejecting from the
+// 'active' stage (after the lead has been picked up but the seller couldn't be
+// reached / the number was bad).
+export const ACTIVE_REJECT_REASONS = [
+  { value: 'number_not_found', label: 'No. not found' },
+  { value: 'invalid_number', label: 'Invalid No.' },
+];
+
+// Every reject reason across all contexts, de-duplicated by value (the contexts
+// share `invalid_duplicate`) — for breakdowns / labels that need to cover
+// whatever value a row actually carries.
+export const ALL_REJECT_REASONS = [...UNQUALIFIED_REJECT_REASONS, ...REJECT_REASONS, ...ACTIVE_REJECT_REASONS]
+  .filter((r, i, arr) => arr.findIndex((x) => x.value === r.value) === i);
+
+// Pick the reason list for the lead's CURRENT stage: an unqualified/intake lead
+// uses the listing-quality reasons; an active lead uses the contact-quality
+// reasons; anything already worked uses the rest.
+export function rejectReasonsForStage(stage) {
+  if (stage === 'lead' || stage === 'unqualified') return UNQUALIFIED_REJECT_REASONS;
+  if (stage === 'active') return ACTIVE_REJECT_REASONS;
+  return REJECT_REASONS;
+}
+
+export function rejectReasonLabel(code) {
+  if (!code) return '';
+  return ALL_REJECT_REASONS.find((r) => r.value === code)?.label || code;
+}
+
+// Label for any stage_reason regardless of which stage it belongs to — reject
+// reasons OR supply-tracker reasons — falling back to a title-cased code.
+export function reasonLabelAny(code) {
+  if (!code) return '';
+  return ALL_REJECT_REASONS.find((r) => r.value === code)?.label
+    || ALL_SUPPLY_REASONS.find((r) => r.value === code)?.label
+    || code.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// Greater Noida is rolled up into Noida everywhere in the UI.
+export const CITIES = ['Gurgaon', 'Noida', 'Ghaziabad'];
 export function displayCity(city) {
   if (!city) return '';
   if (city === 'Greater Noida') return 'Noida';
   return city;
 }
 
-// Sources that mean "added through our UI" rather than crawled from a listing site.
-// Cards with these sources get an orange visual treatment.
+// Roll any 'Greater Noida' into 'Noida' across a list of city names and dedupe,
+// so 'Greater Noida' is never offered or stored as a separate city.
+export function foldCities(list) {
+  return [...new Set((list || []).map(displayCity).filter(Boolean))];
+}
+
 export const MANUAL_SOURCES = new Set(['Website', 'manual']);
 export function isManualSource(src) {
   if (!src) return false;
   return MANUAL_SOURCES.has(src);
 }
 
-// Resolves the star color that should be rendered for a row.
-// Manual override (item.star_color) wins; otherwise fall back to the
-// existing rules — priority -> yellow, cp_match -> green/red, else null.
-// Returns one of 'yellow' | 'green' | 'red' | null.
-//   star_color === 'none'  -> manual blank (suppress default rules)
-//   star_color === null    -> no override, apply default rules
+// Star color rendered for a row. Manual override (star_color) wins; otherwise
+// priority -> yellow, cp_match -> green/red, else null.
+//   star_color === 'none' -> manual blank (suppress default rules)
+//   star_color === null   -> no override, apply defaults
 export function starColor(item) {
   if (!item) return null;
   const sc = item.star_color;
@@ -160,10 +288,7 @@ export function starColor(item) {
 }
 
 // Variation = (asking - oh_price) / oh_price * 100, signed.
-// Returns { pct, label, sign } or null if either side is missing/zero.
-//   sign === 'pos' means asking is OVER OH (typically less attractive)
-//   sign === 'neg' means asking is UNDER OH (typically more attractive)
-//   sign === 'flat' for |pct| < 0.5
+// sign 'pos' = asking OVER OH; 'neg' = UNDER OH; 'flat' for |pct| < 0.5.
 export function variation(asking, oh) {
   const a = Number(asking);
   const o = Number(oh);
@@ -174,31 +299,35 @@ export function variation(asking, oh) {
   return { pct, label, sign };
 }
 
-// OH-price match presentation. A row either has a strict price (society + BHK +
-// area within ±50 sqft) or it shows "Check Price" with a reason. Returns
-// { sub, title } — `sub` is the small grey label under "Check Price" (empty when
-// matched), `title` is the cell hover tooltip for both states.
+// OH Price cell state — single source of truth for what the price cell shows.
+// A real match shows the green price; otherwise "Check Price" with a reason
+// sub-text + tooltip. Driven by the backend's oh_price / oh_price_reason /
+// oh_near_diff (a strict society + exact BHK + area ±50 lookup; never a guess).
 export function ohMatchInfo(item) {
-  if (item.oh_price) {
-    const a = Number(item.area_sqft);
-    const oa = Number(item.oh_price_area);
-    const diff = (Number.isFinite(a) && Number.isFinite(oa)) ? Math.abs(oa - a) : null;
-    const title = `Matched ${item.oh_price_bhk}BHK ${item.oh_price_area}sqft`
-      + (diff != null ? ` (±${diff} sqft)` : '');
-    return { sub: '', title };
+  if (item.oh_price != null) {
+    const bhk = item.oh_price_bhk;
+    const area = item.oh_price_area;
+    const diff = (area != null && item.area_sqft != null) ? Math.abs(area - item.area_sqft) : null;
+    const parts = [
+      bhk != null ? `${bhk}BHK` : null,
+      area != null ? `${area}sqft` : null,
+    ].filter(Boolean).join(' ');
+    const title = `Matched${parts ? ` ${parts}` : ''}${diff != null ? ` (±${diff} sqft)` : ''}`;
+    return { matched: true, sub: null, title };
   }
   switch (item.oh_price_reason) {
-    case 'area_off':
+    case 'area_off': {
+      const n = item.oh_near_diff;
       return {
-        sub: 'area off',
-        title: item.oh_near_diff != null
-          ? `Nearest priced area is ${item.oh_near_diff} sqft off (>50) — open card to verify`
+        matched: false, sub: 'area off',
+        title: n != null
+          ? `Nearest priced area is ${n} sqft off (>50) — open card to verify`
           : 'Nearest priced area is >50 sqft off — open card to verify',
       };
+    }
     case 'no_area':
-      return { sub: 'no area', title: 'Listing has no area, so it can’t be area-matched' };
-    case 'no_match':
-    default:
-      return { sub: 'no match', title: 'No OH price for this society + BHK' };
+      return { matched: false, sub: 'no area', title: "Listing has no area, so it can't be area-matched" };
+    default: // 'no_match' (or missing)
+      return { matched: false, sub: 'no match', title: 'No OH price for this society + BHK' };
   }
 }

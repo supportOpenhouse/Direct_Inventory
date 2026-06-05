@@ -1,0 +1,5719 @@
+[
+  {
+    "society_name": "Ambience Lagoon",
+    "latitude": 28.502937,
+    "longitude": 77.098485
+  },
+  {
+    "society_name": "Ardee Palm Grove Heights",
+    "latitude": 28.434821,
+    "longitude": 77.085472
+  },
+  {
+    "society_name": "Ardee The Residency",
+    "latitude": 28.435541,
+    "longitude": 77.083165
+  },
+  {
+    "society_name": "Sahara Grace",
+    "latitude": 28.479538,
+    "longitude": 77.089851
+  },
+  {
+    "society_name": "DLF Silver Oaks",
+    "latitude": 28.473528,
+    "longitude": 77.100938
+  },
+  {
+    "society_name": "Silver Oaks Estates",
+    "latitude": 28.47351,
+    "longitude": 77.10091
+  },
+  {
+    "society_name": "Emaar MGF The Vilas",
+    "latitude": 28.48421,
+    "longitude": 77.08375
+  },
+  {
+    "society_name": "DLF Belvedere Park",
+    "latitude": 28.494745,
+    "longitude": 77.08953
+  },
+  {
+    "society_name": "DLF Belvedere Towers",
+    "latitude": 28.495215,
+    "longitude": 77.09062
+  },
+  {
+    "society_name": "DLF Oakwood Estate",
+    "latitude": 28.486715,
+    "longitude": 77.088145
+  },
+  {
+    "society_name": "DLF Beverly Park",
+    "latitude": 28.48312,
+    "longitude": 77.09021
+  },
+  {
+    "society_name": "Ambience Caitriona",
+    "latitude": 28.505615,
+    "longitude": 77.09274
+  },
+  {
+    "society_name": "DLF Ridgewood Estate",
+    "latitude": 28.461955,
+    "longitude": 77.08514
+  },
+  {
+    "society_name": "DLF Regency Park 2",
+    "latitude": 28.467425,
+    "longitude": 77.089315
+  },
+  {
+    "society_name": "DLF Regency Park 1",
+    "latitude": 28.46884,
+    "longitude": 77.08523
+  },
+  {
+    "society_name": "DLF Richmond Park",
+    "latitude": 28.46382,
+    "longitude": 77.09015
+  },
+  {
+    "society_name": "DLF Westend Heights",
+    "latitude": 28.45524,
+    "longitude": 77.09756
+  },
+  {
+    "society_name": "DLF Carlton Estate",
+    "latitude": 28.45893,
+    "longitude": 77.09214
+  },
+  {
+    "society_name": "DLF Wellington Estate",
+    "latitude": 28.46012,
+    "longitude": 77.09105
+  },
+  {
+    "society_name": "DLF Princeton Estate",
+    "latitude": 28.45743,
+    "longitude": 77.09432
+  },
+  {
+    "society_name": "DLF The Pinnacle",
+    "latitude": 28.453303,
+    "longitude": 77.098492
+  },
+  {
+    "society_name": "DLF The Icon",
+    "latitude": 28.453716,
+    "longitude": 77.099863
+  },
+  {
+    "society_name": "DLF The Grove",
+    "latitude": 28.452055,
+    "longitude": 77.096521
+  },
+  {
+    "society_name": "DLF Exclusive Floors",
+    "latitude": 28.460412,
+    "longitude": 77.094508
+  },
+  {
+    "society_name": "DLF Trinity Towers",
+    "latitude": 28.456636,
+    "longitude": 77.09635
+  },
+  {
+    "society_name": "Suncity Vatsal Valley",
+    "latitude": 28.423277,
+    "longitude": 77.142472
+  },
+  {
+    "society_name": "Paras Quartier",
+    "latitude": 28.421727,
+    "longitude": 77.145129
+  },
+  {
+    "society_name": "Valley View Estate",
+    "latitude": 28.424296,
+    "longitude": 77.139527
+  },
+  {
+    "society_name": "Krrish Provence Estate",
+    "latitude": 28.419014,
+    "longitude": 77.149511
+  },
+  {
+    "society_name": "ASF Isle De Royale",
+    "latitude": 28.423045,
+    "longitude": 77.153065
+  },
+  {
+    "society_name": "Unitech Heritage City",
+    "latitude": 28.480838,
+    "longitude": 77.083427
+  },
+  {
+    "society_name": "Bedarwal Consortium Sixty Three Golf Drive",
+    "latitude": 28.399512,
+    "longitude": 77.067455
+  },
+  {
+    "society_name": "Malibu Towne",
+    "latitude": 28.422204,
+    "longitude": 77.044196
+  },
+  {
+    "society_name": "Malibu Towers",
+    "latitude": 28.424018,
+    "longitude": 77.04153
+  },
+  {
+    "society_name": "Suncity Platinum Towers",
+    "latitude": 28.479544,
+    "longitude": 77.070822
+  },
+  {
+    "society_name": "Unitech Fresco",
+    "latitude": 28.404287,
+    "longitude": 77.050302
+  },
+  {
+    "society_name": "The Close North",
+    "latitude": 28.407983,
+    "longitude": 77.049586
+  },
+  {
+    "society_name": "Unitech Escape",
+    "latitude": 28.402488,
+    "longitude": 77.051558
+  },
+  {
+    "society_name": "The Close South",
+    "latitude": 28.406155,
+    "longitude": 77.052161
+  },
+  {
+    "society_name": "Unitech Harmony",
+    "latitude": 28.401089,
+    "longitude": 77.049156
+  },
+  {
+    "society_name": "Bestech Park View Residency",
+    "latitude": 28.507425,
+    "longitude": 77.03698
+  },
+  {
+    "society_name": "Ansals Palam Vihar",
+    "latitude": 28.510116,
+    "longitude": 77.042261
+  },
+  {
+    "society_name": "Celebrity Homes",
+    "latitude": 28.507204,
+    "longitude": 77.03534
+  },
+  {
+    "society_name": "HSIIDC Sidco Shivalik Apartments",
+    "latitude": 28.3614,
+    "longitude": 76.93883
+  },
+  {
+    "society_name": "HSIIDC Sidco Aravali",
+    "latitude": 28.36214,
+    "longitude": 76.93921
+  },
+  {
+    "society_name": "Shapoorji Pallonji Joyville Gurugram",
+    "latitude": 28.474618,
+    "longitude": 76.965934
+  },
+  {
+    "society_name": "Adani M2K Oyster Grande",
+    "latitude": 28.468759,
+    "longitude": 76.970258
+  },
+  {
+    "society_name": "Emaar Imperial Gardens",
+    "latitude": 28.471714,
+    "longitude": 76.953696
+  },
+  {
+    "society_name": "Conscient Heritage Max",
+    "latitude": 28.468249,
+    "longitude": 76.959223
+  },
+  {
+    "society_name": "Emaar Gurgaon Greens",
+    "latitude": 28.470001,
+    "longitude": 76.955462
+  },
+  {
+    "society_name": "ROF Aalayas",
+    "latitude": 28.471203,
+    "longitude": 76.962045
+  },
+  {
+    "society_name": "Suncity Avenue 102",
+    "latitude": 28.475141,
+    "longitude": 76.958742
+  },
+  {
+    "society_name": "BPTP Amstoria",
+    "latitude": 28.475191,
+    "longitude": 76.966952
+  },
+  {
+    "society_name": "Adani Oyster Greens",
+    "latitude": 28.47155,
+    "longitude": 76.97011
+  },
+  {
+    "society_name": "Indiabulls Centrum Park",
+    "latitude": 28.484251,
+    "longitude": 76.969853
+  },
+  {
+    "society_name": "Signature Global Grand IVA",
+    "latitude": 28.487532,
+    "longitude": 76.968131
+  },
+  {
+    "society_name": "Satya The Hermitage",
+    "latitude": 28.483981,
+    "longitude": 76.974912
+  },
+  {
+    "society_name": "Ansal Housing Highland Park",
+    "latitude": 28.485292,
+    "longitude": 76.971501
+  },
+  {
+    "society_name": "Landmark The Residency",
+    "latitude": 28.486154,
+    "longitude": 76.966432
+  },
+  {
+    "society_name": "Hero Homes",
+    "latitude": 28.490861,
+    "longitude": 76.978805
+  },
+  {
+    "society_name": "Puri Emerald Bay",
+    "latitude": 28.497742,
+    "longitude": 76.989824
+  },
+  {
+    "society_name": "ATS Triumph",
+    "latitude": 28.49521,
+    "longitude": 76.993415
+  },
+  {
+    "society_name": "Godrej Summit",
+    "latitude": 28.493821,
+    "longitude": 76.995512
+  },
+  {
+    "society_name": "Zara Aavaas",
+    "latitude": 28.496515,
+    "longitude": 76.99723
+  },
+  {
+    "society_name": "Godrej Meridien",
+    "latitude": 28.510045,
+    "longitude": 76.990025
+  },
+  {
+    "society_name": "Paras Dews",
+    "latitude": 28.508512,
+    "longitude": 76.992245
+  },
+  {
+    "society_name": "Viridian The Plaza 106",
+    "latitude": 28.50654,
+    "longitude": 76.995015
+  },
+  {
+    "society_name": "Elan The Presidential",
+    "latitude": 28.504218,
+    "longitude": 76.991055
+  },
+  {
+    "society_name": "M3M Woodshire",
+    "latitude": 28.51453,
+    "longitude": 76.98552
+  },
+  {
+    "society_name": "Signature Global Solera",
+    "latitude": 28.515822,
+    "longitude": 76.984045
+  },
+  {
+    "society_name": "Signature Global Solera 2",
+    "latitude": 28.517015,
+    "longitude": 76.98256
+  },
+  {
+    "society_name": "Sobha City",
+    "latitude": 28.52021,
+    "longitude": 76.989015
+  },
+  {
+    "society_name": "Experion The Heartsong",
+    "latitude": 28.52254,
+    "longitude": 76.986025
+  },
+  {
+    "society_name": "Raheja Vedaanta",
+    "latitude": 28.523815,
+    "longitude": 76.98453
+  },
+  {
+    "society_name": "ROF Alante",
+    "latitude": 28.524555,
+    "longitude": 76.98302
+  },
+  {
+    "society_name": "ATS Tourmaline",
+    "latitude": 28.518545,
+    "longitude": 76.99701
+  },
+  {
+    "society_name": "ATS Kocoon",
+    "latitude": 28.519825,
+    "longitude": 76.99854
+  },
+  {
+    "society_name": "Chintels Serenity",
+    "latitude": 28.521515,
+    "longitude": 76.995525
+  },
+  {
+    "society_name": "Brisk Lumbini Terrace Homes",
+    "latitude": 28.52304,
+    "longitude": 76.994015
+  },
+  {
+    "society_name": "Raheja Atharva",
+    "latitude": 28.52502,
+    "longitude": 76.992035
+  },
+  {
+    "society_name": "SBTL Caladium",
+    "latitude": 28.512615,
+    "longitude": 76.993045
+  },
+  {
+    "society_name": "Raheja Shilas",
+    "latitude": 28.510321,
+    "longitude": 76.99425
+  },
+  {
+    "society_name": "Indiabulls Enigma",
+    "latitude": 28.51783,
+    "longitude": 77.001925
+  },
+  {
+    "society_name": "Mahindra Aura",
+    "latitude": 28.51524,
+    "longitude": 77.00941
+  },
+  {
+    "society_name": "Puri Diplomatic Greens",
+    "latitude": 28.522615,
+    "longitude": 77.01525
+  },
+  {
+    "society_name": "Tashee Capital Gateway",
+    "latitude": 28.52422,
+    "longitude": 77.01254
+  },
+  {
+    "society_name": "Kashish Manor One",
+    "latitude": 28.52551,
+    "longitude": 77.01013
+  },
+  {
+    "society_name": "Lotus Homz",
+    "latitude": 28.52814,
+    "longitude": 77.01482
+  },
+  {
+    "society_name": "M3M Crown",
+    "latitude": 28.521525,
+    "longitude": 77.01121
+  },
+  {
+    "society_name": "Experion Windchants",
+    "latitude": 28.528935,
+    "longitude": 77.02275
+  },
+  {
+    "society_name": "Tata Gurgaon Gateway",
+    "latitude": 28.53051,
+    "longitude": 77.02534
+  },
+  {
+    "society_name": "Zara Rossa",
+    "latitude": 28.531245,
+    "longitude": 77.02412
+  },
+  {
+    "society_name": "Pareena Om Apartments",
+    "latitude": 28.532515,
+    "longitude": 77.02685
+  },
+  {
+    "society_name": "La Vida by Tata Housing",
+    "latitude": 28.53483,
+    "longitude": 77.02951
+  },
+  {
+    "society_name": "M3M Capital",
+    "latitude": 28.53654,
+    "longitude": 77.03122
+  },
+  {
+    "society_name": "Smartworld One DXP",
+    "latitude": 28.53781,
+    "longitude": 77.03314
+  },
+  {
+    "society_name": "M3M Mansion",
+    "latitude": 28.538525,
+    "longitude": 77.034515
+  },
+  {
+    "society_name": "Maxworth Premier Urban",
+    "latitude": 28.45524,
+    "longitude": 77.04213
+  },
+  {
+    "society_name": "DLF Express Greens",
+    "latitude": 28.38421,
+    "longitude": 76.91895
+  },
+  {
+    "society_name": "Mittal Cosmos Executive Apartments",
+    "latitude": 28.441225,
+    "longitude": 77.05154
+  },
+  {
+    "society_name": "Ambience Creacions",
+    "latitude": 28.50851,
+    "longitude": 77.07322
+  },
+  {
+    "society_name": "Alpha Gurgaon One 22",
+    "latitude": 28.50353,
+    "longitude": 77.06915
+  },
+  {
+    "society_name": "Suncity Essel Towers",
+    "latitude": 28.47564,
+    "longitude": 77.08051
+  },
+  {
+    "society_name": "Silverglades The Ivy",
+    "latitude": 28.463215,
+    "longitude": 77.093425
+  },
+  {
+    "society_name": "Godrej Habitat",
+    "latitude": 28.46874,
+    "longitude": 77.01453
+  },
+  {
+    "society_name": "Unitech Uniworld City",
+    "latitude": 28.45561,
+    "longitude": 77.04285
+  },
+  {
+    "society_name": "Unitech The World Spa West",
+    "latitude": 28.451325,
+    "longitude": 77.05814
+  },
+  {
+    "society_name": "Raheja Atlantis",
+    "latitude": 28.45385,
+    "longitude": 77.05452
+  },
+  {
+    "society_name": "Unitech The Residences",
+    "latitude": 28.45224,
+    "longitude": 77.046115
+  },
+  {
+    "society_name": "JMD Gardens",
+    "latitude": 28.42861,
+    "longitude": 77.04113
+  },
+  {
+    "society_name": "Signature Global Park 4",
+    "latitude": 28.271825,
+    "longitude": 77.06154
+  },
+  {
+    "society_name": "Krisumi Waterfall Residences",
+    "latitude": 28.38584,
+    "longitude": 76.97451
+  },
+  {
+    "society_name": "AVL 36 Gurgaon",
+    "latitude": 28.435515,
+    "longitude": 76.97815
+  },
+  {
+    "society_name": "Imperia The Esfera",
+    "latitude": 28.39153,
+    "longitude": 76.95212
+  },
+  {
+    "society_name": "ILD Greens",
+    "latitude": 28.38954,
+    "longitude": 76.95511
+  },
+  {
+    "society_name": "Apex Our Homes",
+    "latitude": 28.386815,
+    "longitude": 76.957525
+  },
+  {
+    "society_name": "ILD Grand",
+    "latitude": 28.38455,
+    "longitude": 76.95914
+  },
+  {
+    "society_name": "Piedmont Taksila heights",
+    "latitude": 28.38151,
+    "longitude": 76.96112
+  },
+  {
+    "society_name": "Corona Optus",
+    "latitude": 28.39384,
+    "longitude": 76.94515
+  },
+  {
+    "society_name": "Ramprastha The View",
+    "latitude": 28.395825,
+    "longitude": 76.94151
+  },
+  {
+    "society_name": "Signature Global the Millennia",
+    "latitude": 28.39751,
+    "longitude": 76.93814
+  },
+  {
+    "society_name": "BPTP Terra",
+    "latitude": 28.38814,
+    "longitude": 76.949515
+  },
+  {
+    "society_name": "Ramprastha The Edge Towers",
+    "latitude": 28.391825,
+    "longitude": 76.93555
+  },
+  {
+    "society_name": "Signature Global The Millennia 2",
+    "latitude": 28.39851,
+    "longitude": 76.93612
+  },
+  {
+    "society_name": "Signature Global City",
+    "latitude": 28.40154,
+    "longitude": 76.93453
+  },
+  {
+    "society_name": "BPTP Spacio",
+    "latitude": 28.382515,
+    "longitude": 76.94451
+  },
+  {
+    "society_name": "BPTP Park Generations",
+    "latitude": 28.38415,
+    "longitude": 76.941125
+  },
+  {
+    "society_name": "BPTP Park Serene",
+    "latitude": 28.38654,
+    "longitude": 76.93951
+  },
+  {
+    "society_name": "Ramprastha Primera",
+    "latitude": 28.39451,
+    "longitude": 76.93254
+  },
+  {
+    "society_name": "Signature Global The Millennia 3",
+    "latitude": 28.399125,
+    "longitude": 76.929115
+  },
+  {
+    "society_name": "Ramprastha The Atrium",
+    "latitude": 28.39254,
+    "longitude": 76.93052
+  },
+  {
+    "society_name": "Unitech The Palms",
+    "latitude": 28.45751,
+    "longitude": 77.06214
+  },
+  {
+    "society_name": "Unitech Ivory Towers",
+    "latitude": 28.455525,
+    "longitude": 77.064115
+  },
+  {
+    "society_name": "DLF The Magnolias",
+    "latitude": 28.44814,
+    "longitude": 77.10851
+  },
+  {
+    "society_name": "DLF The Camellias",
+    "latitude": 28.446515,
+    "longitude": 77.111125
+  },
+  {
+    "society_name": "DLF The Aralias",
+    "latitude": 28.45155,
+    "longitude": 77.10614
+  },
+  {
+    "society_name": "Central Park",
+    "latitude": 28.44251,
+    "longitude": 77.10253
+  },
+  {
+    "society_name": "Ansal Maple Heights",
+    "latitude": 28.45454,
+    "longitude": 77.078515
+  },
+  {
+    "society_name": "Bancourt Apartment",
+    "latitude": 28.452125,
+    "longitude": 77.08011
+  },
+  {
+    "society_name": "Tarika Apartments",
+    "latitude": 28.45114,
+    "longitude": 77.08255
+  },
+  {
+    "society_name": "Millenium Bajrang Society",
+    "latitude": 28.44911,
+    "longitude": 77.08412
+  },
+  {
+    "society_name": "AWHO Sujjan Vihar",
+    "latitude": 28.45315,
+    "longitude": 77.07514
+  },
+  {
+    "society_name": "HBH Galaxy Apartments",
+    "latitude": 28.45551,
+    "longitude": 77.072515
+  },
+  {
+    "society_name": "Sanskriti Apartments",
+    "latitude": 28.45614,
+    "longitude": 77.07152
+  },
+  {
+    "society_name": "Shree Ganesh Apartments",
+    "latitude": 28.458525,
+    "longitude": 77.06911
+  },
+  {
+    "society_name": "Jasminium Apartment",
+    "latitude": 28.446115,
+    "longitude": 77.06854
+  },
+  {
+    "society_name": "Unitech Uniworld Gardens 2",
+    "latitude": 28.41154,
+    "longitude": 77.03912
+  },
+  {
+    "society_name": "Unitech Uniworld Gardens",
+    "latitude": 28.42611,
+    "longitude": 77.04555
+  },
+  {
+    "society_name": "Bestech Park View Spa",
+    "latitude": 28.424525,
+    "longitude": 77.047115
+  },
+  {
+    "society_name": "IRWO Westend Towers",
+    "latitude": 28.42114,
+    "longitude": 77.05151
+  },
+  {
+    "society_name": "Central Park Resorts",
+    "latitude": 28.42511,
+    "longitude": 77.03854
+  },
+  {
+    "society_name": "Vipul Greens",
+    "latitude": 28.41655,
+    "longitude": 77.042515
+  },
+  {
+    "society_name": "Parsvnath Green Ville",
+    "latitude": 28.41414,
+    "longitude": 77.04512
+  },
+  {
+    "society_name": "Central Park 2 Bellevue",
+    "latitude": 28.42651,
+    "longitude": 77.03714
+  },
+  {
+    "society_name": "Bestech Park View City",
+    "latitude": 28.418525,
+    "longitude": 77.04051
+  },
+  {
+    "society_name": "Belaperla Central Park Resorts",
+    "latitude": 28.42754,
+    "longitude": 77.036515
+  },
+  {
+    "society_name": "Central Park The Room",
+    "latitude": 28.42851,
+    "longitude": 77.03554
+  },
+  {
+    "society_name": "Central Park Resort Belgravia Residences",
+    "latitude": 28.42952,
+    "longitude": 77.03451
+  },
+  {
+    "society_name": "Vipul World",
+    "latitude": 28.41114,
+    "longitude": 77.054525
+  },
+  {
+    "society_name": "Orchid Petals",
+    "latitude": 28.41351,
+    "longitude": 77.05114
+  },
+  {
+    "society_name": "Vatika City",
+    "latitude": 28.41515,
+    "longitude": 77.048515
+  },
+  {
+    "society_name": "Bestech Park View City 2",
+    "latitude": 28.41454,
+    "longitude": 77.05612
+  },
+  {
+    "society_name": "AWHO Sispal Vihar",
+    "latitude": 28.409115,
+    "longitude": 77.05954
+  },
+  {
+    "society_name": "Omaxe The Nile",
+    "latitude": 28.40854,
+    "longitude": 77.06151
+  },
+  {
+    "society_name": "Eros Wembley Estate",
+    "latitude": 28.405125,
+    "longitude": 77.06454
+  },
+  {
+    "society_name": "SS Hibiscus",
+    "latitude": 28.40251,
+    "longitude": 77.067115
+  },
+  {
+    "society_name": "Orchid Island",
+    "latitude": 28.41754,
+    "longitude": 77.071525
+  },
+  {
+    "society_name": "Citizen apartment",
+    "latitude": 28.44111,
+    "longitude": 77.07214
+  },
+  {
+    "society_name": "Ansal API Sushant Estate",
+    "latitude": 28.44352,
+    "longitude": 77.07511
+  },
+  {
+    "society_name": "Ardee City",
+    "latitude": 28.43814,
+    "longitude": 77.08215
+  },
+  {
+    "society_name": "New Greenwood Society",
+    "latitude": 28.445515,
+    "longitude": 77.06154
+  },
+  {
+    "society_name": "Friends Apartment",
+    "latitude": 28.44614,
+    "longitude": 77.05851
+  },
+  {
+    "society_name": "EMERALD GREEN",
+    "latitude": 28.423125,
+    "longitude": 77.07954
+  },
+  {
+    "society_name": "Tulip Monsella",
+    "latitude": 28.43151,
+    "longitude": 77.101115
+  },
+  {
+    "society_name": "Parsvnath Exotica",
+    "latitude": 28.43514,
+    "longitude": 77.09852
+  },
+  {
+    "society_name": "Vipul Belmonte",
+    "latitude": 28.438525,
+    "longitude": 77.09511
+  },
+  {
+    "society_name": "TDI Ourania",
+    "latitude": 28.44154,
+    "longitude": 77.09255
+  },
+  {
+    "society_name": "DLF Park Place",
+    "latitude": 28.45511,
+    "longitude": 77.10154
+  },
+  {
+    "society_name": "DLF The Crest",
+    "latitude": 28.457125,
+    "longitude": 77.099115
+  },
+  {
+    "society_name": "DLF The Belaire",
+    "latitude": 28.45954,
+    "longitude": 77.09712
+  },
+  {
+    "society_name": "Emaar The Palm Springs",
+    "latitude": 28.44281,
+    "longitude": 77.096515
+  },
+  {
+    "society_name": "Salcon The Verandas",
+    "latitude": 28.44552,
+    "longitude": 77.09421
+  },
+  {
+    "society_name": "La Lagune",
+    "latitude": 28.448215,
+    "longitude": 77.09153
+  },
+  {
+    "society_name": "DLF The Summit",
+    "latitude": 28.45054,
+    "longitude": 77.089225
+  },
+  {
+    "society_name": "Orchid Gardens",
+    "latitude": 28.43725,
+    "longitude": 77.11221
+  },
+  {
+    "society_name": "Suncity Heights",
+    "latitude": 28.439515,
+    "longitude": 77.10954
+  },
+  {
+    "society_name": "Oasis Apartment",
+    "latitude": 28.44211,
+    "longitude": 77.106825
+  },
+  {
+    "society_name": "Kendriya Vihar",
+    "city": "Gurgaon",
+    "latitude": 28.42115,
+    "longitude": 77.09453
+  },
+  {
+    "society_name": "CGHS HEWO Apartments",
+    "latitude": 28.42354,
+    "longitude": 77.091215
+  },
+  {
+    "society_name": "AWHO Devinder Vihar",
+    "latitude": 28.42621,
+    "longitude": 77.08852
+  },
+  {
+    "society_name": "Intelligentsia Apartment",
+    "latitude": 28.42854,
+    "longitude": 77.08545
+  },
+  {
+    "society_name": "Antriksh Royal Palm Apartments",
+    "latitude": 28.419215,
+    "longitude": 77.08111
+  },
+  {
+    "society_name": "Technocrat Society",
+    "latitude": 28.417525,
+    "longitude": 77.07884
+  },
+  {
+    "society_name": "Gail CGHS",
+    "latitude": 28.41524,
+    "longitude": 77.07651
+  },
+  {
+    "society_name": "Jalvayu Towers",
+    "latitude": 28.412815,
+    "longitude": 77.07425
+  },
+  {
+    "society_name": "Park View Apartment",
+    "latitude": 28.43314,
+    "longitude": 77.06551
+  },
+  {
+    "society_name": "Prerna Society",
+    "latitude": 28.435215,
+    "longitude": 77.062825
+  },
+  {
+    "society_name": "Alaknanda Apartments",
+    "latitude": 28.43755,
+    "longitude": 77.06024
+  },
+  {
+    "society_name": "Bhagwanti Apartment",
+    "latitude": 28.43981,
+    "longitude": 77.057515
+  },
+  {
+    "society_name": "Priyadarshini CHS",
+    "latitude": 28.44214,
+    "longitude": 77.05482
+  },
+  {
+    "society_name": "Gracious Tower",
+    "latitude": 28.422215,
+    "longitude": 77.11554
+  },
+  {
+    "society_name": "Suncity Sukriti",
+    "latitude": 28.42454,
+    "longitude": 77.11281
+  },
+  {
+    "society_name": "Suvidha Apartment",
+    "latitude": 28.426815,
+    "longitude": 77.11015
+  },
+  {
+    "society_name": "Madhur Jeevan Apartments",
+    "latitude": 28.42914,
+    "longitude": 77.107525
+  },
+  {
+    "society_name": "BPTP Freedom Park Life",
+    "latitude": 28.43051,
+    "longitude": 77.05224
+  },
+  {
+    "society_name": "Satya The Legend",
+    "latitude": 28.427825,
+    "longitude": 77.05551
+  },
+  {
+    "society_name": "IRWO Classic Apartments",
+    "latitude": 28.42524,
+    "longitude": 77.058815
+  },
+  {
+    "society_name": "Ireo The Grand Arch",
+    "latitude": 28.41114,
+    "longitude": 77.102515
+  },
+  {
+    "society_name": "Conscient Elevate",
+    "latitude": 28.40881,
+    "longitude": 77.10544
+  },
+  {
+    "society_name": "Mahindra Luminare",
+    "latitude": 28.40625,
+    "longitude": 77.108515
+  },
+  {
+    "society_name": "Raisina Residency",
+    "latitude": 28.40354,
+    "longitude": 77.11122
+  },
+  {
+    "society_name": "Pyramid Midtown",
+    "latitude": 28.399815,
+    "longitude": 77.11451
+  },
+  {
+    "society_name": "Ireo Skyon",
+    "latitude": 28.40224,
+    "longitude": 77.095515
+  },
+  {
+    "society_name": "Adani Brahma Samsara",
+    "latitude": 28.39951,
+    "longitude": 77.09885
+  },
+  {
+    "society_name": "Smart World Orchard",
+    "latitude": 28.396825,
+    "longitude": 77.10154
+  },
+  {
+    "society_name": "Pioneer Park",
+    "latitude": 28.39221,
+    "longitude": 77.085515
+  },
+  {
+    "society_name": "Smart World Orchard Street",
+    "latitude": 28.39454,
+    "longitude": 77.08281
+  },
+  {
+    "society_name": "Suposhaa Smartworld Orchard",
+    "latitude": 28.395815,
+    "longitude": 77.081125
+  },
+  {
+    "society_name": "Emaar Digihomes",
+    "latitude": 28.38114,
+    "longitude": 77.09251
+  },
+  {
+    "society_name": "Pioneer Araya",
+    "latitude": 28.38442,
+    "longitude": 77.08954
+  },
+  {
+    "society_name": "Pioneer Urban Presidia",
+    "latitude": 28.38721,
+    "longitude": 77.086815
+  },
+  {
+    "society_name": "Conscient Heritage One",
+    "latitude": 28.38955,
+    "longitude": 77.08412
+  },
+  {
+    "society_name": "Pivotal Paradise",
+    "latitude": 28.39184,
+    "longitude": 77.08151
+  },
+  {
+    "society_name": "Adani Brahma Samsara Vilasa",
+    "latitude": 28.393215,
+    "longitude": 77.09454
+  },
+  {
+    "society_name": "Adani Samsara Avasa",
+    "latitude": 28.39114,
+    "longitude": 77.09722
+  },
+  {
+    "society_name": "Signature Global Prime",
+    "latitude": 28.38881,
+    "longitude": 77.099515
+  },
+  {
+    "society_name": "Signature Global City 63A",
+    "latitude": 28.385525,
+    "longitude": 77.10224
+  },
+  {
+    "society_name": "Birla Navya",
+    "latitude": 28.38221,
+    "longitude": 77.10515
+  },
+  {
+    "society_name": "Anant Raj",
+    "latitude": 28.37954,
+    "longitude": 77.108215
+  },
+  {
+    "society_name": "Laburnum Victory Floors",
+    "latitude": 28.376815,
+    "longitude": 77.11114
+  },
+  {
+    "society_name": "TARC Ishva",
+    "latitude": 28.37412,
+    "longitude": 77.11391
+  },
+  {
+    "society_name": "M3M Heights",
+    "latitude": 28.40654,
+    "longitude": 77.074415
+  },
+  {
+    "society_name": "M3M Golfestate",
+    "latitude": 28.401215,
+    "longitude": 77.07954
+  },
+  {
+    "society_name": "Trump Tower",
+    "latitude": 28.39884,
+    "longitude": 77.08221
+  },
+  {
+    "society_name": "Emaar MGF Emerald Floors Premier",
+    "latitude": 28.404115,
+    "longitude": 77.06954
+  },
+  {
+    "society_name": "Emaar MGF Emerald Estate",
+    "latitude": 28.40254,
+    "longitude": 77.07181
+  },
+  {
+    "society_name": "M3M Skycity",
+    "latitude": 28.40821,
+    "longitude": 77.072125
+  },
+  {
+    "society_name": "Emaar Emerald Hills",
+    "latitude": 28.409515,
+    "longitude": 77.06884
+  },
+  {
+    "society_name": "M3M Latitude",
+    "latitude": 28.39654,
+    "longitude": 77.06551
+  },
+  {
+    "society_name": "M3M St Andrews",
+    "latitude": 28.39422,
+    "longitude": 77.067815
+  },
+  {
+    "society_name": "Emaar MGF The Palm Drive",
+    "latitude": 28.41884,
+    "longitude": 77.08411
+  },
+  {
+    "society_name": "Emaar Mgf Palm Terraces Select",
+    "latitude": 28.416515,
+    "longitude": 77.08654
+  },
+  {
+    "society_name": "BPTP Park Prime",
+    "latitude": 28.41414,
+    "longitude": 77.089225
+  },
+  {
+    "society_name": "Ireo Uptown",
+    "latitude": 28.41181,
+    "longitude": 77.091515
+  },
+  {
+    "society_name": "BPTP Mansions Park Prime",
+    "latitude": 28.41014,
+    "longitude": 77.09385
+  },
+  {
+    "society_name": "Emaar MGF The Enclave",
+    "latitude": 28.407515,
+    "longitude": 77.09614
+  },
+  {
+    "society_name": "M3M Merlin",
+    "latitude": 28.39114,
+    "longitude": 77.058525
+  },
+  {
+    "society_name": "Bestech Park View Spa Next",
+    "latitude": 28.38881,
+    "longitude": 77.061215
+  },
+  {
+    "society_name": "Ireo Victory Valley",
+    "latitude": 28.38624,
+    "longitude": 77.06391
+  },
+  {
+    "society_name": "Shree Vardhman Mantra",
+    "latitude": 28.383515,
+    "longitude": 77.06654
+  },
+  {
+    "society_name": "Ansal API Esencia",
+    "latitude": 28.38054,
+    "longitude": 77.06921
+  },
+  {
+    "society_name": "Ireo The Corridors",
+    "latitude": 28.374415,
+    "longitude": 77.04214
+  },
+  {
+    "society_name": "Pyramid Urban",
+    "latitude": 28.37154,
+    "longitude": 77.04481
+  },
+  {
+    "society_name": "Pareena Mi Casa",
+    "latitude": 28.36881,
+    "longitude": 77.047525
+  },
+  {
+    "society_name": "M3M The Marina",
+    "latitude": 28.36614,
+    "longitude": 77.050215
+  },
+  {
+    "society_name": "M3M Sierra 68",
+    "latitude": 28.363415,
+    "longitude": 77.05294
+  },
+  {
+    "society_name": "M3M Flora",
+    "latitude": 28.36114,
+    "longitude": 77.05551
+  },
+  {
+    "society_name": "M3M Natura",
+    "latitude": 28.358825,
+    "longitude": 77.05814
+  },
+  {
+    "society_name": "Supertech Hues",
+    "latitude": 28.35624,
+    "longitude": 77.060815
+  },
+  {
+    "society_name": "Tulip Yellow",
+    "latitude": 28.377515,
+    "longitude": 77.02854
+  },
+  {
+    "society_name": "Tulip Violet",
+    "latitude": 28.37524,
+    "longitude": 77.03121
+  },
+  {
+    "society_name": "Tulip Purple",
+    "latitude": 28.37281,
+    "longitude": 77.033925
+  },
+  {
+    "society_name": "Tulip White",
+    "latitude": 28.37054,
+    "longitude": 77.036515
+  },
+  {
+    "society_name": "Tulip Lemon",
+    "latitude": 28.368115,
+    "longitude": 77.03924
+  },
+  {
+    "society_name": "Tulip Leaf",
+    "latitude": 28.36584,
+    "longitude": 77.04181
+  },
+  {
+    "society_name": "Shree Vardhman Victoria",
+    "latitude": 28.362215,
+    "longitude": 77.02554
+  },
+  {
+    "society_name": "Tulip Orange",
+    "latitude": 28.35994,
+    "longitude": 77.02821
+  },
+  {
+    "society_name": "GPL Eden Heights",
+    "latitude": 28.35751,
+    "longitude": 77.030825
+  },
+  {
+    "society_name": "Tulip Ivory",
+    "latitude": 28.35524,
+    "longitude": 77.033515
+  },
+  {
+    "society_name": "Tulip Crimson",
+    "latitude": 28.352815,
+    "longitude": 77.03614
+  },
+  {
+    "society_name": "Pyramid Altia",
+    "latitude": 28.35054,
+    "longitude": 77.03881
+  },
+  {
+    "society_name": "Unitech Vistas",
+    "latitude": 28.36551,
+    "longitude": 77.052525
+  },
+  {
+    "society_name": "AIPL The Peaceful Homes",
+    "latitude": 28.36824,
+    "longitude": 77.049815
+  },
+  {
+    "society_name": "Paras Irene",
+    "latitude": 28.370815,
+    "longitude": 77.04714
+  },
+  {
+    "society_name": "Pyramid Fusion Homes",
+    "latitude": 28.37354,
+    "longitude": 77.04451
+  },
+  {
+    "society_name": "Pyramid Urban Homes",
+    "latitude": 28.37611,
+    "longitude": 77.041825
+  },
+  {
+    "society_name": "AIPL Zen Residences",
+    "latitude": 28.378825,
+    "longitude": 77.03914
+  },
+  {
+    "society_name": "M3M Escala",
+    "latitude": 28.38884,
+    "longitude": 77.036515
+  },
+  {
+    "society_name": "BPTP Astaire Gardens",
+    "latitude": 28.391215,
+    "longitude": 77.03384
+  },
+  {
+    "society_name": "Capital Residences 360",
+    "latitude": 28.39384,
+    "longitude": 77.03111
+  },
+  {
+    "society_name": "BPTP Pedestal",
+    "latitude": 28.396515,
+    "longitude": 77.02854
+  },
+  {
+    "society_name": "CHD Avenue 71",
+    "latitude": 28.39811,
+    "longitude": 77.025825
+  },
+  {
+    "society_name": "Signature Andour Heights",
+    "latitude": 28.40054,
+    "longitude": 77.023115
+  },
+  {
+    "society_name": "Trehan Luxury Floors 71",
+    "latitude": 28.402815,
+    "longitude": 77.02054
+  },
+  {
+    "society_name": "Tata Primanti",
+    "latitude": 28.392525,
+    "longitude": 77.02641
+  },
+  {
+    "society_name": "Spaze Privy",
+    "latitude": 28.39524,
+    "longitude": 77.023815
+  },
+  {
+    "society_name": "DLF Alameda",
+    "latitude": 28.38441,
+    "longitude": 77.01854
+  },
+  {
+    "society_name": "M3M Skywalk",
+    "latitude": 28.369525,
+    "longitude": 76.98551
+  },
+  {
+    "society_name": "Suncity Avenue 76",
+    "latitude": 28.36724,
+    "longitude": 76.988215
+  },
+  {
+    "society_name": "Pyramid Pride",
+    "latitude": 28.36481,
+    "longitude": 76.99084
+  },
+  {
+    "society_name": "Emaar MGF Palm Hills",
+    "latitude": 28.372515,
+    "longitude": 76.94551
+  },
+  {
+    "society_name": "Umang Winter Hills",
+    "latitude": 28.37024,
+    "longitude": 76.948225
+  },
+  {
+    "society_name": "Emaar Palm Heights",
+    "latitude": 28.36781,
+    "longitude": 76.95084
+  },
+  {
+    "society_name": "DLF Privana South",
+    "latitude": 28.365515,
+    "longitude": 76.95351
+  },
+  {
+    "society_name": "Umang Monsoon Breeze",
+    "latitude": 28.36224,
+    "longitude": 76.956225
+  },
+  {
+    "society_name": "Bestech Altura",
+    "latitude": 28.36151,
+    "longitude": 76.99444
+  },
+  {
+    "society_name": "Mapsko Mount Ville",
+    "latitude": 28.358825,
+    "longitude": 76.99711
+  },
+  {
+    "society_name": "Signature Global Golf Greens",
+    "latitude": 28.35624,
+    "longitude": 76.999815
+  },
+  {
+    "society_name": "Godrej Aria",
+    "latitude": 28.35921,
+    "longitude": 76.98154
+  },
+  {
+    "society_name": "Godrej 101",
+    "latitude": 28.356815,
+    "longitude": 76.984125
+  },
+  {
+    "society_name": "M3M Antalya Hills",
+    "latitude": 28.35454,
+    "longitude": 76.98681
+  },
+  {
+    "society_name": "Supertech Araville",
+    "latitude": 28.35121,
+    "longitude": 76.98954
+  },
+  {
+    "society_name": "M3M Golf Hills",
+    "latitude": 28.348825,
+    "longitude": 76.992215
+  },
+  {
+    "society_name": "Godrej Frontier",
+    "latitude": 28.37554,
+    "longitude": 76.93851
+  },
+  {
+    "society_name": "DLF The Ultima",
+    "latitude": 28.37881,
+    "longitude": 76.93584
+  },
+  {
+    "society_name": "Bestech Park View Grand Spa",
+    "latitude": 28.381215,
+    "longitude": 76.933125
+  },
+  {
+    "society_name": "Bestech Park View Ananda",
+    "latitude": 28.38384,
+    "longitude": 76.93051
+  },
+  {
+    "society_name": "Vipul Lavanya",
+    "latitude": 28.38611,
+    "longitude": 76.92784
+  },
+  {
+    "society_name": "Signature Global Synera",
+    "latitude": 28.388515,
+    "longitude": 76.925225
+  },
+  {
+    "society_name": "Signature Global City 81",
+    "latitude": 28.38114,
+    "longitude": 76.94221
+  },
+  {
+    "society_name": "Landmark The Homes 81",
+    "latitude": 28.38351,
+    "longitude": 76.93954
+  },
+  {
+    "society_name": "Vatika The Seven Lamps",
+    "latitude": 28.385815,
+    "longitude": 76.936825
+  },
+  {
+    "society_name": "Mapsko Casa Bella",
+    "latitude": 28.38224,
+    "longitude": 76.95151
+  },
+  {
+    "society_name": "Mapsko Royale Ville",
+    "latitude": 28.38451,
+    "longitude": 76.94884
+  },
+  {
+    "society_name": "DLF The Primus",
+    "latitude": 28.386815,
+    "longitude": 76.946125
+  },
+  {
+    "society_name": "Vatika Sovereign Next",
+    "latitude": 28.38914,
+    "longitude": 76.94351
+  },
+  {
+    "society_name": "Emaar Palm Gardens",
+    "latitude": 28.37221,
+    "longitude": 76.96444
+  },
+  {
+    "society_name": "Vatika Gurgaon 21",
+    "latitude": 28.374525,
+    "longitude": 76.961815
+  },
+  {
+    "society_name": "Vatika Lifestyle Homes",
+    "latitude": 28.37684,
+    "longitude": 76.95911
+  },
+  {
+    "society_name": "Mapsko Paradise",
+    "latitude": 28.37911,
+    "longitude": 76.95654
+  },
+  {
+    "society_name": "Vatika City Homes",
+    "latitude": 28.381415,
+    "longitude": 76.953825
+  },
+  {
+    "society_name": "Vatika Emilia Floors",
+    "latitude": 28.38384,
+    "longitude": 76.95111
+  },
+  {
+    "society_name": "SS Cendana Reserve Collection",
+    "latitude": 28.37111,
+    "longitude": 76.97454
+  },
+  {
+    "society_name": "Antriksh Heights",
+    "latitude": 28.373415,
+    "longitude": 76.971825
+  },
+  {
+    "society_name": "SS The Coralwood",
+    "latitude": 28.37584,
+    "longitude": 76.96911
+  },
+  {
+    "society_name": "Spaze Privy AT4",
+    "latitude": 28.37811,
+    "longitude": 76.96654
+  },
+  {
+    "society_name": "Alpha Corp GurgaonOne 84",
+    "latitude": 28.380415,
+    "longitude": 76.963825
+  },
+  {
+    "society_name": "Pivotal Devaan",
+    "latitude": 28.38284,
+    "longitude": 76.96111
+  },
+  {
+    "society_name": "SS Linden Floors",
+    "latitude": 28.36441,
+    "longitude": 76.95854
+  },
+  {
+    "society_name": "Spaze Kalistaa",
+    "latitude": 28.366815,
+    "longitude": 76.955825
+  },
+  {
+    "society_name": "SS Almeria",
+    "latitude": 28.36914,
+    "longitude": 76.95311
+  },
+  {
+    "society_name": "Godrej Air",
+    "latitude": 28.37141,
+    "longitude": 76.95054
+  },
+  {
+    "society_name": "SS The Leaf",
+    "latitude": 28.373815,
+    "longitude": 76.947825
+  },
+  {
+    "society_name": "Orris Carnation Residency",
+    "latitude": 28.37614,
+    "longitude": 76.94511
+  },
+  {
+    "society_name": "Pyramid Heights",
+    "latitude": 28.37841,
+    "longitude": 76.94254
+  },
+  {
+    "society_name": "Orris Aster Court",
+    "latitude": 28.361115,
+    "longitude": 76.939525
+  },
+  {
+    "society_name": "Orris Aster Court Premier",
+    "latitude": 28.36344,
+    "longitude": 76.93681
+  },
+  {
+    "society_name": "DLF The Skycourt",
+    "latitude": 28.36581,
+    "longitude": 76.93414
+  },
+  {
+    "society_name": "DLF New Town Heights 2",
+    "latitude": 28.368115,
+    "longitude": 76.931525
+  },
+  {
+    "society_name": "Pyramid Elite",
+    "latitude": 28.37044,
+    "longitude": 76.92881
+  },
+  {
+    "society_name": "Pyramid Urban Homes 2",
+    "latitude": 28.37281,
+    "longitude": 76.92614
+  },
+  {
+    "society_name": "Microtek Greenburg",
+    "latitude": 28.358815,
+    "longitude": 76.944225
+  },
+  {
+    "society_name": "Ansal Heights 86",
+    "latitude": 28.36114,
+    "longitude": 76.94151
+  },
+  {
+    "society_name": "County The Center Court",
+    "latitude": 28.36341,
+    "longitude": 76.93884
+  },
+  {
+    "society_name": "Adani Aangan",
+    "latitude": 28.352215,
+    "longitude": 76.931525
+  },
+  {
+    "society_name": "Godrej Oasis",
+    "latitude": 28.35454,
+    "longitude": 76.92881
+  },
+  {
+    "society_name": "Godrej Icon",
+    "latitude": 28.35681,
+    "longitude": 76.92614
+  },
+  {
+    "society_name": "Smart World Gems",
+    "latitude": 28.349515,
+    "longitude": 76.948525
+  },
+  {
+    "society_name": "M3M Soulitude",
+    "latitude": 28.35184,
+    "longitude": 76.94581
+  },
+  {
+    "society_name": "Greenopolis",
+    "latitude": 28.35411,
+    "longitude": 76.94314
+  },
+  {
+    "society_name": "Signature Global Proxima",
+    "latitude": 28.356415,
+    "longitude": 76.940425
+  },
+  {
+    "society_name": "Tulip Petals",
+    "latitude": 28.35884,
+    "longitude": 76.93781
+  },
+  {
+    "society_name": "Ace Palm Floors",
+    "latitude": 28.36221,
+    "longitude": 76.95154
+  },
+  {
+    "society_name": "Vatika Seven Elements",
+    "latitude": 28.364515,
+    "longitude": 76.948825
+  },
+  {
+    "society_name": "ATS Marigold",
+    "latitude": 28.36684,
+    "longitude": 76.94611
+  },
+  {
+    "society_name": "DLF New Town Heights 1",
+    "latitude": 28.34881,
+    "longitude": 76.92424
+  },
+  {
+    "society_name": "DLF Regal Gardens",
+    "latitude": 28.351115,
+    "longitude": 76.921525
+  },
+  {
+    "society_name": "Green Court",
+    "latitude": 28.35344,
+    "longitude": 76.91881
+  },
+  {
+    "society_name": "Shree Vardhman Flora",
+    "latitude": 28.35581,
+    "longitude": 76.91614
+  },
+  {
+    "society_name": "DLF New Town Heights",
+    "latitude": 28.351115,
+    "longitude": 76.921525
+  },
+  {
+    "society_name": "TARC Maceo",
+    "latitude": 28.34114,
+    "longitude": 76.91551
+  },
+  {
+    "society_name": "Sare Homes",
+    "latitude": 28.34341,
+    "longitude": 76.91284
+  },
+  {
+    "society_name": "Bestech Park View Sanskruti",
+    "latitude": 28.345815,
+    "longitude": 76.910125
+  },
+  {
+    "society_name": "GLS Avenue 51",
+    "latitude": 28.34814,
+    "longitude": 76.90751
+  },
+  {
+    "society_name": "Raheja Navodaya",
+    "latitude": 28.35041,
+    "longitude": 76.90484
+  },
+  {
+    "society_name": "ROF Amaltas",
+    "latitude": 28.352815,
+    "longitude": 76.902125
+  },
+  {
+    "society_name": "Signature Global City 92",
+    "latitude": 28.38444,
+    "longitude": 76.90851
+  },
+  {
+    "society_name": "Sare Crescent Parc",
+    "latitude": 28.38681,
+    "longitude": 76.90584
+  },
+  {
+    "society_name": "Raheja Sampada",
+    "latitude": 28.389115,
+    "longitude": 76.903125
+  },
+  {
+    "society_name": "Ansal Heights",
+    "latitude": 28.39144,
+    "longitude": 76.90041
+  },
+  {
+    "society_name": "Sare Petioles",
+    "latitude": 28.39381,
+    "longitude": 76.89784
+  },
+  {
+    "society_name": "DLF Garden City Floors",
+    "latitude": 28.396115,
+    "longitude": 76.895125
+  },
+  {
+    "society_name": "GLS South Avenue",
+    "latitude": 28.39844,
+    "longitude": 76.89251
+  },
+  {
+    "society_name": "Altura at DXP 92",
+    "latitude": 28.40081,
+    "longitude": 76.88984
+  },
+  {
+    "society_name": "Sare Crescent Parc Royal Greens Phase 1",
+    "latitude": 28.387215,
+    "longitude": 76.905125
+  },
+  {
+    "society_name": "Signature Global Orchard Avenue 2",
+    "latitude": 28.39114,
+    "longitude": 76.91551
+  },
+  {
+    "society_name": "MRG The Balcony",
+    "latitude": 28.39341,
+    "longitude": 76.91284
+  },
+  {
+    "society_name": "Spaze Privvy The Address",
+    "latitude": 28.395815,
+    "longitude": 76.910125
+  },
+  {
+    "society_name": "Signature Global Orchard Avenue",
+    "latitude": 28.39114,
+    "longitude": 76.91551
+  },
+  {
+    "society_name": "DLF Gardencity Enclave",
+    "latitude": 28.39811,
+    "longitude": 76.90744
+  },
+  {
+    "society_name": "Ashiana Amarah",
+    "latitude": 28.406532,
+    "longitude": 76.903215
+  },
+  {
+    "society_name": "ROF Ananda",
+    "latitude": 28.412045,
+    "longitude": 76.89854
+  },
+  {
+    "society_name": "Ramsons Kshitij",
+    "latitude": 28.413512,
+    "longitude": 76.89421
+  },
+  {
+    "society_name": "AWHO Shanti Vihar",
+    "latitude": 28.415025,
+    "longitude": 76.89103
+  },
+  {
+    "society_name": "Sidhartha NCR One Phase 1",
+    "latitude": 28.41804,
+    "longitude": 76.897515
+  },
+  {
+    "society_name": "Sidhartha NCR Greens",
+    "latitude": 28.419215,
+    "longitude": 76.89504
+  },
+  {
+    "society_name": "Signature The Roselia",
+    "latitude": 28.423012,
+    "longitude": 76.899025
+  },
+  {
+    "society_name": "Vatika Sovereign Park",
+    "latitude": 28.435045,
+    "longitude": 76.931015
+  },
+  {
+    "society_name": "Assotech Blith",
+    "latitude": 28.43721,
+    "longitude": 76.92854
+  },
+  {
+    "society_name": "Pareena Express Heights",
+    "latitude": 28.438525,
+    "longitude": 76.925015
+  },
+  {
+    "society_name": "Cosmos Express 99",
+    "latitude": 28.43984,
+    "longitude": 76.922035
+  },
+  {
+    "society_name": "Lotus Elise",
+    "latitude": 28.441015,
+    "longitude": 76.91902
+  },
+  {
+    "society_name": "Pivotal Riddhi Siddhi",
+    "latitude": 28.44254,
+    "longitude": 76.91651
+  },
+  {
+    "society_name": "Pareena Coban Residences",
+    "latitude": 28.445015,
+    "longitude": 76.911025
+  },
+  {
+    "society_name": "Pareena Laxmi Apartments",
+    "latitude": 28.44654,
+    "longitude": 76.90851
+  },
+  {
+    "society_name": "Conscient Habitat",
+    "latitude": 28.448012,
+    "longitude": 76.905035
+  },
+  {
+    "society_name": "Ashiana Mulberry Blossom",
+    "latitude": 28.243515,
+    "longitude": 77.06904
+  },
+  {
+    "society_name": "Central Park Flower Valley Aqua Front Towers",
+    "latitude": 28.245025,
+    "longitude": 77.062015
+  },
+  {
+    "society_name": "Godrej Nature Plus",
+    "latitude": 28.24904,
+    "longitude": 77.05851
+  },
+  {
+    "society_name": "Central Park Flower Valley",
+    "latitude": 28.244015,
+    "longitude": 77.06352
+  },
+  {
+    "society_name": "Central Park Flower Valley Flamingo Floors",
+    "latitude": 28.243045,
+    "longitude": 77.06451
+  },
+  {
+    "society_name": "Central Park Flower Valley Cerise Floors",
+    "latitude": 28.242012,
+    "longitude": 77.06554
+  },
+  {
+    "society_name": "Godrej Nature Plus Serenity",
+    "latitude": 28.24953,
+    "longitude": 77.058015
+  },
+  {
+    "society_name": "Silverglades The Melia",
+    "latitude": 28.238515,
+    "longitude": 77.07254
+  },
+  {
+    "society_name": "Signature Global Park",
+    "latitude": 28.25104,
+    "longitude": 77.055515
+  },
+  {
+    "society_name": "Ashiana Anmol",
+    "latitude": 28.253512,
+    "longitude": 77.05304
+  },
+  {
+    "society_name": "GLS Arawali Homes",
+    "latitude": 28.256025,
+    "longitude": 77.050515
+  },
+  {
+    "society_name": "Breez Global Heights",
+    "latitude": 28.25804,
+    "longitude": 77.047035
+  },
+  {
+    "society_name": "Signature The Serenas",
+    "latitude": 28.260515,
+    "longitude": 77.04501
+  },
+  {
+    "society_name": "Eldeco Accolade",
+    "latitude": 28.235045,
+    "longitude": 77.07552
+  },
+  {
+    "society_name": "HCBS Sports Ville",
+    "latitude": 28.233012,
+    "longitude": 77.07854
+  },
+  {
+    "society_name": "Ashiana Mulberry",
+    "latitude": 28.241035,
+    "longitude": 77.068015
+  },
+  {
+    "society_name": "MVN Athens",
+    "latitude": 28.229045,
+    "longitude": 77.08103
+  },
+  {
+    "society_name": "Trisara Our Homes 3",
+    "latitude": 28.226015,
+    "longitude": 77.08454
+  },
+  {
+    "society_name": "Breez Global Hill View",
+    "latitude": 28.25904,
+    "longitude": 77.046515
+  },
+  {
+    "society_name": "Eldeco Acclaim",
+    "latitude": 28.236025,
+    "longitude": 77.07451
+  },
+  {
+    "society_name": "Central Park Flower Valley The Room",
+    "latitude": 28.246515,
+    "longitude": 77.06104
+  },
+  {
+    "society_name": "Vipul Orchid Gardens",
+    "latitude": 28.43754,
+    "longitude": 77.095015
+  },
+  {
+    "society_name": "Ansal Sushant Apartments",
+    "latitude": 28.441512,
+    "longitude": 77.078045
+  },
+  {
+    "society_name": "Sushant Lok 1 Builder Floors",
+    "latitude": 28.444035,
+    "longitude": 77.07251
+  },
+  {
+    "society_name": "Ansal Maple Crescent",
+    "latitude": 28.44954,
+    "longitude": 77.068015
+  },
+  {
+    "society_name": "Ansal Harmony Homes",
+    "latitude": 28.423515,
+    "longitude": 77.08154
+  },
+  {
+    "society_name": "Tch Garden Residency",
+    "latitude": 28.61154,
+    "longitude": 77.374025
+  },
+  {
+    "society_name": "Spacetech Edana",
+    "latitude": 28.494512,
+    "longitude": 77.511035
+  },
+  {
+    "society_name": "Parsvnath Edens",
+    "latitude": 28.625045,
+    "longitude": 77.36851
+  },
+  {
+    "society_name": "Assotech Golf Vista Apartments",
+    "latitude": 28.482515,
+    "longitude": 77.52504
+  },
+  {
+    "society_name": "Army Flats",
+    "latitude": 28.471035,
+    "longitude": 77.49851
+  },
+  {
+    "society_name": "Presidency Heights Presithum",
+    "latitude": 28.41154,
+    "longitude": 77.545025
+  },
+  {
+    "society_name": "AVJ Homes",
+    "latitude": 28.486512,
+    "longitude": 77.51403
+  },
+  {
+    "society_name": "ultima allure",
+    "latitude": 28.461545,
+    "longitude": 77.502015
+  },
+  {
+    "society_name": "Wow Monk",
+    "latitude": 28.45502,
+    "longitude": 77.53154
+  },
+  {
+    "society_name": "Migsun Twinz",
+    "latitude": 28.439045,
+    "longitude": 77.54151
+  },
+  {
+    "society_name": "Migsun Vilaasa",
+    "latitude": 28.437015,
+    "longitude": 77.543025
+  },
+  {
+    "society_name": "SKA Metro Ville",
+    "latitude": 28.415035,
+    "longitude": 77.55801
+  },
+  {
+    "society_name": "Mahagun Manor",
+    "latitude": 28.61854,
+    "longitude": 77.361025
+  },
+  {
+    "society_name": "Twin Towers AWHO",
+    "latitude": 28.468512,
+    "longitude": 77.51254
+  },
+  {
+    "society_name": "Ambesten Twin Chalet",
+    "latitude": 28.452545,
+    "longitude": 77.524015
+  },
+  {
+    "society_name": "Trinity high street",
+    "latitude": 28.465015,
+    "longitude": 77.51804
+  },
+  {
+    "society_name": "Jaypee Greens Star Court",
+    "latitude": 28.474025,
+    "longitude": 77.53151
+  },
+  {
+    "society_name": "Jaypee Greens Moon Court",
+    "latitude": 28.47654,
+    "longitude": 77.529035
+  },
+  {
+    "society_name": "Jaypee Greens Crescent Court",
+    "latitude": 28.478015,
+    "longitude": 77.52654
+  },
+  {
+    "society_name": "Jaypee Greens The Sun Court",
+    "latitude": 28.48154,
+    "longitude": 77.524012
+  },
+  {
+    "society_name": "Jaypee The Castille",
+    "latitude": 28.483025,
+    "longitude": 77.521045
+  },
+  {
+    "society_name": "jaypee greens sea court",
+    "latitude": 28.485512,
+    "longitude": 77.51853
+  },
+  {
+    "society_name": "Jaypee Greens Spa Court",
+    "latitude": 28.488045,
+    "longitude": 77.516015
+  },
+  {
+    "society_name": "Casa View Apartment 4",
+    "latitude": 28.459035,
+    "longitude": 77.53554
+  },
+  {
+    "society_name": "Gaur 16th Avenue",
+    "latitude": 28.598512,
+    "longitude": 77.441025
+  },
+  {
+    "society_name": "Gaur 12th Avenue",
+    "latitude": 28.601045,
+    "longitude": 77.43801
+  },
+  {
+    "society_name": "Amrapali Dream Valley High Life 2",
+    "latitude": 28.595015,
+    "longitude": 77.45254
+  },
+  {
+    "society_name": "Exotica Dreamville",
+    "latitude": 28.59354,
+    "longitude": 77.455015
+  },
+  {
+    "society_name": "Galaxy North Avenue 2",
+    "latitude": 28.604025,
+    "longitude": 77.43251
+  },
+  {
+    "society_name": "French Apartments",
+    "latitude": 28.606515,
+    "longitude": 77.429035
+  },
+  {
+    "society_name": "Supertech Ecovillage 3",
+    "latitude": 28.58154,
+    "longitude": 77.468012
+  },
+  {
+    "society_name": "Galaxy Vega",
+    "latitude": 28.583025,
+    "longitude": 77.46554
+  },
+  {
+    "society_name": "Stellar One",
+    "latitude": 28.621512,
+    "longitude": 77.451035
+  },
+  {
+    "society_name": "Town Park White Orchid",
+    "latitude": 28.623045,
+    "longitude": 77.44851
+  },
+  {
+    "society_name": "Amrapali Tropical Garden",
+    "latitude": 28.588515,
+    "longitude": 77.44204
+  },
+  {
+    "society_name": "Gaur City 10Th Avenue",
+    "latitude": 28.611035,
+    "longitude": 77.42551
+  },
+  {
+    "society_name": "Geotech Pristine Avenue",
+    "latitude": 28.61354,
+    "longitude": 77.422515
+  },
+  {
+    "society_name": "Sky Gardens",
+    "latitude": 28.615512,
+    "longitude": 77.420045
+  },
+  {
+    "society_name": "Twin Celestial by Ambesten Homes",
+    "latitude": 28.45454,
+    "longitude": 77.521035
+  },
+  {
+    "society_name": "Vihaan Vista",
+    "latitude": 28.618015,
+    "longitude": 77.443025
+  },
+  {
+    "society_name": "Gayatri Life",
+    "latitude": 28.62054,
+    "longitude": 77.44051
+  },
+  {
+    "society_name": "Aig Park Avenue",
+    "latitude": 28.623512,
+    "longitude": 77.438045
+  },
+  {
+    "society_name": "Amrapali O2 Valley",
+    "latitude": 28.574545,
+    "longitude": 77.485015
+  },
+  {
+    "society_name": "SDS NRI Residency",
+    "latitude": 28.45151,
+    "longitude": 77.542035
+  },
+  {
+    "society_name": "Omaxe NRI City",
+    "latitude": 28.453045,
+    "longitude": 77.53951
+  },
+  {
+    "society_name": "Omaxe Putting Greens",
+    "latitude": 28.455515,
+    "longitude": 77.537025
+  },
+  {
+    "society_name": "ACE Divino",
+    "latitude": 28.61854,
+    "longitude": 77.421035
+  },
+  {
+    "society_name": "Ace City",
+    "latitude": 28.621512,
+    "longitude": 77.41854
+  },
+  {
+    "society_name": "ATS Rhapsody",
+    "latitude": 28.601545,
+    "longitude": 77.46401
+  },
+  {
+    "society_name": "Stellar Jeevan",
+    "latitude": 28.603015,
+    "longitude": 77.461525
+  },
+  {
+    "society_name": "Arihant Arden",
+    "latitude": 28.60554,
+    "longitude": 77.459015
+  },
+  {
+    "society_name": "CRC Sublimis",
+    "latitude": 28.608512,
+    "longitude": 77.456035
+  },
+  {
+    "society_name": "Hawelia Valencia Homes",
+    "latitude": 28.610545,
+    "longitude": 77.45351
+  },
+  {
+    "society_name": "Trident Embassy",
+    "latitude": 28.612515,
+    "longitude": 77.45104
+  },
+  {
+    "society_name": "Paramount Emotions",
+    "latitude": 28.61554,
+    "longitude": 77.448015
+  },
+  {
+    "society_name": "Apex Aura",
+    "latitude": 28.617512,
+    "longitude": 77.44553
+  },
+  {
+    "society_name": "NCR Monarch and Crown",
+    "latitude": 28.619545,
+    "longitude": 77.443015
+  },
+  {
+    "society_name": "Arihant Ambar",
+    "latitude": 28.622515,
+    "longitude": 77.440025
+  },
+  {
+    "society_name": "Trident Embassy Reso",
+    "latitude": 28.61384,
+    "longitude": 77.45021
+  },
+  {
+    "society_name": "Capital Athena",
+    "latitude": 28.62552,
+    "longitude": 77.435815
+  },
+  {
+    "society_name": "Supertech Ecovillage 1",
+    "latitude": 28.60941,
+    "longitude": 77.44253
+  },
+  {
+    "society_name": "AIGIN Royal",
+    "latitude": 28.611815,
+    "longitude": 77.43984
+  },
+  {
+    "society_name": "Apex Golf Avenue",
+    "latitude": 28.61394,
+    "longitude": 77.436915
+  },
+  {
+    "society_name": "Panchsheel Hynish",
+    "latitude": 28.61652,
+    "longitude": 77.43424
+  },
+  {
+    "society_name": "Irish Pearls",
+    "latitude": 28.61861,
+    "longitude": 77.431815
+  },
+  {
+    "society_name": "The Valley",
+    "latitude": 28.59154,
+    "longitude": 77.45682
+  },
+  {
+    "society_name": "Apex Alphabet",
+    "latitude": 28.593815,
+    "longitude": 77.45391
+  },
+  {
+    "society_name": "Lucky Krishna Elite Homes",
+    "latitude": 28.59594,
+    "longitude": 77.451215
+  },
+  {
+    "society_name": "BNH Casa View Orchid Aurum",
+    "latitude": 28.45682,
+    "longitude": 77.53251
+  },
+  {
+    "society_name": "Sportshome by Dev Sai Group",
+    "latitude": 28.601415,
+    "longitude": 77.44482
+  },
+  {
+    "society_name": "SRPL Flora Heritage",
+    "latitude": 28.60351,
+    "longitude": 77.441915
+  },
+  {
+    "society_name": "Rudra Palace Heights",
+    "latitude": 28.60594,
+    "longitude": 77.43921
+  },
+  {
+    "society_name": "Orchid Residency",
+    "latitude": 28.608515,
+    "longitude": 77.43684
+  },
+  {
+    "society_name": "Vihaan Heritage",
+    "latitude": 28.62141,
+    "longitude": 77.44582
+  },
+  {
+    "society_name": "Vihaan Greens",
+    "latitude": 28.623615,
+    "longitude": 77.44294
+  },
+  {
+    "society_name": "Vrinda Heritage Skyward",
+    "latitude": 28.62594,
+    "longitude": 77.440215
+  },
+  {
+    "society_name": "Devika Gold Homz",
+    "latitude": 28.628215,
+    "longitude": 77.43754
+  },
+  {
+    "society_name": "Rajhans Residency",
+    "latitude": 28.63051,
+    "longitude": 77.434915
+  },
+  {
+    "society_name": "Vihaan Wisteria",
+    "latitude": 28.63294,
+    "longitude": 77.43221
+  },
+  {
+    "society_name": "ATS Destinaire",
+    "latitude": 28.624815,
+    "longitude": 77.46142
+  },
+  {
+    "society_name": "SAM RISE INN",
+    "latitude": 28.44151,
+    "longitude": 77.518815
+  },
+  {
+    "society_name": "Clover Spring Homes",
+    "latitude": 28.44394,
+    "longitude": 77.51592
+  },
+  {
+    "society_name": "Lucky The Palm Valley",
+    "latitude": 28.445915,
+    "longitude": 77.51321
+  },
+  {
+    "society_name": "Vihaan Wardenia",
+    "latitude": 28.62684,
+    "longitude": 77.441515
+  },
+  {
+    "society_name": "Future Estate by FW Group",
+    "latitude": 28.60151,
+    "longitude": 77.47254
+  },
+  {
+    "society_name": "Rise Resort Residences",
+    "latitude": 28.603915,
+    "longitude": 77.46982
+  },
+  {
+    "society_name": "Express Astra",
+    "latitude": 28.60594,
+    "longitude": 77.466915
+  },
+  {
+    "society_name": "orchid aurum",
+    "latitude": 28.45691,
+    "longitude": 77.53284
+  },
+  {
+    "society_name": "Trinity Grand",
+    "latitude": 28.463515,
+    "longitude": 77.51582
+  },
+  {
+    "society_name": "HomeKraft Happy Trails",
+    "latitude": 28.61484,
+    "longitude": 77.462815
+  },
+  {
+    "society_name": "Coco County",
+    "latitude": 28.616915,
+    "longitude": 77.45994
+  },
+  {
+    "society_name": "Arihant Abode",
+    "latitude": 28.61941,
+    "longitude": 77.457215
+  },
+  {
+    "society_name": "Amaatra Homes",
+    "latitude": 28.621815,
+    "longitude": 77.45454
+  },
+  {
+    "society_name": "Mahagun Mantraa 2",
+    "latitude": 28.43554,
+    "longitude": 77.551515
+  },
+  {
+    "society_name": "Sikka Kaamya Greens",
+    "latitude": 28.43791,
+    "longitude": 77.54882
+  },
+  {
+    "society_name": "Mahagun Mantraa 1",
+    "latitude": 28.434515,
+    "longitude": 77.55284
+  },
+  {
+    "society_name": "Greater Noida Authority Apartment",
+    "latitude": 28.47484,
+    "longitude": 77.511515
+  },
+  {
+    "society_name": "3C Lotus Boulevard",
+    "latitude": 28.53591,
+    "longitude": 77.37152
+  },
+  {
+    "society_name": "3C Lotus Boulevard Espacia",
+    "latitude": 28.537515,
+    "longitude": 77.36984
+  },
+  {
+    "society_name": "ATS One Hamlet",
+    "latitude": 28.52894,
+    "longitude": 77.385815
+  },
+  {
+    "society_name": "golden residency",
+    "latitude": 28.53151,
+    "longitude": 77.38292
+  },
+  {
+    "society_name": "Chauhan Apartments",
+    "latitude": 28.533815,
+    "longitude": 77.38024
+  },
+  {
+    "society_name": "Amrapali HeartBeat City",
+    "latitude": 28.54151,
+    "longitude": 77.365815
+  },
+  {
+    "society_name": "County 107",
+    "latitude": 28.54384,
+    "longitude": 77.36292
+  },
+  {
+    "society_name": "Great Value Sharanam",
+    "latitude": 28.531515,
+    "longitude": 77.39184
+  },
+  {
+    "society_name": "3C Lotus 300",
+    "latitude": 28.53394,
+    "longitude": 77.38891
+  },
+  {
+    "society_name": "Sunworld Vanalika",
+    "latitude": 28.535915,
+    "longitude": 77.38624
+  },
+  {
+    "society_name": "Prateek Edifice",
+    "latitude": 28.53851,
+    "longitude": 77.383515
+  },
+  {
+    "society_name": "Arena The Ultima Heights",
+    "latitude": 28.54084,
+    "longitude": 77.38092
+  },
+  {
+    "society_name": "Great Value Anandam",
+    "latitude": 28.542915,
+    "longitude": 77.37821
+  },
+  {
+    "society_name": "Parx Laureate",
+    "latitude": 28.52484,
+    "longitude": 77.408915
+  },
+  {
+    "society_name": "Elixir Divine Meadows",
+    "latitude": 28.52691,
+    "longitude": 77.40592
+  },
+  {
+    "society_name": "3C Lotus Panache",
+    "latitude": 28.521515,
+    "longitude": 77.40154
+  },
+  {
+    "society_name": "Royal Residency",
+    "latitude": 28.52384,
+    "longitude": 77.39891
+  },
+  {
+    "society_name": "Ivory County",
+    "latitude": 28.551515,
+    "longitude": 77.42182
+  },
+  {
+    "society_name": "Supertech The Romano",
+    "latitude": 28.55381,
+    "longitude": 77.418915
+  },
+  {
+    "society_name": "Ajnara Ambrosia",
+    "latitude": 28.55594,
+    "longitude": 77.41621
+  },
+  {
+    "society_name": "Amrapali Platinum",
+    "latitude": 28.584815,
+    "longitude": 77.35894
+  },
+  {
+    "society_name": "Uninati The Aranya",
+    "latitude": 28.58691,
+    "longitude": 77.355815
+  },
+  {
+    "society_name": "Gaur Grandeur",
+    "latitude": 28.581515,
+    "longitude": 77.36892
+  },
+  {
+    "society_name": "Eldeco Aamantran",
+    "latitude": 28.58394,
+    "longitude": 77.36581
+  },
+  {
+    "society_name": "Eldeco Magnolia Park",
+    "latitude": 28.585915,
+    "longitude": 77.36324
+  },
+  {
+    "society_name": "Eldeco Inspire",
+    "latitude": 28.58851,
+    "longitude": 77.360515
+  },
+  {
+    "society_name": "Amrapali Zodiac",
+    "latitude": 28.59154,
+    "longitude": 77.37292
+  },
+  {
+    "society_name": "Prateek Laurel",
+    "latitude": 28.593915,
+    "longitude": 77.36981
+  },
+  {
+    "society_name": "RG Residency",
+    "latitude": 28.59594,
+    "longitude": 77.367215
+  },
+  {
+    "society_name": "ABA Cleo County",
+    "latitude": 28.601515,
+    "longitude": 77.37894
+  },
+  {
+    "society_name": "Homes 121",
+    "latitude": 28.60381,
+    "longitude": 77.375915
+  },
+  {
+    "society_name": "ABA Cleo Gold",
+    "latitude": 28.60194,
+    "longitude": 77.37821
+  },
+  {
+    "society_name": "Jaypee Greens Kalypso Court",
+    "latitude": 28.531515,
+    "longitude": 77.35484
+  },
+  {
+    "society_name": "Jaypee Greens Knights Court",
+    "latitude": 28.53391,
+    "longitude": 77.351915
+  },
+  {
+    "society_name": "Kalpataru Vista",
+    "latitude": 28.53594,
+    "longitude": 77.34921
+  },
+  {
+    "society_name": "Jaypee Greens The Pavilion Court",
+    "latitude": 28.538515,
+    "longitude": 77.34684
+  },
+  {
+    "society_name": "Jaypee Greens Imperial Court",
+    "latitude": 28.54091,
+    "longitude": 77.343915
+  },
+  {
+    "society_name": "Jaypee Greens Pavilion Heights",
+    "latitude": 28.54294,
+    "longitude": 77.34121
+  },
+  {
+    "society_name": "Jaypee Wish Town",
+    "latitude": 28.535915,
+    "longitude": 77.35154
+  },
+  {
+    "society_name": "Jaypee Augusta Town Homes",
+    "latitude": 28.52894,
+    "longitude": 77.358915
+  },
+  {
+    "society_name": "Jaypee Greens Wish Town Klassic",
+    "latitude": 28.52151,
+    "longitude": 77.36594
+  },
+  {
+    "society_name": "Jaypee Greens Kensington Boulevard",
+    "latitude": 28.514815,
+    "longitude": 77.37191
+  },
+  {
+    "society_name": "Jaypee Greens Kensington Park Apartments",
+    "latitude": 28.51694,
+    "longitude": 77.368815
+  },
+  {
+    "society_name": "Jaypee Greens Garden Isles",
+    "latitude": 28.50951,
+    "longitude": 77.37894
+  },
+  {
+    "society_name": "Jaypee Greens Kosmos",
+    "latitude": 28.502515,
+    "longitude": 77.38591
+  },
+  {
+    "society_name": "Jaypee Greens Klassic",
+    "latitude": 28.52154,
+    "longitude": 77.365815
+  },
+  {
+    "society_name": "Jaypee Klassic Shaurya",
+    "latitude": 28.52291,
+    "longitude": 77.36394
+  },
+  {
+    "society_name": "Jaypee Greens Klassic Heights",
+    "latitude": 28.523915,
+    "longitude": 77.36221
+  },
+  {
+    "society_name": "Jaypee Greens Klassic A",
+    "latitude": 28.52154,
+    "longitude": 77.365815
+  },
+  {
+    "society_name": "Jaypee Wish Point",
+    "latitude": 28.50591,
+    "longitude": 77.382515
+  },
+  {
+    "society_name": "Today Ridge Residency",
+    "latitude": 28.49894,
+    "longitude": 77.41251
+  },
+  {
+    "society_name": "Paras Tierea",
+    "latitude": 28.501515,
+    "longitude": 77.40984
+  },
+  {
+    "society_name": "Supertech Ecociti",
+    "latitude": 28.50391,
+    "longitude": 77.406915
+  },
+  {
+    "society_name": "Purvanchal Royal Park",
+    "latitude": 28.50594,
+    "longitude": 77.40421
+  },
+  {
+    "society_name": "Gulshan Vivante",
+    "latitude": 28.508515,
+    "longitude": 77.40154
+  },
+  {
+    "society_name": "Paramount Floraville",
+    "latitude": 28.51091,
+    "longitude": 77.398915
+  },
+  {
+    "society_name": "Logix Blossom County",
+    "latitude": 28.51294,
+    "longitude": 77.39621
+  },
+  {
+    "society_name": "Ajnara Daffodil",
+    "latitude": 28.515515,
+    "longitude": 77.39354
+  },
+  {
+    "society_name": "Exotica Fresco",
+    "latitude": 28.51791,
+    "longitude": 77.390915
+  },
+  {
+    "society_name": "Gulshan Ikebana",
+    "latitude": 28.48484,
+    "longitude": 77.43251
+  },
+  {
+    "society_name": "Logix Blossom Greens",
+    "latitude": 28.486915,
+    "longitude": 77.42994
+  },
+  {
+    "society_name": "Sikka Kaamna Greens",
+    "latitude": 28.489115,
+    "longitude": 77.42694
+  },
+  {
+    "society_name": "Logix Blossom Zest",
+    "latitude": 28.49144,
+    "longitude": 77.424115
+  },
+  {
+    "society_name": "SKA Orion",
+    "latitude": 28.493815,
+    "longitude": 77.42144
+  },
+  {
+    "society_name": "Rani Aakriti Shantiniketan",
+    "latitude": 28.49614,
+    "longitude": 77.418815
+  },
+  {
+    "society_name": "Sikka Karnam Greens",
+    "latitude": 28.498415,
+    "longitude": 77.41614
+  },
+  {
+    "society_name": "Gulshan Botnia",
+    "latitude": 28.47224,
+    "longitude": 77.452215
+  },
+  {
+    "society_name": "Gulshan Dynasty",
+    "latitude": 28.474515,
+    "longitude": 77.44954
+  },
+  {
+    "society_name": "Godrej Tropical Isle",
+    "latitude": 28.45584,
+    "longitude": 77.46891
+  },
+  {
+    "society_name": "ACE Parkway",
+    "latitude": 28.442515,
+    "longitude": 77.48594
+  },
+  {
+    "society_name": "ATS Pious Hideaways",
+    "latitude": 28.44484,
+    "longitude": 77.482815
+  },
+  {
+    "society_name": "Eldeco Live By The Greens",
+    "latitude": 28.446815,
+    "longitude": 77.48014
+  },
+  {
+    "society_name": "ATS Le Grandiose",
+    "latitude": 28.44914,
+    "longitude": 77.477515
+  },
+  {
+    "society_name": "Samridhi Luxuriya Avenue",
+    "latitude": 28.451415,
+    "longitude": 77.47484
+  },
+  {
+    "society_name": "ATS Pristine",
+    "latitude": 28.45384,
+    "longitude": 77.472115
+  },
+  {
+    "society_name": "Eureka Park By Tata Value Homes",
+    "latitude": 28.456115,
+    "longitude": 77.46954
+  },
+  {
+    "society_name": "ACE Golfshire",
+    "latitude": 28.45844,
+    "longitude": 77.466815
+  },
+  {
+    "society_name": "Godrej Nest",
+    "latitude": 28.460815,
+    "longitude": 77.46414
+  },
+  {
+    "society_name": "Godrej Palm Retreat",
+    "latitude": 28.46314,
+    "longitude": 77.461515
+  },
+  {
+    "society_name": "TATA Value Homes",
+    "latitude": 28.45614,
+    "longitude": 77.469515
+  },
+  {
+    "society_name": "Mahagun Meadow",
+    "latitude": 28.432515,
+    "longitude": 77.49894
+  },
+  {
+    "society_name": "Antriksh Golf City",
+    "latitude": 28.43454,
+    "longitude": 77.495815
+  },
+  {
+    "society_name": "Godrej Nurture",
+    "latitude": 28.436815,
+    "longitude": 77.49314
+  },
+  {
+    "society_name": "Antriksh Grand View",
+    "latitude": 28.43914,
+    "longitude": 77.490515
+  },
+  {
+    "society_name": "Max Antara Noida",
+    "latitude": 28.421515,
+    "longitude": 77.51254
+  },
+  {
+    "society_name": "Prateek Canary",
+    "latitude": 28.42344,
+    "longitude": 77.509515
+  },
+  {
+    "society_name": "Jaypee Aman",
+    "latitude": 28.411515,
+    "longitude": 77.52584
+  },
+  {
+    "society_name": "Ace Starlit",
+    "latitude": 28.41444,
+    "longitude": 77.518515
+  },
+  {
+    "society_name": "ATS Picturesque Reprieves",
+    "latitude": 28.418815,
+    "longitude": 77.51154
+  },
+  {
+    "society_name": "Panchsheel Greens 2",
+    "latitude": 28.60484,
+    "longitude": 77.452515
+  },
+  {
+    "society_name": "Gulshan Bellina",
+    "latitude": 28.606815,
+    "longitude": 77.44954
+  },
+  {
+    "society_name": "Nirala Aspire",
+    "latitude": 28.60914,
+    "longitude": 77.446815
+  },
+  {
+    "society_name": "SKA Divya Towers",
+    "latitude": 28.611415,
+    "longitude": 77.44414
+  },
+  {
+    "society_name": "Ratan Pearls",
+    "latitude": 28.61384,
+    "longitude": 77.441415
+  },
+  {
+    "society_name": "Victoryone Amara",
+    "latitude": 28.616115,
+    "longitude": 77.43884
+  },
+  {
+    "society_name": "Emenox La Solara",
+    "latitude": 28.61844,
+    "longitude": 77.436115
+  },
+  {
+    "society_name": "Radhey Krishna Casa Greens 1",
+    "latitude": 28.620815,
+    "longitude": 77.43344
+  },
+  {
+    "society_name": "B S Vaibhav Heritage Height",
+    "latitude": 28.62314,
+    "longitude": 77.430815
+  },
+  {
+    "society_name": "Radicon Vedantam",
+    "latitude": 28.625415,
+    "longitude": 77.42814
+  },
+  {
+    "society_name": "Aarcity Regency Park",
+    "latitude": 28.62784,
+    "longitude": 77.425515
+  },
+  {
+    "society_name": "Nirala Aspire Low Rise Phase 4",
+    "latitude": 28.609515,
+    "longitude": 77.44614
+  },
+  {
+    "society_name": "Royal Court",
+    "latitude": 28.49884,
+    "longitude": 77.531215
+  },
+  {
+    "society_name": "The Golden Palm",
+    "latitude": 28.511515,
+    "longitude": 77.40894
+  },
+  {
+    "society_name": "Paras Seasons",
+    "latitude": 28.51554,
+    "longitude": 77.402515
+  },
+  {
+    "society_name": "Sunworld Arista",
+    "latitude": 28.518815,
+    "longitude": 77.39884
+  },
+  {
+    "society_name": "3C Lotus Zing",
+    "latitude": 28.502515,
+    "longitude": 77.41894
+  },
+  {
+    "society_name": "Urbtech Xaviers",
+    "latitude": 28.50554,
+    "longitude": 77.412215
+  },
+  {
+    "society_name": "Shri Radha Sky Gardens",
+    "latitude": 28.618515,
+    "longitude": 77.44854
+  },
+  {
+    "society_name": "Ajnara Homes",
+    "latitude": 28.62151,
+    "longitude": 77.44524
+  },
+  {
+    "society_name": "Ajnara Le Garden",
+    "latitude": 28.62354,
+    "longitude": 77.442115
+  },
+  {
+    "society_name": "Supertech Ecovillage 2",
+    "latitude": 28.601515,
+    "longitude": 77.45894
+  },
+  {
+    "society_name": "Panchsheel Greens",
+    "latitude": 28.60344,
+    "longitude": 77.455815
+  },
+  {
+    "society_name": "Amrapali Dream Valley",
+    "latitude": 28.598515,
+    "longitude": 77.44924
+  },
+  {
+    "society_name": "SKA Greenarch",
+    "latitude": 28.61151,
+    "longitude": 77.43224
+  },
+  {
+    "society_name": "Shri Radha Aqua Gardens",
+    "latitude": 28.61344,
+    "longitude": 77.429515
+  },
+  {
+    "society_name": "RG Luxury Homes",
+    "latitude": 28.615815,
+    "longitude": 77.42684
+  },
+  {
+    "society_name": "Anthem French Apartments",
+    "latitude": 28.60684,
+    "longitude": 77.429515
+  },
+  {
+    "society_name": "Strategic Royal Court",
+    "latitude": 28.611215,
+    "longitude": 77.43554
+  },
+  {
+    "society_name": "Supertech Oxford Square",
+    "latitude": 28.60884,
+    "longitude": 77.432215
+  },
+  {
+    "society_name": "Gaur City 2 14th Avenue",
+    "latitude": 28.615515,
+    "longitude": 77.43254
+  },
+  {
+    "society_name": "Mahagun Mywoods Phase 1",
+    "latitude": 28.608815,
+    "longitude": 77.44154
+  },
+  {
+    "society_name": "Gaur City 2 11th Avenue",
+    "latitude": 28.61884,
+    "longitude": 77.428515
+  },
+  {
+    "society_name": "Sam Palm Olympia",
+    "latitude": 28.62151,
+    "longitude": 77.42554
+  },
+  {
+    "society_name": "Mahagun Mywoods Phase 2",
+    "latitude": 28.60924,
+    "longitude": 77.440515
+  },
+  {
+    "society_name": "Gaur City 2",
+    "latitude": 28.616515,
+    "longitude": 77.43154
+  },
+  {
+    "society_name": "Divyansh Flora",
+    "latitude": 28.62444,
+    "longitude": 77.421215
+  },
+  {
+    "society_name": "Galaxy Royale",
+    "latitude": 28.626815,
+    "longitude": 77.41854
+  },
+  {
+    "society_name": "AFOWO Raksha Addela",
+    "latitude": 28.62914,
+    "longitude": 77.415815
+  },
+  {
+    "society_name": "Sanskriti Vihar 10th Avenue",
+    "latitude": 28.612515,
+    "longitude": 77.42454
+  },
+  {
+    "society_name": "Casa Woodstock",
+    "latitude": 28.60444,
+    "longitude": 77.462515
+  },
+  {
+    "society_name": "Solitaire VVIP Homes",
+    "latitude": 28.606815,
+    "longitude": 77.45984
+  },
+  {
+    "society_name": "Mahagun Mywoods Phase 3",
+    "latitude": 28.60984,
+    "longitude": 77.439815
+  },
+  {
+    "society_name": "Wall Rock Aishwaryam",
+    "latitude": 28.61151,
+    "longitude": 77.45554
+  },
+  {
+    "society_name": "Eros Sampoornam",
+    "latitude": 28.591215,
+    "longitude": 77.43854
+  },
+  {
+    "society_name": "Nirala Greenshire",
+    "latitude": 28.59354,
+    "longitude": 77.435815
+  },
+  {
+    "society_name": "Eros Sampoornam 2",
+    "latitude": 28.591915,
+    "longitude": 77.43784
+  },
+  {
+    "society_name": "Air Force Naval Housing Board",
+    "latitude": 28.54554,
+    "longitude": 77.342215
+  },
+  {
+    "society_name": "Oasis GrandStand",
+    "latitude": 28.31151,
+    "longitude": 77.54554
+  },
+  {
+    "society_name": "YEIDA RPS 02",
+    "latitude": 28.29884,
+    "longitude": 77.561215
+  },
+  {
+    "society_name": "RWA Jalvayu Vihar",
+    "latitude": 28.59124,
+    "longitude": 77.332515
+  },
+  {
+    "society_name": "Godrej Golf Links The Suites",
+    "latitude": 28.44151,
+    "longitude": 77.50224
+  },
+  {
+    "society_name": "Godrej Golf Link Park Lane",
+    "latitude": 28.44254,
+    "longitude": 77.500515
+  },
+  {
+    "society_name": "Godrej Golf Links Windsor",
+    "latitude": 28.443915,
+    "longitude": 77.49884
+  },
+  {
+    "society_name": "The Hemisphere",
+    "latitude": 28.45554,
+    "longitude": 77.51151
+  },
+  {
+    "society_name": "Yamuna Enclave",
+    "latitude": 28.32151,
+    "longitude": 77.53224
+  },
+  {
+    "society_name": "Army Welfare",
+    "latitude": 28.57444,
+    "longitude": 77.318515
+  },
+  {
+    "society_name": "Arun Vihar",
+    "latitude": 28.572215,
+    "longitude": 77.32124
+  },
+  {
+    "society_name": "India Gate Apartment",
+    "latitude": 28.58151,
+    "longitude": 77.34554
+  },
+  {
+    "society_name": "Parsvnath Panorama",
+    "latitude": 28.46884,
+    "longitude": 77.505515
+  },
+  {
+    "society_name": "Wave Amore",
+    "latitude": 28.571215,
+    "longitude": 77.34151
+  },
+  {
+    "society_name": "Supertech 34 Pavilion",
+    "latitude": 28.56884,
+    "longitude": 77.338515
+  },
+  {
+    "society_name": "RWA Nar Vihar",
+    "latitude": 28.57151,
+    "longitude": 77.34254
+  },
+  {
+    "society_name": "Arun Vihar Noida",
+    "latitude": 28.57224,
+    "longitude": 77.321215
+  },
+  {
+    "society_name": "Army Welfare Housing",
+    "latitude": 28.574415,
+    "longitude": 77.31854
+  },
+  {
+    "society_name": "Amrapali Golf Homes",
+    "latitude": 28.60151,
+    "longitude": 77.45224
+  },
+  {
+    "society_name": "Gaur City 7th Avenue",
+    "latitude": 28.61444,
+    "longitude": 77.422515
+  },
+  {
+    "society_name": "Amrapali Centurian Park Terrace Homes",
+    "latitude": 28.59884,
+    "longitude": 77.455515
+  },
+  {
+    "society_name": "ATS Nobility",
+    "latitude": 28.60444,
+    "longitude": 77.468815
+  },
+  {
+    "society_name": "Gaur City 1st Avenue",
+    "latitude": 28.61151,
+    "longitude": 77.42854
+  },
+  {
+    "society_name": "Saya Zion",
+    "latitude": 28.60124,
+    "longitude": 77.45151
+  },
+  {
+    "society_name": "Gaur City 5th Avenue",
+    "latitude": 28.61224,
+    "longitude": 77.426515
+  },
+  {
+    "society_name": "Aastha Greens",
+    "latitude": 28.604115,
+    "longitude": 77.44754
+  },
+  {
+    "society_name": "Gaur City 6th Avenue",
+    "latitude": 28.61421,
+    "longitude": 77.425125
+  },
+  {
+    "society_name": "Aims Green Avenue",
+    "latitude": 28.606215,
+    "longitude": 77.44484
+  },
+  {
+    "society_name": "Galaxy North Avenue",
+    "latitude": 28.61251,
+    "longitude": 77.428915
+  },
+  {
+    "society_name": "Gaur City",
+    "latitude": 28.61514,
+    "longitude": 77.422115
+  },
+  {
+    "society_name": "Gaur City 4th Avenue",
+    "latitude": 28.61284,
+    "longitude": 77.426215
+  },
+  {
+    "society_name": "Godrej Woods",
+    "latitude": 28.558315,
+    "longitude": 77.33254
+  },
+  {
+    "society_name": "Pearls Gateway Towers",
+    "latitude": 28.55521,
+    "longitude": 77.327815
+  },
+  {
+    "society_name": "Defence Enclave Sector 44 Noida",
+    "latitude": 28.55454,
+    "longitude": 77.33411
+  },
+  {
+    "society_name": "Assotech Celeste Towers",
+    "latitude": 28.556815,
+    "longitude": 77.33124
+  },
+  {
+    "society_name": "Amrapali Sapphire",
+    "latitude": 28.56151,
+    "longitude": 77.368815
+  },
+  {
+    "society_name": "Prateek Stylome",
+    "latitude": 28.56584,
+    "longitude": 77.36421
+  },
+  {
+    "society_name": "Gardenia Glory",
+    "latitude": 28.560115,
+    "longitude": 77.37754
+  },
+  {
+    "society_name": "Eldeco Ananda",
+    "latitude": 28.55781,
+    "longitude": 77.374815
+  },
+  {
+    "society_name": "Sector 49 RWA",
+    "latitude": 28.56354,
+    "longitude": 77.36511
+  },
+  {
+    "society_name": "Ambience Tiverton",
+    "latitude": 28.570115,
+    "longitude": 77.36754
+  },
+  {
+    "society_name": "Amrapali Eden Park",
+    "latitude": 28.57244,
+    "longitude": 77.36481
+  },
+  {
+    "society_name": "Mahagun Morpheus",
+    "latitude": 28.574815,
+    "longitude": 77.36214
+  },
+  {
+    "society_name": "Antriksh Greens",
+    "latitude": 28.57051,
+    "longitude": 77.351215
+  },
+  {
+    "society_name": "Stellar Kings Court",
+    "latitude": 28.57284,
+    "longitude": 77.34851
+  },
+  {
+    "society_name": "Mahagun Maestro",
+    "latitude": 28.575115,
+    "longitude": 77.34584
+  },
+  {
+    "society_name": "Purvanchal Kailash Dham SAS",
+    "latitude": 28.57344,
+    "longitude": 77.36011
+  },
+  {
+    "society_name": "ATS Greens 2",
+    "latitude": 28.570215,
+    "longitude": 77.36254
+  },
+  {
+    "society_name": "TGB Meghdutam",
+    "latitude": 28.56781,
+    "longitude": 77.364815
+  },
+  {
+    "society_name": "Alok Vihar 1",
+    "latitude": 28.570115,
+    "longitude": 77.35454
+  },
+  {
+    "society_name": "Assotech Windsor Greens",
+    "latitude": 28.57244,
+    "longitude": 77.35181
+  },
+  {
+    "society_name": "ATS Greens 1",
+    "latitude": 28.574815,
+    "longitude": 77.34914
+  },
+  {
+    "society_name": "Mahagun Maple",
+    "latitude": 28.57014,
+    "longitude": 77.357515
+  },
+  {
+    "society_name": "Omaxe Twin Towers",
+    "latitude": 28.57241,
+    "longitude": 77.35484
+  },
+  {
+    "society_name": "Alok Vihar 2",
+    "latitude": 28.570515,
+    "longitude": 77.35351
+  },
+  {
+    "society_name": "Shubhkamna Appartment",
+    "latitude": 28.57714,
+    "longitude": 77.342515
+  },
+  {
+    "society_name": "Kendriya Vihar",
+    "city": "Noida",
+    "latitude": 28.57341,
+    "longitude": 77.34014
+  },
+  {
+    "society_name": "Antriksh Nature",
+    "latitude": 28.583415,
+    "longitude": 77.35124
+  },
+  {
+    "society_name": "Arawali Apartment",
+    "latitude": 28.58584,
+    "longitude": 77.34851
+  },
+  {
+    "society_name": "Royale Garden Estate",
+    "latitude": 28.580115,
+    "longitude": 77.34014
+  },
+  {
+    "society_name": "Mapsko Krishna Apra Residency",
+    "latitude": 28.58244,
+    "longitude": 77.337515
+  },
+  {
+    "society_name": "Prateek Fedora",
+    "latitude": 28.58481,
+    "longitude": 77.33484
+  },
+  {
+    "society_name": "Gardenia Grace",
+    "latitude": 28.587115,
+    "longitude": 77.33214
+  },
+  {
+    "society_name": "Shatabdi Vihar",
+    "latitude": 28.58124,
+    "longitude": 77.34851
+  },
+  {
+    "society_name": "Indraprastha Villa",
+    "latitude": 28.583515,
+    "longitude": 77.34584
+  },
+  {
+    "society_name": "Varun Apartments",
+    "latitude": 28.58581,
+    "longitude": 77.343115
+  },
+  {
+    "society_name": "Telecom City",
+    "latitude": 28.58014,
+    "longitude": 77.35751
+  },
+  {
+    "society_name": "Purvanchal PMO Apartments",
+    "latitude": 28.582415,
+    "longitude": 77.35484
+  },
+  {
+    "society_name": "Gail Apartments",
+    "latitude": 28.58484,
+    "longitude": 77.35211
+  },
+  {
+    "society_name": "Vinayak Apartment",
+    "latitude": 28.587115,
+    "longitude": 77.34944
+  },
+  {
+    "society_name": "Pan Oasis",
+    "latitude": 28.59014,
+    "longitude": 77.381515
+  },
+  {
+    "society_name": "Elite homes",
+    "latitude": 28.59241,
+    "longitude": 77.37884
+  },
+  {
+    "society_name": "ABCZ East Avenue",
+    "latitude": 28.594815,
+    "longitude": 77.37611
+  },
+  {
+    "society_name": "Divine Home",
+    "latitude": 28.59714,
+    "longitude": 77.373415
+  },
+  {
+    "society_name": "Supertech Cape Town",
+    "latitude": 28.583115,
+    "longitude": 77.38544
+  },
+  {
+    "society_name": "Grand Ajnara Heritage",
+    "latitude": 28.58541,
+    "longitude": 77.382815
+  },
+  {
+    "society_name": "Ivy County",
+    "latitude": 28.58784,
+    "longitude": 77.38011
+  },
+  {
+    "society_name": "Golf City",
+    "latitude": 28.583515,
+    "longitude": 77.39024
+  },
+  {
+    "society_name": "Dasnac Burj Noida",
+    "latitude": 28.58581,
+    "longitude": 77.387515
+  },
+  {
+    "society_name": "Dasnac The Jewel of Noida",
+    "latitude": 28.58814,
+    "longitude": 77.38484
+  },
+  {
+    "society_name": "Apex Athena",
+    "latitude": 28.590415,
+    "longitude": 77.38211
+  },
+  {
+    "society_name": "Panchsheel Pratishtha",
+    "latitude": 28.59284,
+    "longitude": 77.379515
+  },
+  {
+    "society_name": "Gardenia Gateway",
+    "latitude": 28.59511,
+    "longitude": 77.37684
+  },
+  {
+    "society_name": "Maxblis White House",
+    "latitude": 28.597415,
+    "longitude": 77.37411
+  },
+  {
+    "society_name": "JM Aroma",
+    "latitude": 28.58124,
+    "longitude": 77.387515
+  },
+  {
+    "society_name": "Aims Golf Avenue 2",
+    "latitude": 28.58351,
+    "longitude": 77.38484
+  },
+  {
+    "society_name": "Aims Golf Avenue",
+    "latitude": 28.585815,
+    "longitude": 77.38211
+  },
+  {
+    "society_name": "Indosam75",
+    "latitude": 28.58814,
+    "longitude": 77.379415
+  },
+  {
+    "society_name": "Maxblis Grand Wellington",
+    "latitude": 28.59041,
+    "longitude": 77.37684
+  },
+  {
+    "society_name": "Maxblis Grand Kingston",
+    "latitude": 28.592815,
+    "longitude": 77.37411
+  },
+  {
+    "society_name": "Amrapali Silicon City",
+    "latitude": 28.57014,
+    "longitude": 77.387515
+  },
+  {
+    "society_name": "Amrapali Crystal Homes",
+    "latitude": 28.57241,
+    "longitude": 77.38484
+  },
+  {
+    "society_name": "Amrapali Princely Estate",
+    "latitude": 28.574815,
+    "longitude": 77.38211
+  },
+  {
+    "society_name": "Skytech Matrott",
+    "latitude": 28.57714,
+    "longitude": 77.379415
+  },
+  {
+    "society_name": "Amarpali Scilion City",
+    "latitude": 28.57051,
+    "longitude": 77.38654
+  },
+  {
+    "society_name": "JM Orchid",
+    "latitude": 28.561215,
+    "longitude": 77.38451
+  },
+  {
+    "society_name": "Sethi Max Royal",
+    "latitude": 28.56354,
+    "longitude": 77.381815
+  },
+  {
+    "society_name": "Aditya Celebrity Homes",
+    "latitude": 28.56581,
+    "longitude": 77.37914
+  },
+  {
+    "society_name": "Prateek Wisteria",
+    "latitude": 28.580115,
+    "longitude": 77.39054
+  },
+  {
+    "society_name": "Express Zenith",
+    "latitude": 28.58244,
+    "longitude": 77.38781
+  },
+  {
+    "society_name": "Antriksh Forest",
+    "latitude": 28.58481,
+    "longitude": 77.38514
+  },
+  {
+    "society_name": "Griha Pravesh",
+    "latitude": 28.587115,
+    "longitude": 77.38241
+  },
+  {
+    "society_name": "Elite Homz",
+    "latitude": 28.58944,
+    "longitude": 77.379815
+  },
+  {
+    "society_name": "Civitech Sampriti",
+    "latitude": 28.59181,
+    "longitude": 77.37714
+  },
+  {
+    "society_name": "Antriksh Kanball 3G",
+    "latitude": 28.594115,
+    "longitude": 77.37451
+  },
+  {
+    "society_name": "AVS Orchard",
+    "latitude": 28.59644,
+    "longitude": 77.371815
+  },
+  {
+    "society_name": "Mahagun Moderne",
+    "latitude": 28.56271,
+    "longitude": 77.39124
+  },
+  {
+    "society_name": "The Hyde Park",
+    "latitude": 28.565115,
+    "longitude": 77.38851
+  },
+  {
+    "society_name": "Mahagun Mezzaria",
+    "latitude": 28.56744,
+    "longitude": 77.385815
+  },
+  {
+    "society_name": "Antriksh Golf View 2",
+    "latitude": 28.56981,
+    "longitude": 77.38314
+  },
+  {
+    "society_name": "Sikka Karmic Greens",
+    "latitude": 28.572115,
+    "longitude": 77.38051
+  },
+  {
+    "society_name": "Antriksh Golf View",
+    "latitude": 28.56944,
+    "longitude": 77.382515
+  },
+  {
+    "society_name": "Aditya Urban Casa",
+    "latitude": 28.57411,
+    "longitude": 77.37784
+  },
+  {
+    "society_name": "Assotech Windsor Court",
+    "latitude": 28.576415,
+    "longitude": 77.37511
+  },
+  {
+    "society_name": "Sunshine Helios",
+    "latitude": 28.57884,
+    "longitude": 77.372515
+  },
+  {
+    "society_name": "Gaur Sports Wood",
+    "latitude": 28.56014,
+    "longitude": 77.41151
+  },
+  {
+    "society_name": "Elite Golf Greens",
+    "latitude": 28.562415,
+    "longitude": 77.40884
+  },
+  {
+    "society_name": "Civitech Stadia",
+    "latitude": 28.56481,
+    "longitude": 77.406115
+  },
+  {
+    "society_name": "Mahagun Mirabella",
+    "latitude": 28.56714,
+    "longitude": 77.40351
+  },
+  {
+    "society_name": "AWHO Vivek Vihar",
+    "latitude": 28.526815,
+    "longitude": 77.39054
+  },
+  {
+    "society_name": "CGEWHO Kendriya Vihar 2",
+    "latitude": 28.52911,
+    "longitude": 77.387815
+  },
+  {
+    "society_name": "Parsvnath Prestige",
+    "latitude": 28.51884,
+    "longitude": 77.38351
+  },
+  {
+    "society_name": "Purvanchal Silver City",
+    "latitude": 28.521115,
+    "longitude": 77.38084
+  },
+  {
+    "society_name": "Express View Apartments",
+    "latitude": 28.52344,
+    "longitude": 77.37811
+  },
+  {
+    "society_name": "Parsvnath Srishti",
+    "latitude": 28.525815,
+    "longitude": 77.37554
+  },
+  {
+    "society_name": "ATS Greens Village",
+    "latitude": 28.52154,
+    "longitude": 77.398515
+  },
+  {
+    "society_name": "Supertech Emerald Court",
+    "latitude": 28.523815,
+    "longitude": 77.39584
+  },
+  {
+    "society_name": "Eldeco Utopia",
+    "latitude": 28.52614,
+    "longitude": 77.393115
+  },
+  {
+    "society_name": "Eldeco Olympia",
+    "latitude": 28.528515,
+    "longitude": 77.39054
+  },
+  {
+    "society_name": "Grand Omaxe",
+    "latitude": 28.51484,
+    "longitude": 77.411515
+  },
+  {
+    "society_name": "Omaxe The Forest Spa",
+    "latitude": 28.517215,
+    "longitude": 77.40884
+  },
+  {
+    "society_name": "Supertech Supernova",
+    "latitude": 28.54154,
+    "longitude": 77.325515
+  },
+  {
+    "society_name": "Green View Apartment",
+    "latitude": 28.481515,
+    "longitude": 77.51554
+  },
+  {
+    "society_name": "Stellar Icon Apartments",
+    "latitude": 28.48384,
+    "longitude": 77.512815
+  },
+  {
+    "society_name": "Unitech Heights",
+    "latitude": 28.461515,
+    "longitude": 77.52154
+  },
+  {
+    "society_name": "ATS Greens Paradiso",
+    "latitude": 28.46384,
+    "longitude": 77.518815
+  },
+  {
+    "society_name": "Purvanchal Royal City",
+    "latitude": 28.429115,
+    "longitude": 77.54554
+  },
+  {
+    "society_name": "Nimbus Express Park View 2",
+    "latitude": 28.43154,
+    "longitude": 77.542815
+  },
+  {
+    "society_name": "Nimbus Express Park View 2 Low Rise",
+    "latitude": 28.431815,
+    "longitude": 77.54214
+  },
+  {
+    "society_name": "Proview Technocity Apartments",
+    "latitude": 28.41254,
+    "longitude": 77.558515
+  },
+  {
+    "society_name": "AWHO Gurjinder Vihar",
+    "latitude": 28.441515,
+    "longitude": 77.53124
+  },
+  {
+    "society_name": "Express Park View 1",
+    "latitude": 28.43254,
+    "longitude": 77.521515
+  },
+  {
+    "society_name": "Earthcon Casagrand",
+    "latitude": 28.434815,
+    "longitude": 77.51884
+  },
+  {
+    "society_name": "Casagrand 2",
+    "latitude": 28.43584,
+    "longitude": 77.517815
+  },
+  {
+    "society_name": "Omaxe Palm Greens",
+    "latitude": 28.451515,
+    "longitude": 77.53854
+  },
+  {
+    "society_name": "BHS 16 Scheme",
+    "latitude": 28.46154,
+    "longitude": 77.512515
+  },
+  {
+    "society_name": "GNIDA BHS 16",
+    "latitude": 28.461515,
+    "longitude": 77.51254
+  },
+  {
+    "society_name": "BHS 10 Scheme",
+    "latitude": 28.46384,
+    "longitude": 77.509815
+  },
+  {
+    "society_name": "Today Kings Park",
+    "latitude": 28.469115,
+    "longitude": 77.51854
+  },
+  {
+    "society_name": "Parsvnath Estate",
+    "latitude": 28.47154,
+    "longitude": 77.515815
+  },
+  {
+    "society_name": "Gaur Atulyam",
+    "latitude": 28.421515,
+    "longitude": 77.55224
+  },
+  {
+    "society_name": "Supertech Czar Suites",
+    "latitude": 28.45584,
+    "longitude": 77.525515
+  },
+  {
+    "society_name": "Eldeco Mystic Greens",
+    "latitude": 28.441515,
+    "longitude": 77.53124
+  },
+  {
+    "society_name": "Sankalp Society",
+    "latitude": 28.47154,
+    "longitude": 77.491515
+  },
+  {
+    "society_name": "GNIDA Lohiya Enclave",
+    "latitude": 28.473815,
+    "longitude": 77.48884
+  },
+  {
+    "society_name": "Migsun Ultimo",
+    "latitude": 28.47914,
+    "longitude": 77.491215
+  },
+  {
+    "society_name": "Uppal Plumeria Garden Estate",
+    "latitude": 28.461515,
+    "longitude": 77.51854
+  },
+  {
+    "society_name": "Stellar MI Citihomes",
+    "latitude": 28.46384,
+    "longitude": 77.515815
+  },
+  {
+    "society_name": "Lotus Welfare Society",
+    "latitude": 28.466115,
+    "longitude": 77.51314
+  },
+  {
+    "society_name": "CGEWHO Phase 1",
+    "latitude": 28.47584,
+    "longitude": 77.501215
+  },
+  {
+    "society_name": "Jalvayu Vihar",
+    "latitude": 28.479115,
+    "longitude": 77.49854
+  },
+  {
+    "society_name": "Anand Ashray",
+    "latitude": 28.48154,
+    "longitude": 77.495815
+  },
+  {
+    "society_name": "Novelty Himsagar Apartments",
+    "latitude": 28.483815,
+    "longitude": 77.49314
+  },
+  {
+    "society_name": "Eldeco Green Meadows",
+    "latitude": 28.46154,
+    "longitude": 77.511515
+  },
+  {
+    "society_name": "Eldeco Residency Greens",
+    "latitude": 28.463815,
+    "longitude": 77.50884
+  },
+  {
+    "society_name": "Gulmohar Estate",
+    "latitude": 28.46614,
+    "longitude": 77.506115
+  },
+  {
+    "society_name": "Unitech Horizon",
+    "latitude": 28.451515,
+    "longitude": 77.52154
+  },
+  {
+    "society_name": "Purvanchal Silver City 2",
+    "latitude": 28.45384,
+    "longitude": 77.518815
+  },
+  {
+    "society_name": "Unitech Habitat",
+    "latitude": 28.456115,
+    "longitude": 77.51614
+  },
+  {
+    "society_name": "Unitech Cascades",
+    "latitude": 28.45854,
+    "longitude": 77.513415
+  },
+  {
+    "society_name": "Paramount Golfforeste",
+    "latitude": 28.432515,
+    "longitude": 77.54554
+  },
+  {
+    "society_name": "ATS Dolce",
+    "latitude": 28.46154,
+    "longitude": 77.518515
+  },
+  {
+    "society_name": "ACE Platinum",
+    "latitude": 28.463815,
+    "longitude": 77.51584
+  },
+  {
+    "society_name": "Purvanchal Heights",
+    "latitude": 28.46614,
+    "longitude": 77.513115
+  },
+  {
+    "society_name": "Amrapali Grand",
+    "latitude": 28.468515,
+    "longitude": 77.51044
+  },
+  {
+    "society_name": "AVJ Heightss",
+    "latitude": 28.47154,
+    "longitude": 77.515515
+  },
+  {
+    "society_name": "Assotech Springfields",
+    "latitude": 28.473815,
+    "longitude": 77.51284
+  },
+  {
+    "society_name": "Victoryone Central",
+    "latitude": 28.61914,
+    "longitude": 77.431515
+  },
+  {
+    "society_name": "SKA Green Mansion",
+    "latitude": 28.621515,
+    "longitude": 77.42884
+  },
+  {
+    "society_name": "Civitech Strings",
+    "latitude": 28.62384,
+    "longitude": 77.426115
+  },
+  {
+    "society_name": "Fusion The Brook",
+    "latitude": 28.626115,
+    "longitude": 77.42344
+  },
+  {
+    "society_name": "Fusion The Rivulet",
+    "latitude": 28.62854,
+    "longitude": 77.420815
+  },
+  {
+    "society_name": "Royal Apartments",
+    "latitude": 28.630815,
+    "longitude": 77.41814
+  },
+  {
+    "society_name": "Migsun Green Mansion",
+    "latitude": 28.63314,
+    "longitude": 77.415415
+  },
+  {
+    "society_name": "Oasis Venetia Heights",
+    "latitude": 28.635515,
+    "longitude": 77.41284
+  },
+  {
+    "society_name": "Dasnac Designarch eHomes",
+    "latitude": 28.48154,
+    "longitude": 77.512215
+  },
+  {
+    "society_name": "Arenaa Heights Surajpur",
+    "latitude": 28.494815,
+    "longitude": 77.49154
+  },
+  {
+    "society_name": "Property Ultima Allure",
+    "latitude": 28.46154,
+    "longitude": 77.502215
+  },
+  {
+    "society_name": "Newtech La Galaxia",
+    "latitude": 28.601515,
+    "longitude": 77.45854
+  },
+  {
+    "society_name": "Gaur Saundaryam",
+    "latitude": 28.61484,
+    "longitude": 77.422515
+  },
+  {
+    "society_name": "Nirala Estate",
+    "latitude": 28.611515,
+    "longitude": 77.42854
+  },
+  {
+    "society_name": "NBCC Aspire Dream Valley",
+    "latitude": 28.59884,
+    "longitude": 77.449215
+  },
+  {
+    "society_name": "Amrapali Terrace Homes",
+    "latitude": 28.603815,
+    "longitude": 77.44854
+  },
+  {
+    "society_name": "Amrapali Centurian Park",
+    "latitude": 28.59914,
+    "longitude": 77.455515
+  },
+  {
+    "society_name": "ABA Cherry County",
+    "latitude": 28.62354,
+    "longitude": 77.438115
+  },
+  {
+    "society_name": "Fusion Homes",
+    "latitude": 28.613815,
+    "longitude": 77.45014
+  },
+  {
+    "society_name": "Saviour Greenarch",
+    "latitude": 28.61154,
+    "longitude": 77.432215
+  },
+  {
+    "society_name": "Nirala Estate Phase 2",
+    "latitude": 28.611815,
+    "longitude": 77.42814
+  },
+  {
+    "society_name": "Himalaya Pride",
+    "latitude": 28.62154,
+    "longitude": 77.445515
+  },
+  {
+    "society_name": "NBCC Leisure Park",
+    "latitude": 28.601515,
+    "longitude": 77.47224
+  },
+  {
+    "society_name": "Apex Splendour",
+    "latitude": 28.59384,
+    "longitude": 77.453815
+  },
+  {
+    "society_name": "Samridhi Grand Avenue",
+    "latitude": 28.613115,
+    "longitude": 77.45114
+  },
+  {
+    "society_name": "Hawelia Valenova Park",
+    "latitude": 28.61084,
+    "longitude": 77.453815
+  },
+  {
+    "society_name": "La Residentia",
+    "latitude": 28.607115,
+    "longitude": 77.42954
+  },
+  {
+    "society_name": "JM Florence",
+    "latitude": 28.61884,
+    "longitude": 77.431515
+  },
+  {
+    "society_name": "Habitech Panchtatva",
+    "latitude": 28.615515,
+    "longitude": 77.44854
+  },
+  {
+    "society_name": "Amrapali Enchante",
+    "latitude": 28.58914,
+    "longitude": 77.442215
+  },
+  {
+    "society_name": "Pigeon Spring Meadows",
+    "latitude": 28.619115,
+    "longitude": 77.42154
+  },
+  {
+    "society_name": "Amrapali Riverview",
+    "latitude": 28.57484,
+    "longitude": 77.485515
+  },
+  {
+    "society_name": "Royal Nest",
+    "latitude": 28.630815,
+    "longitude": 77.43484
+  },
+  {
+    "society_name": "Mangalya Novena Green",
+    "latitude": 28.61654,
+    "longitude": 77.434115
+  },
+  {
+    "society_name": "Patel Neotown",
+    "latitude": 28.625815,
+    "longitude": 77.43554
+  },
+  {
+    "society_name": "O2 Valley",
+    "latitude": 28.574815,
+    "longitude": 77.48554
+  },
+  {
+    "society_name": "CRC Joyous",
+    "latitude": 28.61484,
+    "longitude": 77.462515
+  },
+  {
+    "society_name": "Omkar Royal Nest",
+    "latitude": 28.63084,
+    "longitude": 77.434815
+  },
+  {
+    "society_name": "Supercity Mayfair Residency",
+    "latitude": 28.611515,
+    "longitude": 77.44414
+  },
+  {
+    "society_name": "La Residentia Amrapali",
+    "latitude": 28.60714,
+    "longitude": 77.429515
+  },
+  {
+    "society_name": "Elegant Ville",
+    "latitude": 28.623815,
+    "longitude": 77.44284
+  },
+  {
+    "society_name": "KVD Wind Park",
+    "latitude": 28.61884,
+    "longitude": 77.443515
+  },
+  {
+    "society_name": "Ace Aspire",
+    "latitude": 28.621515,
+    "longitude": 77.41884
+  },
+  {
+    "society_name": "Supertech Eco Village 1",
+    "latitude": 28.60954,
+    "longitude": 77.442215
+  },
+  {
+    "society_name": "Amrapali Verona Heights",
+    "latitude": 28.581515,
+    "longitude": 77.46854
+  },
+  {
+    "society_name": "Amrapali Dream Valley Villas",
+    "latitude": 28.598815,
+    "longitude": 77.44924
+  },
+  {
+    "society_name": "Himalya Pride",
+    "latitude": 28.621515,
+    "longitude": 77.44554
+  },
+  {
+    "society_name": "Mahagun",
+    "latitude": 28.61914,
+    "longitude": 77.361515
+  },
+  {
+    "society_name": "Gaur Yamuna City 16th Park View",
+    "latitude": 28.298515,
+    "longitude": 77.54584
+  },
+  {
+    "society_name": "ATS Allure",
+    "latitude": 28.281815,
+    "longitude": 77.56154
+  },
+  {
+    "society_name": "Gaur Yamuna City",
+    "latitude": 28.298115,
+    "longitude": 77.54524
+  },
+  {
+    "society_name": "Royal Hometown Beetle Lap",
+    "latitude": 28.31154,
+    "longitude": 77.532515
+  },
+  {
+    "society_name": "Yamuna Expressway Authority Flat",
+    "latitude": 28.274815,
+    "longitude": 77.55154
+  },
+  {
+    "society_name": "Ajnara Panorama",
+    "latitude": 28.26154,
+    "longitude": 77.568115
+  },
+  {
+    "society_name": "Solitairian City",
+    "latitude": 28.258115,
+    "longitude": 77.57154
+  },
+  {
+    "society_name": "Supertech Golf Country",
+    "latitude": 28.24584,
+    "longitude": 77.585115
+  },
+  {
+    "society_name": "Gaur Green Avenue",
+    "latitude": 28.635115,
+    "longitude": 77.37154
+  },
+  {
+    "society_name": "ATS Advantage",
+    "latitude": 28.63754,
+    "longitude": 77.369115
+  },
+  {
+    "society_name": "ABA Corp Orange County",
+    "latitude": 28.63154,
+    "longitude": 77.385115
+  },
+  {
+    "society_name": "Shipra Krishna Vista",
+    "latitude": 28.633115,
+    "longitude": 77.38254
+  },
+  {
+    "society_name": "Rajhans Premier Apartment",
+    "latitude": 28.63514,
+    "longitude": 77.380815
+  },
+  {
+    "society_name": "Shipra Srishti",
+    "latitude": 28.63854,
+    "longitude": 77.374115
+  },
+  {
+    "society_name": "Jaipurias Sunrise Greens",
+    "latitude": 28.640115,
+    "longitude": 77.37154
+  },
+  {
+    "society_name": "Niho Scottish Garden",
+    "latitude": 28.64214,
+    "longitude": 77.368115
+  },
+  {
+    "society_name": "Trine Towers",
+    "latitude": 28.64554,
+    "longitude": 77.365115
+  },
+  {
+    "society_name": "Angel Jupiter",
+    "latitude": 28.631815,
+    "longitude": 77.39114
+  },
+  {
+    "society_name": "Saya Zenith",
+    "latitude": 28.63384,
+    "longitude": 77.388515
+  },
+  {
+    "society_name": "Ashiana Greens",
+    "latitude": 28.635115,
+    "longitude": 77.38684
+  },
+  {
+    "society_name": "Apex D Rio",
+    "latitude": 28.638515,
+    "longitude": 77.38314
+  },
+  {
+    "society_name": "Ashiana Upvan",
+    "latitude": 28.64084,
+    "longitude": 77.380115
+  },
+  {
+    "society_name": "Gaur Valerio",
+    "latitude": 28.642115,
+    "longitude": 77.37854
+  },
+  {
+    "society_name": "SVP Gulmohur Residency",
+    "latitude": 28.64554,
+    "longitude": 77.375115
+  },
+  {
+    "society_name": "Exotica Elegance",
+    "latitude": 28.647115,
+    "longitude": 77.37254
+  },
+  {
+    "society_name": "Divyansh Pratham",
+    "latitude": 28.64914,
+    "longitude": 77.370815
+  },
+  {
+    "society_name": "JKG Amba G Residency",
+    "latitude": 28.65254,
+    "longitude": 77.367115
+  },
+  {
+    "society_name": "Shri Balaji Residency",
+    "latitude": 28.654115,
+    "longitude": 77.36454
+  },
+  {
+    "society_name": "Manchanda East End Apartments",
+    "latitude": 28.65654,
+    "longitude": 77.362115
+  },
+  {
+    "society_name": "Oxirich Avenue",
+    "latitude": 28.659115,
+    "longitude": 77.35984
+  },
+  {
+    "society_name": "Charms Solitaire",
+    "latitude": 28.66184,
+    "longitude": 77.356115
+  },
+  {
+    "society_name": "Nirala Eden Park",
+    "latitude": 28.663115,
+    "longitude": 77.35484
+  },
+  {
+    "society_name": "Saya Desire Residency",
+    "latitude": 28.66654,
+    "longitude": 77.351115
+  },
+  {
+    "society_name": "Vashisth Vijaya Apartment",
+    "latitude": 28.668115,
+    "longitude": 77.34854
+  },
+  {
+    "society_name": "Himalayan Towers",
+    "latitude": 28.67054,
+    "longitude": 77.346115
+  },
+  {
+    "society_name": "DLF Ankur Vihar",
+    "latitude": 28.718115,
+    "longitude": 77.29184
+  },
+  {
+    "society_name": "Rail Vihar",
+    "latitude": 28.72154,
+    "longitude": 77.288115
+  },
+  {
+    "society_name": "SLF Ved Vihar",
+    "latitude": 28.723115,
+    "longitude": 77.28654
+  },
+  {
+    "society_name": "Aditya Luxuria Estate",
+    "latitude": 28.685115,
+    "longitude": 77.44284
+  },
+  {
+    "society_name": "Bharat City",
+    "latitude": 28.68754,
+    "longitude": 77.439115
+  },
+  {
+    "society_name": "Super Realtech Oxy Homez",
+    "latitude": 28.69084,
+    "longitude": 77.436115
+  },
+  {
+    "society_name": "Andromida Planet One",
+    "latitude": 28.692115,
+    "longitude": 77.43454
+  },
+  {
+    "society_name": "MR Delhi 99",
+    "latitude": 28.69454,
+    "longitude": 77.431115
+  },
+  {
+    "society_name": "DLF Dilshad Ext Sahibabad",
+    "latitude": 28.674115,
+    "longitude": 77.33584
+  },
+  {
+    "society_name": "Panchsheel Wellington",
+    "latitude": 28.64184,
+    "longitude": 77.448115
+  },
+  {
+    "society_name": "Paramount Symphony",
+    "latitude": 28.643115,
+    "longitude": 77.44554
+  },
+  {
+    "society_name": "Ajnara Gen 10",
+    "latitude": 28.64554,
+    "longitude": 77.443115
+  },
+  {
+    "society_name": "Mahagun Mascot",
+    "latitude": 28.648115,
+    "longitude": 77.44084
+  },
+  {
+    "society_name": "Supertech Livingston",
+    "latitude": 28.65084,
+    "longitude": 77.437115
+  },
+  {
+    "society_name": "Assotech The Nest",
+    "latitude": 28.652115,
+    "longitude": 77.43554
+  },
+  {
+    "society_name": "Gardenia Square 1",
+    "latitude": 28.65554,
+    "longitude": 77.432115
+  },
+  {
+    "society_name": "GH 7",
+    "latitude": 28.657115,
+    "longitude": 77.42984
+  },
+  {
+    "society_name": "Gaur Global Village",
+    "latitude": 28.65954,
+    "longitude": 77.427115
+  },
+  {
+    "society_name": "Bulland Heights",
+    "latitude": 28.66284,
+    "longitude": 77.424115
+  },
+  {
+    "society_name": "Prateek The Royal Cliff",
+    "latitude": 28.664115,
+    "longitude": 77.42154
+  },
+  {
+    "society_name": "Proview Laboni Apartments",
+    "latitude": 28.66654,
+    "longitude": 77.419115
+  },
+  {
+    "society_name": "Prabhat Heights",
+    "latitude": 28.66984,
+    "longitude": 77.416115
+  },
+  {
+    "society_name": "Saviour IRIS",
+    "latitude": 28.671115,
+    "longitude": 77.41354
+  },
+  {
+    "society_name": "Arocon Golf Ville",
+    "latitude": 28.67354,
+    "longitude": 77.411115
+  },
+  {
+    "society_name": "Exotica Eastern Court",
+    "latitude": 28.676115,
+    "longitude": 77.40884
+  },
+  {
+    "society_name": "Renowned Srishti",
+    "latitude": 28.67884,
+    "longitude": 77.405115
+  },
+  {
+    "society_name": "Skytech Merion Residency",
+    "latitude": 28.680115,
+    "longitude": 77.40354
+  },
+  {
+    "society_name": "Sam Clement City",
+    "latitude": 28.68354,
+    "longitude": 77.400115
+  },
+  {
+    "society_name": "Dreamland The Willows",
+    "latitude": 28.685115,
+    "longitude": 77.39784
+  },
+  {
+    "society_name": "KSN Golf Greens",
+    "latitude": 28.68754,
+    "longitude": 77.395115
+  },
+  {
+    "society_name": "Arihant Ambience",
+    "latitude": 28.69084,
+    "longitude": 77.392115
+  },
+  {
+    "society_name": "Balaji Foster Heights",
+    "latitude": 28.692115,
+    "longitude": 77.38954
+  },
+  {
+    "society_name": "SKB Gold Coast",
+    "latitude": 28.69454,
+    "longitude": 77.387115
+  },
+  {
+    "society_name": "Landcraft MetroHomes",
+    "latitude": 28.68284,
+    "longitude": 77.458115
+  },
+  {
+    "society_name": "Amrapali Empire",
+    "latitude": 28.684115,
+    "longitude": 77.45554
+  },
+  {
+    "society_name": "Keltech Kumar Golf Vista",
+    "latitude": 28.68654,
+    "longitude": 77.453115
+  },
+  {
+    "society_name": "Cosmos Golden Heights",
+    "latitude": 28.68984,
+    "longitude": 77.450115
+  },
+  {
+    "society_name": "Balaji Enclave",
+    "latitude": 28.691115,
+    "longitude": 77.44754
+  },
+  {
+    "society_name": "Shipra Riviera",
+    "latitude": 28.64184,
+    "longitude": 77.368115
+  },
+  {
+    "society_name": "Cloud 9",
+    "latitude": 28.643115,
+    "longitude": 77.36554
+  },
+  {
+    "society_name": "Parsvnath Majestic",
+    "latitude": 28.64554,
+    "longitude": 77.363115
+  },
+  {
+    "society_name": "Angel Mercury Indirapuram",
+    "latitude": 28.64884,
+    "longitude": 77.360115
+  },
+  {
+    "society_name": "MKS La Royale",
+    "latitude": 28.650115,
+    "longitude": 77.35754
+  },
+  {
+    "society_name": "Pinnacle Towers",
+    "latitude": 28.65254,
+    "longitude": 77.355115
+  },
+  {
+    "society_name": "Ramprastha Imperial Heights",
+    "latitude": 28.65584,
+    "longitude": 77.352115
+  },
+  {
+    "society_name": "Amrapali Village 2",
+    "latitude": 28.657115,
+    "longitude": 77.34954
+  },
+  {
+    "society_name": "Arihant Harmony",
+    "latitude": 28.65954,
+    "longitude": 77.347115
+  },
+  {
+    "society_name": "Rishabh Cloud9 Skylish Towers",
+    "latitude": 28.66284,
+    "longitude": 77.344115
+  },
+  {
+    "society_name": "Shipra Sun Tower",
+    "latitude": 28.641115,
+    "longitude": 77.36854
+  },
+  {
+    "society_name": "Shipra Windsor and Nova Society",
+    "latitude": 28.64384,
+    "longitude": 77.365115
+  },
+  {
+    "society_name": "Independent Builder Floors Indirapuram",
+    "latitude": 28.645115,
+    "longitude": 77.36254
+  },
+  {
+    "society_name": "Gaur Greenvista",
+    "latitude": 28.64554,
+    "longitude": 77.363115
+  },
+  {
+    "society_name": "Shipra Suncity Regent",
+    "latitude": 28.64184,
+    "longitude": 77.368115
+  },
+  {
+    "society_name": "GDA Flats Indirapuram",
+    "latitude": 28.64754,
+    "longitude": 77.359115
+  },
+  {
+    "society_name": "JNC Princess Park",
+    "latitude": 28.648115,
+    "longitude": 77.36054
+  },
+  {
+    "society_name": "Arihant Residency",
+    "latitude": 28.65084,
+    "longitude": 77.357115
+  },
+  {
+    "society_name": "Exotica East Square",
+    "latitude": 28.652115,
+    "longitude": 77.35554
+  },
+  {
+    "society_name": "GDA Flats",
+    "latitude": 28.65784,
+    "longitude": 77.422115
+  },
+  {
+    "society_name": "UPAVP Mandola Vihar Apartment",
+    "latitude": 28.745115,
+    "longitude": 77.31154
+  },
+  {
+    "society_name": "GDA Madhuban Bapu Dham Society",
+    "latitude": 28.68154,
+    "longitude": 77.465115
+  },
+  {
+    "society_name": "Rise Organic Homes",
+    "latitude": 28.66384,
+    "longitude": 77.442115
+  },
+  {
+    "society_name": "Mahagun Puram Phase 2",
+    "latitude": 28.665115,
+    "longitude": 77.43954
+  },
+  {
+    "society_name": "Ruchira Sapphire Plaza",
+    "latitude": 28.66754,
+    "longitude": 77.436115
+  },
+  {
+    "society_name": "Parsvnath Paradise",
+    "latitude": 28.67184,
+    "longitude": 77.351115
+  },
+  {
+    "society_name": "Saviour Park",
+    "latitude": 28.673115,
+    "longitude": 77.34854
+  },
+  {
+    "society_name": "Moti Residency",
+    "latitude": 28.67584,
+    "longitude": 77.345115
+  },
+  {
+    "society_name": "Landcraft Golflinks",
+    "latitude": 28.652115,
+    "longitude": 77.46154
+  },
+  {
+    "society_name": "Mahagun Puram",
+    "latitude": 28.66584,
+    "longitude": 77.439115
+  },
+  {
+    "society_name": "Wave Dream Homes",
+    "latitude": 28.642515,
+    "longitude": 77.48554
+  },
+  {
+    "society_name": "Aditya City Apartments",
+    "latitude": 28.63184,
+    "longitude": 77.495115
+  },
+  {
+    "society_name": "Aditya Urban Homes",
+    "latitude": 28.633115,
+    "longitude": 77.49254
+  },
+  {
+    "society_name": "Divyansh Onyx",
+    "latitude": 28.644115,
+    "longitude": 77.48284
+  },
+  {
+    "society_name": "Wave Veridia Oakwood Enclave",
+    "latitude": 28.64654,
+    "longitude": 77.480115
+  },
+  {
+    "society_name": "Urban Homes Aditya World City",
+    "latitude": 28.63154,
+    "longitude": 77.495815
+  },
+  {
+    "society_name": "Aditya City Grace",
+    "latitude": 28.635115,
+    "longitude": 77.49084
+  },
+  {
+    "society_name": "Aditya World City",
+    "latitude": 28.63184,
+    "longitude": 77.495515
+  },
+  {
+    "society_name": "Savfab Jasmine Grove",
+    "latitude": 28.64954,
+    "longitude": 77.477115
+  },
+  {
+    "society_name": "Skardi Greens",
+    "latitude": 28.651115,
+    "longitude": 77.47454
+  },
+  {
+    "society_name": "Wave Executive Floors",
+    "latitude": 28.64284,
+    "longitude": 77.485115
+  },
+  {
+    "society_name": "Parakh The Golden Gate",
+    "latitude": 28.653115,
+    "longitude": 77.47284
+  },
+  {
+    "society_name": "Wave City Dream Homes Ghaziabad",
+    "latitude": 28.64254,
+    "longitude": 77.485815
+  },
+  {
+    "society_name": "VVIP Namah",
+    "latitude": 28.65654,
+    "longitude": 77.469115
+  },
+  {
+    "society_name": "Marina Suites",
+    "latitude": 28.658115,
+    "longitude": 77.46654
+  },
+  {
+    "society_name": "Wave City",
+    "latitude": 28.642115,
+    "longitude": 77.48554
+  },
+  {
+    "society_name": "Wave Swamanorath",
+    "latitude": 28.64384,
+    "longitude": 77.483115
+  },
+  {
+    "society_name": "Sapphire Smart Homes",
+    "latitude": 28.644115,
+    "longitude": 77.48154
+  },
+  {
+    "society_name": "Aditya World City Urban Royal",
+    "latitude": 28.63154,
+    "longitude": 77.495115
+  },
+  {
+    "society_name": "Wave Eligo",
+    "latitude": 28.64684,
+    "longitude": 77.479115
+  },
+  {
+    "society_name": "Unione Residency",
+    "latitude": 28.647115,
+    "longitude": 77.47784
+  },
+  {
+    "society_name": "Agarwal The Resort",
+    "latitude": 28.64854,
+    "longitude": 77.475115
+  },
+  {
+    "society_name": "Landcraft Golf Link Apartments",
+    "latitude": 28.65254,
+    "longitude": 77.461815
+  },
+  {
+    "society_name": "Gaur Green Vista",
+    "latitude": 28.645115,
+    "longitude": 77.36384
+  },
+  {
+    "society_name": "Supertech Icon",
+    "latitude": 28.64184,
+    "longitude": 77.36854
+  },
+  {
+    "society_name": "V3S Indralok",
+    "latitude": 28.64354,
+    "longitude": 77.365115
+  },
+  {
+    "society_name": "Amrapali Village",
+    "latitude": 28.657115,
+    "longitude": 77.34914
+  },
+  {
+    "society_name": "UPHD Ganga Yamuna and Hindon Apartment",
+    "latitude": 28.65154,
+    "longitude": 77.338115
+  },
+  {
+    "society_name": "VVIP Addresses",
+    "latitude": 28.675115,
+    "longitude": 77.44254
+  },
+  {
+    "society_name": "KW Srishti",
+    "latitude": 28.677115,
+    "longitude": 77.43984
+  },
+  {
+    "society_name": "Eureka Diya Greencity",
+    "latitude": 28.68054,
+    "longitude": 77.436115
+  },
+  {
+    "society_name": "SVP Gulmohur Garden",
+    "latitude": 28.682115,
+    "longitude": 77.43454
+  },
+  {
+    "society_name": "Charms Castle",
+    "latitude": 28.68414,
+    "longitude": 77.431815
+  },
+  {
+    "society_name": "Landcraft River Heights",
+    "latitude": 28.68754,
+    "longitude": 77.428115
+  },
+  {
+    "society_name": "Nilaya Greens",
+    "latitude": 28.689115,
+    "longitude": 77.42654
+  },
+  {
+    "society_name": "Windsor Paradise 2",
+    "latitude": 28.69114,
+    "longitude": 77.423815
+  },
+  {
+    "society_name": "Javin Raj Empire",
+    "latitude": 28.69454,
+    "longitude": 77.420115
+  },
+  {
+    "society_name": "Star Rameshwaram",
+    "latitude": 28.696115,
+    "longitude": 77.41854
+  },
+  {
+    "society_name": "SCC Sapphire",
+    "latitude": 28.69854,
+    "longitude": 77.415115
+  },
+  {
+    "society_name": "Mittal Rajnagar Residency",
+    "latitude": 28.70154,
+    "longitude": 77.412115
+  },
+  {
+    "society_name": "Addela Palm Resort",
+    "latitude": 28.703115,
+    "longitude": 77.41054
+  },
+  {
+    "society_name": "Ajnara Integrity",
+    "latitude": 28.70514,
+    "longitude": 77.407815
+  },
+  {
+    "society_name": "Gaur Cascades",
+    "latitude": 28.70854,
+    "longitude": 77.404115
+  },
+  {
+    "society_name": "Ascent Savy Ville De",
+    "latitude": 28.710115,
+    "longitude": 77.40254
+  },
+  {
+    "society_name": "MCC Signature Heights",
+    "latitude": 28.71254,
+    "longitude": 77.399115
+  },
+  {
+    "society_name": "KDPMGI Gharaunda",
+    "latitude": 28.71554,
+    "longitude": 77.396115
+  },
+  {
+    "society_name": "Shourya Aura Chimera",
+    "latitude": 28.717115,
+    "longitude": 77.39454
+  },
+  {
+    "society_name": "Ashiana Palm Court",
+    "latitude": 28.71954,
+    "longitude": 77.391115
+  },
+  {
+    "society_name": "Aggarwal Heights",
+    "latitude": 28.72254,
+    "longitude": 77.388115
+  },
+  {
+    "society_name": "Emenox Brave Hearts",
+    "latitude": 28.724115,
+    "longitude": 77.38654
+  },
+  {
+    "society_name": "VVIP Mangal",
+    "latitude": 28.72654,
+    "longitude": 77.383115
+  },
+  {
+    "society_name": "SG Grand",
+    "latitude": 28.72954,
+    "longitude": 77.380115
+  },
+  {
+    "society_name": "Meenal Balmukanda Residency",
+    "latitude": 28.731115,
+    "longitude": 77.37854
+  },
+  {
+    "society_name": "Highend Paradise",
+    "latitude": 28.73354,
+    "longitude": 77.375115
+  },
+  {
+    "society_name": "MR Platinum 321",
+    "latitude": 28.73654,
+    "longitude": 77.372115
+  },
+  {
+    "society_name": "Uninav Heights",
+    "latitude": 28.738115,
+    "longitude": 77.37054
+  },
+  {
+    "society_name": "Vasu Fortune Residency",
+    "latitude": 28.74054,
+    "longitude": 77.367115
+  },
+  {
+    "society_name": "Devika Skypers",
+    "latitude": 28.74354,
+    "longitude": 77.364115
+  },
+  {
+    "society_name": "Uninav Utopia",
+    "latitude": 28.745115,
+    "longitude": 77.36254
+  },
+  {
+    "society_name": "KDP Grand Savanna",
+    "latitude": 28.74754,
+    "longitude": 77.359115
+  },
+  {
+    "society_name": "SCC Heights",
+    "latitude": 28.75054,
+    "longitude": 77.356115
+  },
+  {
+    "society_name": "Himalaya Tanishq",
+    "latitude": 28.752115,
+    "longitude": 77.35454
+  },
+  {
+    "society_name": "MR Proview Officer City 2",
+    "latitude": 28.75454,
+    "longitude": 77.351115
+  },
+  {
+    "society_name": "Shree Energy Classic Residency",
+    "latitude": 28.75754,
+    "longitude": 77.348115
+  },
+  {
+    "society_name": "Migsun Roof",
+    "latitude": 28.759115,
+    "longitude": 77.34654
+  },
+  {
+    "society_name": "Sg Impression 58",
+    "latitude": 28.76154,
+    "longitude": 77.343115
+  },
+  {
+    "society_name": "Royce Sentosa Parc",
+    "latitude": 28.76454,
+    "longitude": 77.340115
+  },
+  {
+    "society_name": "LR Bluemoon Homes",
+    "latitude": 28.766115,
+    "longitude": 77.33854
+  },
+  {
+    "society_name": "Techmans Moti Residency",
+    "latitude": 28.76854,
+    "longitude": 77.335115
+  },
+  {
+    "society_name": "Value Meadows Vista",
+    "latitude": 28.77154,
+    "longitude": 77.332115
+  },
+  {
+    "society_name": "Divyansh Arc Angels",
+    "latitude": 28.773115,
+    "longitude": 77.33054
+  },
+  {
+    "society_name": "Proview Officer City",
+    "latitude": 28.77554,
+    "longitude": 77.327115
+  },
+  {
+    "society_name": "KM Residency",
+    "latitude": 28.77854,
+    "longitude": 77.324115
+  },
+  {
+    "society_name": "Mehak Jeevan",
+    "latitude": 28.780115,
+    "longitude": 77.32254
+  },
+  {
+    "society_name": "Uninav Bliss",
+    "latitude": 28.78254,
+    "longitude": 77.319115
+  },
+  {
+    "society_name": "Raj Garden City",
+    "latitude": 28.78554,
+    "longitude": 77.316115
+  },
+  {
+    "society_name": "Ramprastha Colony",
+    "latitude": 28.665115,
+    "longitude": 77.32454
+  },
+  {
+    "society_name": "JM Park Sapphire",
+    "latitude": 28.66754,
+    "longitude": 77.321115
+  },
+  {
+    "society_name": "Ramprastha Pearl Court",
+    "latitude": 28.66584,
+    "longitude": 77.324115
+  },
+  {
+    "society_name": "Ramprastha Platinum Height",
+    "latitude": 28.667115,
+    "longitude": 77.32254
+  },
+  {
+    "society_name": "Gulshan GC Emerald Heights",
+    "latitude": 28.654115,
+    "longitude": 77.37254
+  },
+  {
+    "society_name": "Saviour Greenisle",
+    "latitude": 28.65654,
+    "longitude": 77.369115
+  },
+  {
+    "society_name": "Rishabh Cloud 9 Towers",
+    "latitude": 28.66254,
+    "longitude": 77.34484
+  },
+  {
+    "society_name": "Express Green Apartment Sector 1 Vaishali",
+    "latitude": 28.64254,
+    "longitude": 77.338115
+  },
+  {
+    "society_name": "SKG The Merlin",
+    "latitude": 28.644115,
+    "longitude": 77.33554
+  },
+  {
+    "society_name": "Express One",
+    "latitude": 28.64654,
+    "longitude": 77.333115
+  },
+  {
+    "society_name": "Nandini The Vasundhara Grand",
+    "latitude": 28.64954,
+    "longitude": 77.33084
+  },
+  {
+    "society_name": "Elite Estate",
+    "latitude": 28.651115,
+    "longitude": 77.32754
+  },
+  {
+    "society_name": "Metro Suites Glitz",
+    "latitude": 28.65354,
+    "longitude": 77.325115
+  },
+  {
+    "society_name": "Apex Acacia Valley",
+    "latitude": 28.65684,
+    "longitude": 77.322115
+  },
+  {
+    "society_name": "SG Homes",
+    "latitude": 28.658115,
+    "longitude": 77.31954
+  },
+  {
+    "society_name": "Gardenia Glamour",
+    "latitude": 28.66054,
+    "longitude": 77.317115
+  },
+  {
+    "society_name": "Sarvottam KSN Square",
+    "latitude": 28.66354,
+    "longitude": 77.31484
+  },
+  {
+    "society_name": "JNC Greenwoods",
+    "latitude": 28.665115,
+    "longitude": 77.31154
+  },
+  {
+    "society_name": "Nandini Metro Suites",
+    "latitude": 28.653115,
+    "longitude": 77.32554
+  },
+  {
+    "society_name": "Eldeco Apartments",
+    "latitude": 28.64154,
+    "longitude": 77.33884
+  },
+  {
+    "society_name": "Mahagun Villa",
+    "latitude": 28.643115,
+    "longitude": 77.33554
+  },
+  {
+    "society_name": "Mahagun Mosaic",
+    "latitude": 28.64551,
+    "longitude": 77.33384
+  },
+  {
+    "society_name": "Devika Apartments",
+    "latitude": 28.64884,
+    "longitude": 77.330115
+  },
+  {
+    "society_name": "Surya Kanishk Tower",
+    "latitude": 28.650115,
+    "longitude": 77.32754
+  },
+  {
+    "society_name": "Express Apartments",
+    "latitude": 28.64284,
+    "longitude": 77.338115
+  },
+  {
+    "society_name": "Leela Homes",
+    "latitude": 28.652115,
+    "longitude": 77.32554
+  },
+  {
+    "society_name": "Amrapali Apartments",
+    "latitude": 28.65784,
+    "longitude": 77.349115
+  },
+  {
+    "society_name": "Gaur Heights",
+    "latitude": 28.65554,
+    "longitude": 77.322115
+  },
+  {
+    "society_name": "Gaur Ganga",
+    "latitude": 28.657115,
+    "longitude": 77.31954
+  },
+  {
+    "society_name": "CGHS Vartalok Apartments",
+    "latitude": 28.65954,
+    "longitude": 77.31784
+  },
+  {
+    "society_name": "Supertech Avant Garde",
+    "latitude": 28.662115,
+    "longitude": 77.31454
+  },
+  {
+    "society_name": "Ansals Neelpadam 1",
+    "latitude": 28.64154,
+    "longitude": 77.338115
+  },
+  {
+    "society_name": "Supertech Residency",
+    "latitude": 28.64384,
+    "longitude": 77.335115
+  },
+  {
+    "society_name": "ABA Olive County",
+    "latitude": 28.668115,
+    "longitude": 77.37484
+  },
+  {
+    "society_name": "Civitech Florencia",
+    "latitude": 28.67154,
+    "longitude": 77.371115
+  },
+  {
+    "society_name": "Aditya World City Urban Homes",
+    "latitude": 28.63184,
+    "longitude": 77.495815
+  },
+  {
+    "society_name": "Real World Residency",
+    "latitude": 28.63384,
+    "longitude": 77.492115
+  },
+  {
+    "society_name": "SVP Gulmohar Garden Phase 2",
+    "latitude": 28.68284,
+    "longitude": 77.43454
+  },
+  {
+    "society_name": "shalimargarden ext ii ghaziabad",
+    "latitude": 28.69184,
+    "longitude": 77.318115
+  },
+  {
+    "society_name": "Prateek Grand City",
+    "latitude": 28.64154,
+    "longitude": 77.428115
+  },
+  {
+    "society_name": "Gaurs Siddhartham",
+    "latitude": 28.643115,
+    "longitude": 77.42554
+  },
+  {
+    "society_name": "T Homes",
+    "latitude": 28.64554,
+    "longitude": 77.42384
+  },
+  {
+    "society_name": "SG Shikhar Height",
+    "latitude": 28.64884,
+    "longitude": 77.420115
+  },
+  {
+    "society_name": "T and T Eutopia",
+    "latitude": 28.650115,
+    "longitude": 77.41754
+  },
+  {
+    "society_name": "Apex The Kremlin",
+    "latitude": 28.65254,
+    "longitude": 77.41584
+  },
+  {
+    "society_name": "UPAVP Brahmputra Enclave",
+    "latitude": 28.65584,
+    "longitude": 77.412115
+  },
+  {
+    "society_name": "Siddharth Vihar Residency",
+    "latitude": 28.641115,
+    "longitude": 77.42884
+  },
+  {
+    "society_name": "Truvae Fragrance Homes",
+    "latitude": 28.657115,
+    "longitude": 77.40954
+  },
+  {
+    "society_name": "Saya Gold Avenue",
+    "latitude": 28.64184,
+    "longitude": 77.37154
+  },
+  {
+    "society_name": "Aditya Mega City",
+    "latitude": 28.64354,
+    "longitude": 77.36984
+  },
+  {
+    "society_name": "Krishna Apra Gardens",
+    "latitude": 28.63184,
+    "longitude": 77.385115
+  },
+  {
+    "society_name": "Express Garden",
+    "latitude": 28.633115,
+    "longitude": 77.38284
+  },
+  {
+    "society_name": "Shipra Sun City",
+    "latitude": 28.64154,
+    "longitude": 77.36884
+  },
+  {
+    "society_name": "Mahagun Mansion 1 and 2",
+    "latitude": 28.645115,
+    "longitude": 77.36354
+  },
+  {
+    "society_name": "Amrapali Royal",
+    "latitude": 28.64884,
+    "longitude": 77.360115
+  },
+  {
+    "society_name": "Assotech Windsor Park",
+    "latitude": 28.63854,
+    "longitude": 77.374115
+  },
+  {
+    "society_name": "Gaur Green City",
+    "latitude": 28.63584,
+    "longitude": 77.371115
+  },
+  {
+    "society_name": "Gulshan GC Grand",
+    "latitude": 28.65484,
+    "longitude": 77.372115
+  },
+  {
+    "society_name": "Panchsheel SPS Residency",
+    "latitude": 28.656115,
+    "longitude": 77.36954
+  },
+  {
+    "society_name": "HRC Professional Hub",
+    "latitude": 28.65984,
+    "longitude": 77.359115
+  },
+  {
+    "society_name": "Amrapali Green",
+    "latitude": 28.65784,
+    "longitude": 77.34954
+  },
+  {
+    "society_name": "Aarcity Krishna Apra Sapphire",
+    "latitude": 28.643115,
+    "longitude": 77.36984
+  },
+  {
+    "society_name": "Shipra Neo",
+    "latitude": 28.64184,
+    "longitude": 77.36854
+  },
+  {
+    "society_name": "HRC Apartments",
+    "latitude": 28.659115,
+    "longitude": 77.35984
+  },
+  {
+    "society_name": "Parsvnath Majestic Arcade",
+    "latitude": 28.645115,
+    "longitude": 77.36384
+  },
+  {
+    "society_name": "Ramprastha Greens Royal Park",
+    "latitude": 28.66584,
+    "longitude": 77.32454
+  },
+  {
+    "society_name": "Oasis Emerald Heights",
+    "latitude": 28.705115,
+    "longitude": 77.40784
+  },
+  {
+    "society_name": "Gardenia Gitanjali",
+    "latitude": 28.65584,
+    "longitude": 77.432115
+  },
+  {
+    "society_name": "Ajpa Dronagiri",
+    "latitude": 28.64154,
+    "longitude": 77.44884
+  },
+  {
+    "society_name": "Apex The Florus",
+    "latitude": 28.652115,
+    "longitude": 77.41554
+  },
+  {
+    "society_name": "Migsun Kiaan",
+    "latitude": 28.478115,
+    "longitude": 77.49184
+  },
+  {
+    "society_name": "Sanchar Nest Palm Heights",
+    "latitude": 28.68284,
+    "longitude": 77.458115
+  },
+  {
+    "society_name": "Wave Floors",
+    "latitude": 28.64284,
+    "longitude": 77.485115
+  },
+  {
+    "society_name": "Lotus Srishti",
+    "latitude": 28.68984,
+    "longitude": 77.450115
+  },
+  {
+    "society_name": "Shyam Bankey Bihari Sharnam",
+    "latitude": 28.677115,
+    "longitude": 77.43984
+  },
+  {
+    "society_name": "AR Reflections",
+    "latitude": 28.691115,
+    "longitude": 77.42384
+  },
+  {
+    "society_name": "SG Impressions Plus",
+    "latitude": 28.76184,
+    "longitude": 77.343115
+  },
+  {
+    "society_name": "Milan Earth",
+    "latitude": 28.70154,
+    "longitude": 77.412115
+  },
+  {
+    "society_name": "Ajnara Grace",
+    "latitude": 28.705115,
+    "longitude": 77.40784
+  },
+  {
+    "society_name": "Rama Heights",
+    "latitude": 28.712115,
+    "longitude": 77.39984
+  },
+  {
+    "society_name": "GAV Green View Heights",
+    "latitude": 28.77384,
+    "longitude": 77.330115
+  },
+  {
+    "society_name": "Ashiana Le Residency",
+    "latitude": 28.66354,
+    "longitude": 77.442115
+  },
+  {
+    "society_name": "Kingswood Court",
+    "latitude": 28.68584,
+    "longitude": 77.397115
+  },
+  {
+    "society_name": "Sangwan Heights",
+    "latitude": 28.68754,
+    "longitude": 77.428115
+  }
+]

@@ -27,14 +27,24 @@ export function AuthProvider({ children }) {
     setUser(r.user);
   }
 
+  // Dev sign-in for the no-backend phase: pick a role and enter. Routes
+  // through the mock /api/auth/dev endpoint.
+  async function loginAsDev(email) {
+    const r = await api.post('/api/auth/dev', { email });
+    localStorage.setItem('di_token', r.token);
+    setAuthToken(r.token);
+    setUser(r.user);
+  }
+
   function logout() {
     localStorage.removeItem('di_token');
+    localStorage.removeItem('di_mock_email');
     setAuthToken(null);
     setUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, loading, loginWithGoogle, loginAsDev, logout }}>
       {children}
     </AuthContext.Provider>
   );
