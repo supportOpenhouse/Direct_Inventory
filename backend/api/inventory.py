@@ -93,7 +93,7 @@ EDITABLE_RAW_FIELDS = {
 
 # Fields that bulk-update may set. Single-row PATCH allows more (notes, raw fields).
 BULK_ALLOWED_FIELDS = {
-    "stage", "reject_reason", "assigned_rm_ids", "assigned_mgr_id", "follow_up_at",
+    "stage", "stage_reason", "assigned_rm_ids", "assigned_mgr_id", "follow_up_at",
     "priority",
 }
 
@@ -1058,7 +1058,7 @@ def update_one(oh_id: str):
             # editable through this endpoint — comments live on `note_thread`
             # and go through POST /<oh_id>/notes instead.
             allowed = EDITABLE_RAW_FIELDS | {
-                "stage", "reject_reason", "assigned_rm_ids", "assigned_mgr_id",
+                "stage", "stage_reason", "assigned_rm_ids", "assigned_mgr_id",
                 "follow_up_at", "priority", "star_color", "cp_match",
             }
             # Accept the legacy single-id key as a one-element array.
@@ -1095,12 +1095,12 @@ def update_one(oh_id: str):
                 if k == "stage":
                     if v not in VALID_STAGES:
                         return jsonify({"error": f"invalid stage: {v}"}), 400
-                    if v == "rejected" and not body.get("reject_reason") and not existing.get("reject_reason"):
-                        return jsonify({"error": "reject_reason required when stage=rejected"}), 400
+                    if v == "rejected" and not body.get("stage_reason") and not existing.get("stage_reason"):
+                        return jsonify({"error": "stage_reason required when stage=rejected"}), 400
                     if v == "visit_scheduled":
                         requires_visit_form = True
-                if k == "reject_reason" and v and v not in VALID_REJECT_REASONS:
-                    return jsonify({"error": f"invalid reject_reason: {v}"}), 400
+                if k == "stage_reason" and v and v not in VALID_REJECT_REASONS:
+                    return jsonify({"error": f"invalid stage_reason: {v}"}), 400
                 if k in MATCH_INPUT_FIELDS:
                     invalidate_cp_match = True
                 updates.append(f"{k} = %s")
@@ -1145,7 +1145,7 @@ def update_one(oh_id: str):
 def bulk_update():
     """Update the same field(s) on many inventory rows in one call.
 
-    Body: { oh_ids: [...], updates: { stage?, reject_reason?, assigned_rm_id?,
+    Body: { oh_ids: [...], updates: { stage?, stage_reason?, assigned_rm_id?,
             assigned_mgr_id?, follow_up_at? } }
 
     Returns: { updated, skipped_forbidden: [oh_id...], not_found: [oh_id...] }
@@ -1177,17 +1177,17 @@ def bulk_update():
         return jsonify({"error": f"invalid stage: {stage}"}), 400
     if stage == "visit_scheduled":
         return jsonify({"error": "visit_scheduled requires the per-row schedule modal"}), 400
-    if stage == "rejected" and not updates.get("reject_reason"):
-        return jsonify({"error": "reject_reason required when stage=rejected"}), 400
-    reject_reason = updates.get("reject_reason")
-    if reject_reason and reject_reason not in VALID_REJECT_REASONS:
-        return jsonify({"error": f"invalid reject_reason: {reject_reason}"}), 400
+    if stage == "rejected" and not updates.get("stage_reason"):
+        return jsonify({"error": "stage_reason required when stage=rejected"}), 400
+    stage_reason = updates.get("stage_reason")
+    if stage_reason and stage_reason not in VALID_REJECT_REASONS:
+        return jsonify({"error": f"invalid stage_reason: {stage_reason}"}), 400
 
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
             cur.execute(
-                "SELECT oh_id, city, stage, assigned_rm_ids, follow_up_at, reject_reason, "
+                "SELECT oh_id, city, stage, assigned_rm_ids, follow_up_at, stage_reason, "
                 "assigned_mgr_id, priority "
                 "FROM inventory WHERE oh_id = ANY(%s) FOR UPDATE",
                 (oh_ids,),

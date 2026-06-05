@@ -553,10 +553,10 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
             )}
           </div>
 
-          {item.stage === 'rejected' && item.reject_reason && (
+          {item.stage === 'rejected' && item.stage_reason && (
             <div className="cd-reject-line">
               <span className="cd-lbl">Reject reason</span>
-              <span>{REJECT_REASONS.find((r) => r.value === item.reject_reason)?.label || item.reject_reason}</span>
+              <span>{REJECT_REASONS.find((r) => r.value === item.stage_reason)?.label || item.stage_reason}</span>
             </div>
           )}
 
@@ -586,7 +586,7 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
           ohId={item.oh_id}
           onClose={() => setShowReject(false)}
           onSelect={async (reason) => {
-            await applyStage('rejected', { reject_reason: reason });
+            await applyStage('rejected', { stage_reason: reason });
             setShowReject(false);
           }}
         />

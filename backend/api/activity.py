@@ -621,7 +621,7 @@ def user_report_leads():
 
     Query: email (required), date=YYYY-MM-DD (required).
     Response: { email, date, leads: [{ oh_id, society, city, seller_name,
-                from_stage, final_stage, current_stage, reject_reason,
+                from_stage, final_stage, current_stage, stage_reason,
                 last_change_at }] }
 
     Access: admin → any user; manager → themselves or one of their RMs;
@@ -644,7 +644,7 @@ def user_report_leads():
         _WINNERS_CTE.format(extra_where="AND a.actor_email = %s") +
         " SELECT w.oh_id, w.from_stage, w.final_stage, w.last_change_at, "
         "        i.society, i.city, i.seller_name, "
-        "        i.stage AS current_stage, i.reject_reason, i.notes "
+        "        i.stage AS current_stage, i.stage_reason, i.notes "
         " FROM winners w LEFT JOIN inventory i ON i.oh_id = w.oh_id "
         " ORDER BY w.last_change_at DESC"
     )

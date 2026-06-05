@@ -267,7 +267,7 @@ export default function Board() {
           it.oh_price != null ? (Number(it.oh_price) / 100000).toFixed(2) : '',
           variation,
           stageLabel(it.stage),
-          it.reject_reason || '',
+          it.stage_reason || '',
           it.seller_name || '',
           it.seller_phone || '',
           fmtDate(it.posting_date),

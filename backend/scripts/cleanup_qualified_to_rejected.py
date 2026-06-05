@@ -71,11 +71,11 @@ def read_csv_rejected(path: str) -> dict:
 
 
 def fetch_db_state(cur, ids: list[int]) -> dict:
-    """Return {id: {'oh_id':..., 'stage':..., 'reject_reason':...}} for given ids."""
+    """Return {id: {'oh_id':..., 'stage':..., 'stage_reason':...}} for given ids."""
     if not ids:
         return {}
     cur.execute(
-        "SELECT id, oh_id, stage, reject_reason FROM inventory WHERE id = ANY(%s)",
+        "SELECT id, oh_id, stage, stage_reason FROM inventory WHERE id = ANY(%s)",
         (ids,),
     )
     return {r["id"]: dict(r) for r in cur.fetchall()}
@@ -141,7 +141,7 @@ def main():
                     oh_id_mismatch.append((rid, csv_oh, row["oh_id"]))
                     continue
                 db_stage  = row["stage"]
-                db_reason = row["reject_reason"]
+                db_reason = row["stage_reason"]
                 if db_stage == "qualified":
                     to_update.append((rid, row["oh_id"], csv_reason, db_stage, db_reason))
                 elif db_stage == "rejected":
@@ -229,7 +229,7 @@ def main():
             cur.execute("""
                 UPDATE inventory i
                    SET stage = 'rejected',
-                       reject_reason = c.new_reason,
+                       stage_reason = c.new_reason,
                        updated_at = NOW()
                   FROM _stage_cleanup c
                  WHERE i.id = c.id

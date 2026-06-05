@@ -70,7 +70,7 @@ function DayLeadsModal({ email, date, onClose }) {
       const s = l.final_stage || '(none)';
       byStage[s] = (byStage[s] || 0) + 1;
       if (s === 'rejected') {
-        const r = l.reject_reason || 'unspecified';
+        const r = l.stage_reason || 'unspecified';
         rejectByReason[r] = (rejectByReason[r] || 0) + 1;
       }
     }
@@ -139,12 +139,12 @@ function DayLeadsModal({ email, date, onClose }) {
                   <td>{l.society || '—'}</td>
                   <td>{l.city || '—'}</td>
                   <td>{l.seller_name || '—'}</td>
-                  <td><StagePill stage={l.from_stage} rejectReason={l.reject_reason} /></td>
-                  <td><StagePill stage={l.final_stage} rejectReason={l.reject_reason} /></td>
+                  <td><StagePill stage={l.from_stage} rejectReason={l.stage_reason} /></td>
+                  <td><StagePill stage={l.final_stage} rejectReason={l.stage_reason} /></td>
                   <td>
                     {l.current_stage === l.final_stage
                       ? <span className="muted">same</span>
-                      : <StagePill stage={l.current_stage} rejectReason={l.reject_reason} />}
+                      : <StagePill stage={l.current_stage} rejectReason={l.stage_reason} />}
                   </td>
                   <td className="dr-notes" title={l.notes || ''}>{l.notes || '—'}</td>
                 </tr>

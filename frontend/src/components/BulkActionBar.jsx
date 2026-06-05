@@ -4,7 +4,7 @@ import { REJECT_REASONS, STAGES, stageLabel, todayISO } from '../utils/format.js
 
 /**
  * Floating bar shown when the user is in select-mode and has ≥1 cards selected.
- * Supports: change stage (with reject_reason picker), assign RM, set follow-up date.
+ * Supports: change stage (with stage_reason picker), assign RM, set follow-up date.
  */
 export default function BulkActionBar({ selected, role, onCleared, onDone }) {
   const [action, setAction] = useState('');     // 'stage' | 'assign_rm' | 'follow_up' | 'priority_on' | 'priority_off'
@@ -32,7 +32,7 @@ export default function BulkActionBar({ selected, role, onCleared, onDone }) {
       updates.stage = stage;
       if (stage === 'rejected') {
         if (!rejectReason) { setError('Pick a reject reason'); return; }
-        updates.reject_reason = rejectReason;
+        updates.stage_reason = rejectReason;
       }
     } else if (action === 'assign_rm') {
       if (!rmId) { setError('Pick an RM'); return; }
