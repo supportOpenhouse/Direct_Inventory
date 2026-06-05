@@ -302,6 +302,27 @@ def schedule_visit():
                     "forms_visit_id": visit_id,
                 },
             )
+            # Companion stage_change row. The user report and conversion funnel
+            # are built solely from action='stage_change' rows (see
+            # api/activity.py _WINNERS_CTE and the funnel query) — scheduling a
+            # visit moves the stage directly here without ever going through the
+            # inventory PATCH that normally emits stage_change, so without this
+            # the RM gets no credit for the visit and the funnel's
+            # visit_scheduled count stays empty. The rich 'visit_scheduled' row
+            # above still drives the activity-feed display; this one exists only
+            # so the reports see the qualified → visit_scheduled transition.
+            log_activity(
+                cur,
+                actor_user_id=g.user["id"],
+                actor_email=g.user["email"],
+                entity_type="inventory",
+                entity_id=oh_id,
+                action="stage_change",
+                field="stage",
+                before_value=inv.get("stage"),
+                after_value="visit_scheduled",
+                metadata={"via": "visit_schedule"},
+            )
         return jsonify(row)
     finally:
         conn.close()
