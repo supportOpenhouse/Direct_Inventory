@@ -231,7 +231,7 @@ def main(csv_path: str):
                     oh_id, rec["source"], rec["city"], rec["locality"], rec["society"],
                     rec["bedrooms"], rec["area_sqft"], rec["floor"], rec["price"],
                     rec["seller_name"], rec["posting_date"], rec["listing_link"],
-                    "qualified", rm_id, mgr_id,
+                    "lead", rm_id, mgr_id,
                 ))
 
             if tuples:

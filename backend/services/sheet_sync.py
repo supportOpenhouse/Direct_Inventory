@@ -147,7 +147,7 @@ def run_push_sync(conn, rows: list[dict], *, actor_email: str = "system:apps-scr
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s,
                               %s, %s, %s,
                               %s, %s, %s, %s,
-                              'qualified', %s, %s,
+                              'lead', %s, %s,
                               (NOW() AT TIME ZONE 'Asia/Kolkata')::DATE, NOW())
                     """,
                     (

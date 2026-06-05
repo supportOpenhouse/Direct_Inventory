@@ -310,7 +310,7 @@ def schedule_visit():
             # the RM gets no credit for the visit and the funnel's
             # visit_scheduled count stays empty. The rich 'visit_scheduled' row
             # above still drives the activity-feed display; this one exists only
-            # so the reports see the qualified → visit_scheduled transition.
+            # so the reports see the lead → visit_scheduled transition.
             log_activity(
                 cur,
                 actor_user_id=g.user["id"],
@@ -345,7 +345,7 @@ def forms_webhook():
     if status == "completed":
         new_stage = "visit_completed"
     elif status == "cancelled":
-        new_stage = "qualified"  # back to top of pipeline; admin can re-route
+        new_stage = "lead"  # back to top of pipeline; admin can re-route
     elif status == "rescheduled":
         new_stage = "visit_scheduled"
 

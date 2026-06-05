@@ -40,7 +40,7 @@ function formatTime(iso) {
 
 // Final-stage order for the day's summary line; unknown stages sort last.
 const SUMMARY_STAGE_ORDER = [
-  'qualified', 'call_not_received', 'follow_up', 'visit_scheduled',
+  'lead', 'call_not_received', 'follow_up', 'visit_scheduled',
   'visit_completed', 'offer_given', 'unreachable', 'rejected',
 ];
 

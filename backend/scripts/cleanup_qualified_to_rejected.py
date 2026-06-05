@@ -142,7 +142,7 @@ def main():
                     continue
                 db_stage  = row["stage"]
                 db_reason = row["stage_reason"]
-                if db_stage == "qualified":
+                if db_stage == "lead":
                     to_update.append((rid, row["oh_id"], csv_reason, db_stage, db_reason))
                 elif db_stage == "rejected":
                     if db_reason == csv_reason:
@@ -233,7 +233,7 @@ def main():
                        updated_at = NOW()
                   FROM _stage_cleanup c
                  WHERE i.id = c.id
-                   AND i.stage = 'qualified'
+                   AND i.stage = 'lead'
             """)
             updated = cur.rowcount
             print(f"  rows updated: {updated}")
@@ -248,7 +248,7 @@ def main():
                 "VALUES (%s, 'inventory', 'bulk_stage_cleanup', %s::jsonb)",
                 (
                     "system:csv_cleanup",
-                    f'{{"updated": {updated}, "from_stage": "qualified", "to_stage": "rejected", '
+                    f'{{"updated": {updated}, "from_stage": "lead", "to_stage": "rejected", '
                     f'"csv": "{os.path.basename(args.csv_path)}"}}',
                 ),
             )

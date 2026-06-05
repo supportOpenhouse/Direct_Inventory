@@ -5,7 +5,7 @@ import { stageLabel } from '../utils/format.js';
 // Stages in the order we want to show them across charts. Anything outside
 // this list (legacy stages, "(none)") is appended in insertion order.
 const STAGE_ORDER = [
-  'qualified',
+  'lead',
   'call_not_received',
   'follow_up',
   'visit_scheduled',
@@ -18,14 +18,14 @@ const STAGE_ORDER = [
 // Funnel order — canonical pipeline progression. Labels come from the
 // shared `stageLabel` mapping so they stay consistent with the rest of
 // the UI.
-const FUNNEL_STAGES = ['qualified', 'visit_scheduled', 'visit_completed', 'offer_given'];
+const FUNNEL_STAGES = ['lead', 'visit_scheduled', 'visit_completed', 'offer_given'];
 
 // Analytics palette — locally scoped so we don't repaint the rest of the
 // app's stage dots. "Rejected" is intentionally the most recessive
 // (muted grey) even though it's usually the largest segment — the eye
 // should land on live pipeline, not failures.
 const ANALYTICS_STAGE_COLOR = {
-  qualified:         '#7F77DD',
+  lead:              '#7F77DD',
   call_not_received: '#EF9F27',
   follow_up:         '#378ADD',
   visit_scheduled:   '#1D9E75',

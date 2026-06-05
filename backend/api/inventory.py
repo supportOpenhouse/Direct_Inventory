@@ -36,7 +36,7 @@ bp = Blueprint("inventory", __name__, url_prefix="/api/inventory")
 
 VALID_STAGES = {
     # Active stages shown on the board.
-    "qualified",
+    "lead",                  # top of pipeline; renamed from 'qualified' (always shown as "Lead")
     "call_not_received",     # split from the old follow_up_cnr
     "follow_up",             # new — ongoing conversation
     "visit_scheduled",
@@ -64,7 +64,7 @@ SORTABLE_FIELDS = {
     "variation":     "CASE WHEN oh_price IS NULL OR oh_price = 0 THEN NULL "
                      "ELSE (price::FLOAT - oh_price) / oh_price * 100 END",
     # Stage sorts in pipeline order, not alphabetically.
-    "stage":         "CASE stage WHEN 'qualified' THEN 0 WHEN 'call_not_received' THEN 1 "
+    "stage":         "CASE stage WHEN 'lead' THEN 0 WHEN 'call_not_received' THEN 1 "
                      "WHEN 'follow_up' THEN 2 WHEN 'visit_scheduled' THEN 3 "
                      "WHEN 'rejected' THEN 4 ELSE 5 END",
     "seller_name":   "seller_name",
@@ -410,7 +410,7 @@ def list_inventory():
                 f"     ELSE 2 END ASC, "
                 # Stage order applies only inside the overdue bucket.
                 f"CASE WHEN follow_up_at IS NOT NULL AND follow_up_at::DATE < {today_ist} "
-                f"     THEN CASE stage WHEN 'follow_up' THEN 0 WHEN 'qualified' THEN 1 ELSE 2 END "
+                f"     THEN CASE stage WHEN 'follow_up' THEN 0 WHEN 'lead' THEN 1 ELSE 2 END "
                 f"     ELSE 0 END ASC, "
                 # Overdue: most recent follow-up date first.
                 f"CASE WHEN follow_up_at IS NOT NULL AND follow_up_at::DATE < {today_ist} "
@@ -525,7 +525,7 @@ def inventory_counts():
     # Board-visible stages only. Counts for legacy stages are intentionally
     # omitted from the response (the chips for them no longer exist).
     all_stages = [
-        "qualified", "call_not_received", "follow_up", "visit_scheduled", "rejected",
+        "lead", "call_not_received", "follow_up", "visit_scheduled", "rejected",
     ]
 
     inner_where = f"WHERE TRUE {scope} {' '.join(base_filters)}"
@@ -930,7 +930,7 @@ def create_one():
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s,
                           %s, %s, %s,
                           %s, %s, %s, %s, %s,
-                          'qualified', %s, %s,
+                          'lead', %s, %s,
                           (NOW() AT TIME ZONE 'Asia/Kolkata')::DATE, NULL)
                 RETURNING *
                 """,

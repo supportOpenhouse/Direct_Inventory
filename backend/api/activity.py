@@ -220,11 +220,11 @@ def _parse_ist_range(default_to_today: bool = True):
 # Base SELECT — picks the latest stage_change per (actor, IST day, lead).
 # Joins are done in the outer query so each endpoint can pull what it needs.
 #
-# Lead-days whose LATEST action was moving to 'qualified' are dropped
-# entirely. Moving a lead back to qualified (from rejected, follow_up,
+# Lead-days whose LATEST action was moving to 'lead' are dropped
+# entirely. Moving a lead back to the 'lead' stage (from rejected, follow_up,
 # etc.) is not "work done" on the lead — the user shouldn't be credited
 # with that lead for that day. Filtering here, AFTER the DISTINCT ON,
-# means we don't silently fall back to an earlier non-qualified action;
+# means we don't silently fall back to an earlier non-lead action;
 # we simply omit the lead-day. The filter is in the CTE so every endpoint
 # (per-user summary, per-day, leads detail, analytics) stays consistent.
 _WINNERS_CTE = """
@@ -251,7 +251,7 @@ _WINNERS_CTE = """
                      a.entity_id,
                      a.created_at DESC
         ) latest
-        WHERE latest.final_stage IS DISTINCT FROM 'qualified'
+        WHERE latest.final_stage IS DISTINCT FROM 'lead'
     )
 """
 
@@ -409,7 +409,7 @@ def user_report_analytics():
     Response: {
       from, to,
       daily_trend: [{ day, total, counts: {stage: n} }],
-      funnel: { qualified, visit_scheduled, visit_completed, offer_given },
+      funnel: { lead, visit_scheduled, visit_completed, offer_given },
     }
     """
     try:
@@ -468,7 +468,7 @@ def user_report_analytics():
             # that.").
             #
             # Lead count NEVER comes from activity_log.after_value =
-            # 'qualified' — a user moving a lead back to qualified must
+            # 'lead' — a user moving a lead back to the 'lead' stage must
             # not bump the new-lead count. Sourcing from inventory.created
             # _at sidesteps the activity_log path entirely.
             #
@@ -494,7 +494,7 @@ def user_report_analytics():
                 f"  {cohort_user_clause}",
                 cohort_params,
             )
-            qualified_count = cur.fetchone()["leads"]
+            lead_count = cur.fetchone()["leads"]
 
             cur.execute(
                 "WITH cohort AS ("
@@ -536,7 +536,7 @@ def user_report_analytics():
 
     ordered = sorted(days.values(), key=lambda d: d["day"])
     funnel = {r["stage"]: r["leads"] for r in funnel_rows}
-    funnel["qualified"] = qualified_count
+    funnel["lead"] = lead_count
     return jsonify({
         "from": date_from.isoformat(),
         "to": date_to.isoformat(),

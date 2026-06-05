@@ -48,7 +48,7 @@ function daysAgo(iso) {
 
 // Attention flag for a row's OH-ID / City / Society cells. Returns one of:
 //   'yellow' — Follow Up stage and the follow-up date has already passed.
-//   'red'    — Lead (qualified) stage that came in before today (a stale,
+//   'red'    — Lead stage that came in before today (a stale,
 //              unworked lead). Driven by created_at via the same day-count as
 //              the "Posted" column, so a row showing "Posted: Today" is never
 //              red.
@@ -57,7 +57,7 @@ function daysAgo(iso) {
 export function rowFlag(item) {
   if (!item) return null;
   if (item.stage === 'follow_up' && isDateBeforeToday(item.follow_up_at)) return 'yellow';
-  if (item.stage === 'qualified') {
+  if (item.stage === 'lead') {
     const d = daysAgo(item.created_at);
     if (d != null && d >= 1) return 'red';
   }
@@ -76,13 +76,14 @@ export function formatDateRel(iso) {
 
 export function stageLabel(s) {
   return ({
-    qualified: 'Lead',
+    lead: 'Lead',
     call_not_received: 'Call Not Received',
     follow_up: 'Follow Up',
     visit_scheduled: 'Visit Scheduled',
     rejected: 'Rejected',
     // Legacy stage labels — kept so historical activity-log entries and any
     // rows still sitting in these stages render with the right name.
+    qualified: 'Lead',          // renamed to 'lead'; kept for pre-migration rows
     follow_up_cnr: 'Follow Up (CNR)',
     visit_completed: 'Visit Completed',
     offer_given: 'Offer Given',
@@ -93,7 +94,7 @@ export function stageLabel(s) {
 // Board-visible stages, in display order. Drives kanban columns, count pills,
 // and the stage dropdown on the card detail modal.
 export const STAGES = [
-  'qualified',
+  'lead',
   'call_not_received',
   'follow_up',
   'visit_scheduled',
@@ -101,12 +102,13 @@ export const STAGES = [
 ];
 
 export const STAGE_DOT_COLOR = {
-  qualified: '#a78bfa',
+  lead: '#a78bfa',
   call_not_received: '#facc15',
   follow_up: '#f97316',
   visit_scheduled: '#a855f7',
   rejected: '#ef4444',
   // Legacy stages — used by stage-dot rendering on any stray rows.
+  qualified: '#a78bfa',         // renamed to 'lead'; kept for pre-migration rows
   follow_up_cnr: '#facc15',
   visit_completed: '#22c55e',
   offer_given: '#fb923c',
