@@ -41,10 +41,9 @@ export default function Login() {
           <span>Openhouse</span>
         </div>
         <div>
-          <h2>Direct Inventory, beautifully in order.</h2>
+          <h2>Direct Inventory Portal</h2>
           <p className="lh-sub">
-            Track leads from first listing to scheduled visit — qualify, follow up,
-            and close, all in one place.
+            by Openhouse
           </p>
         </div>
         <div className="lh-sub">Direct Inventory · Internal portal</div>
