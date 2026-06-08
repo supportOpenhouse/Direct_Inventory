@@ -10,10 +10,9 @@ Activity list is admin/manager only. Filters (all optional, AND-combined):
 
 LEFT JOIN against users so we can show actor name alongside email.
 
-The user-report endpoints dedupe to the LATEST stage_change per (actor, IST
-day, lead) — the "winner" — then aggregate. A winner whose final stage is the
-intake stage `lead` is dropped: moving a lead back to the intake stage is not
-work done.
+The user-report endpoints count every action — each 'stage_change',
+'bulk_stage_change', and 'note_added' row is one action (no dedup, no
+mid-step collapsing). note_added rows are mapped to a synthetic 'note' stage.
 """
 from __future__ import annotations
 
@@ -185,10 +184,10 @@ def filter_options():
 # ---------------------------------------------------------------------------
 # User Report endpoints.
 #
-# All three share the same dedupe rule: for a given (actor_email, IST day,
-# oh_id), keep only the LATEST stage_change. That row represents what the
-# user *did* to that lead that day (their final hop). Three aggregations are
-# exposed on top of that base set:
+# All share the same base set (_WINNERS_CTE): one row per countable action —
+# every stage_change / bulk_stage_change / note_added the user performed. No
+# dedup, so each hop and each note counts. Three aggregations are exposed on
+# top of that base set:
 #
 #   /user-report          aggregate over (date range, optional users) → per
 #                         user summary across the whole range.
@@ -228,40 +227,36 @@ def _parse_ist_range(default_to_today: bool = True):
     return date_from, date_to, start_ist.astimezone(timezone.utc), end_ist.astimezone(timezone.utc)
 
 
-# Base SELECT — picks the latest stage_change per (actor, IST day, lead).
-# Joins are done in the outer query so each endpoint can pull what it needs.
+# Base SELECT — one row per countable action. Every stage change (single-row
+# 'stage_change' or bulk 'bulk_stage_change') AND every 'note_added' counts as a
+# distinct action. There is intentionally NO dedup: a lead moved through three
+# stages in a day is three actions, not one, and mid-steps are no longer
+# collapsed. Moves to 'lead' are counted too (every stage change is an action).
 #
-# Lead-days whose LATEST action was moving to 'lead' are dropped
-# entirely. Moving a lead back to the intake stage is not "work done" on the
-# lead — the user shouldn't be credited for that lead that day. Filtering here,
-# AFTER the DISTINCT ON, means we omit the lead-day rather than silently falling
-# back to an earlier action. The filter lives in the CTE so every endpoint stays
-# consistent.
+# note_added rows carry the note text in after_value, not a stage — they are
+# mapped to the synthetic 'note' stage so they count toward `total` and render
+# as their own pill without polluting real stage counts.
+#
+# The CTE name and column shape (actor_email, day, oh_id, from_stage,
+# final_stage, last_change_at) are unchanged so every endpoint stays consistent.
 _WINNERS_CTE = """
     WITH winners AS (
-        SELECT * FROM (
-            SELECT DISTINCT ON (a.actor_email, (a.created_at AT TIME ZONE 'Asia/Kolkata')::DATE, a.entity_id)
-                a.actor_email,
-                (a.created_at AT TIME ZONE 'Asia/Kolkata')::DATE AS day,
-                a.entity_id          AS oh_id,
-                a.before_value       AS from_stage,
-                a.after_value        AS final_stage,
-                a.created_at         AS last_change_at
-            FROM activity_log a
-            WHERE a.action = 'stage_change'
-              AND a.entity_type = 'inventory'
-              AND a.created_at >= %s
-              AND a.created_at <  %s
-              AND a.actor_email IS NOT NULL
-              AND a.actor_email NOT LIKE 'apps-script:%%'
-              AND a.actor_email <> 'system:forms-webhook'
-              {extra_where}
-            ORDER BY a.actor_email,
-                     (a.created_at AT TIME ZONE 'Asia/Kolkata')::DATE,
-                     a.entity_id,
-                     a.created_at DESC
-        ) latest
-        WHERE latest.final_stage <> 'lead'
+        SELECT
+            a.actor_email,
+            (a.created_at AT TIME ZONE 'Asia/Kolkata')::DATE AS day,
+            a.entity_id          AS oh_id,
+            a.before_value       AS from_stage,
+            CASE WHEN a.action = 'note_added' THEN 'note' ELSE a.after_value END AS final_stage,
+            a.created_at         AS last_change_at
+        FROM activity_log a
+        WHERE a.action IN ('stage_change', 'bulk_stage_change', 'note_added')
+          AND a.entity_type = 'inventory'
+          AND a.created_at >= %s
+          AND a.created_at <  %s
+          AND a.actor_email IS NOT NULL
+          AND a.actor_email NOT LIKE 'apps-script:%%'
+          AND a.actor_email <> 'system:forms-webhook'
+          {extra_where}
     )
 """
 
