@@ -33,7 +33,7 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
             .filter(Boolean).join(' · ')} · <strong className="val-orange">{formatPrice(item.price)}</strong>
         </div>
         <div className="inv-table-wrap" style={{ overflow: 'visible' }}>
-          <ExpandPanel item={item} role={role} onUpdated={onUpdated} canPost={canPost} />
+          <ExpandPanel item={item} role={role} onUpdated={onUpdated} canPost={canPost} showAssignedRm={false} />
         </div>
       </div>
     </div>

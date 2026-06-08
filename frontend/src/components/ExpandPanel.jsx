@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api } from '../api/client.js';
 import NoteThread from './NoteThread.jsx';
 import StatusEditModal from './StatusEditModal.jsx';
 import EditDetailsModal from './EditDetailsModal.jsx';
@@ -14,12 +15,83 @@ function Field({ label, children }) {
   );
 }
 
+// Assigned-RM row in Seller Details. Visible to admin + manager; admin can
+// change it inline via PUT <oh_id>/assigned-rms (same endpoint Edit Details
+// uses). Changing collapses to a single primary RM, mirroring Edit Details.
+function AssignedRmField({ item, role, onUpdated }) {
+  const isAdmin = role === 'admin';
+  const visible = isAdmin || role === 'manager';
+  const currentRm = (item.assigned_rms && item.assigned_rms[0]) || null;
+  const currentRmId = (item.assigned_rm_ids && item.assigned_rm_ids[0]) ?? (currentRm?.id ?? null);
+  const names = (item.assigned_rms || []).map((r) => r.name || r.email).filter(Boolean);
+  const currentLabel = names.length ? names.join(', ') : (currentRmId != null ? `#${currentRmId}` : 'Unassigned');
+
+  const [editing, setEditing] = useState(false);
+  const [rms, setRms] = useState([]);
+  const [rmId, setRmId] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!editing || rms.length) return undefined;
+    let alive = true;
+    api.get('/api/users?role=rm').then((r) => { if (alive) setRms(r.items || []); }).catch(() => {});
+    return () => { alive = false; };
+  }, [editing, rms.length]);
+
+  if (!visible) return null;
+
+  function startEdit() { setError(null); setRmId(currentRmId != null ? String(currentRmId) : ''); setEditing(true); }
+
+  async function save() {
+    setError(null);
+    if (rmId === (currentRmId != null ? String(currentRmId) : '')) { setEditing(false); return; }
+    try {
+      setSaving(true);
+      const r = await api.put(`/api/inventory/${item.oh_id}/assigned-rms`, { rm_ids: rmId ? [Number(rmId)] : [] });
+      if (r?.item) onUpdated?.(r.item);
+      setEditing(false);
+    } catch (e) { setError(e.data?.error || e.message); } finally { setSaving(false); }
+  }
+
+  if (isAdmin && editing) {
+    // Keep the current RM selectable even if it's since gone inactive.
+    const rmOptions = currentRm && !rms.some((u) => u.id === currentRm.id)
+      ? [{ id: currentRm.id, name: currentRm.name, email: currentRm.email }, ...rms]
+      : rms;
+    return (
+      <div className="field-row">
+        <span className="field-lbl">Assigned RM</span>
+        <span className="field-val assigned-rm-edit">
+          <select value={rmId} onChange={(e) => setRmId(e.target.value)} disabled={saving}>
+            <option value="">— Unassigned —</option>
+            {rmOptions.map((u) => <option key={u.id} value={u.id}>{u.name || u.email}</option>)}
+          </select>
+          <button type="button" className="btn-soft" onClick={save} disabled={saving}>{saving ? '…' : 'Save'}</button>
+          <button type="button" className="btn-link" onClick={() => setEditing(false)} disabled={saving}>Cancel</button>
+          {error && <span className="muted">{error}</span>}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="field-row">
+      <span className="field-lbl">Assigned RM</span>
+      <span className="field-val">
+        {currentLabel}
+        {isAdmin && <button type="button" className="btn-link" style={{ marginLeft: 8 }} onClick={startEdit}>Change</button>}
+      </span>
+    </div>
+  );
+}
+
 /**
  * Inline drill-down panel revealed beneath a clicked table row.
  * Distributed columns: Property Details · Pricing · Seller Details · Notes.
  * `sections` lets a host trim what's shown (Leads keeps it lean).
  */
-export default function ExpandPanel({ item, role, onUpdated, canPost = true, sections, canEditStatus = true }) {
+export default function ExpandPanel({ item, role, onUpdated, canPost = true, sections, canEditStatus = true, showAssignedRm = true }) {
   const show = sections || ['property', 'pricing', 'seller', 'notes'];
   const v = variation(item.price, item.oh_price);
   const listing = item.listing_link && !/^internal:\/\//.test(item.listing_link) ? item.listing_link : null;
@@ -77,6 +149,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
               ? <a className="inv-link" href={`tel:${item.seller_phone}`}>{item.seller_phone}</a>
               : '—'}
           </Field>
+          {showAssignedRm && <AssignedRmField item={item} role={role} onUpdated={onUpdated} />}
         </div>
       )}
 
