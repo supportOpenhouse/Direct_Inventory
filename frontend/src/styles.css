@@ -735,7 +735,10 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .dr-role { margin-left: 8px; }
 .ur-day-date { font-size: 14px; margin-bottom: 8px; }
 .stage-inline { display: inline-flex; align-items: center; }
+.stage-inline-stack { flex-direction: column; align-items: flex-start; gap: 1px; }
+.stage-inline-main { display: inline-flex; align-items: center; }
 .stage-reason { color: var(--text-muted); }
+.stage-reason-line { margin-left: 16px; }
 .dr-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 14px; }
 .dr-table th { text-align: left; padding: 8px 10px; font-size: 10.5px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); }
 .dr-table td { padding: 8px 10px; border-bottom: 1px solid var(--hairline); }

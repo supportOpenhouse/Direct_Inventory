@@ -61,7 +61,9 @@ export default function TrackTasks() {
               <tr className="inv-row" key={u.id}>
                 <td className="inv-td-society">
                   {u.name || u.email}
-                  <div className="inv-td-muted" style={{ fontWeight: 400, fontSize: 12 }}>{u.email}{u.role ? ` · ${u.role}` : ''}</div>
+                  <div className="inv-td-muted" style={{ fontWeight: 400, fontSize: 12 }}>
+                    {u.unassigned ? 'Leads with no RM assigned' : `${u.email || ''}${u.role ? ` · ${u.role}` : ''}`}
+                  </div>
                 </td>
                 <td><ProgressCell worked={u.task1_worked} total={u.total} /></td>
                 <td><ProgressCell worked={u.task2_worked} total={u.total} /></td>

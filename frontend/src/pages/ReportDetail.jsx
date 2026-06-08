@@ -14,7 +14,12 @@ function StageCountPills({ counts }) {
 function StagePill({ stage, rejectReason }) {
   if (!stage) return <span className="muted">—</span>;
   const reason = stage === 'rejected' ? rejectReasonLabel(rejectReason) : '';
-  return <span className="stage-inline"><span className="stage-dot" style={{ background: STAGE_DOT_COLOR[stage] || '#94a3b8' }} />{stageLabel(stage)}{reason && <span className="stage-reason"> ({reason})</span>}</span>;
+  return (
+    <span className="stage-inline stage-inline-stack">
+      <span className="stage-inline-main"><span className="stage-dot" style={{ background: STAGE_DOT_COLOR[stage] || '#94a3b8' }} />{stageLabel(stage)}</span>
+      {reason && <span className="stage-reason stage-reason-line">({reason})</span>}
+    </span>
+  );
 }
 function fmtTime(iso) { return iso ? new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }) : ''; }
 

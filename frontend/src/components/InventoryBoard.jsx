@@ -53,7 +53,10 @@ export default function InventoryBoard({
     const p = new URLSearchParams();
     if (qApplied) p.set('q', qApplied);
     if (city) p.set('city', city);
-    const effectiveStages = stageSel.size > 0 ? Array.from(stageSel) : (fixedStages || []);
+    // ALL (nothing selected) restricts to THIS board's own stages — so grouped
+    // extras like Post Visit (Supply Closure stages) only show when their pill
+    // is explicitly selected, never in the default view or other stage pills.
+    const effectiveStages = stageSel.size > 0 ? Array.from(stageSel) : stages;
     if (effectiveStages.length) p.set('stage', effectiveStages.join(','));
     if (sort.field) { p.set('sort', sort.field); p.set('dir', sort.dir); }
     if (annotateVisitOverdue) p.set('annotate_visit_overdue', '1');
@@ -120,11 +123,9 @@ export default function InventoryBoard({
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const filterCount = Object.keys(filtersApplied).length;
-  // When the page is pinned to a stage subset, "ALL" means all of THIS page's
-  // stages — sum their counts rather than showing the global total.
-  const allCount = fixedStages
-    ? stages.reduce((a, s) => a + (counts.by_stage?.[s] || 0), 0)
-    : counts.total;
+  // "ALL" means all of THIS board's own stages — sum their counts. Grouped
+  // extras (e.g. Post Visit) are NOT included, matching the ALL stage filter.
+  const allCount = stages.reduce((a, s) => a + (counts.by_stage?.[s] || 0), 0);
 
   // A "grouped" count pill (e.g. Post Visit = all supply stages combined).
   function groupPill(g) {

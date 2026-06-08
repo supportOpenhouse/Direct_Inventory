@@ -218,6 +218,10 @@ def task_tracking():
     'active' (Task 2: active→qualified). total = their leads created today.
     Multi-RM leads count toward each assignee. Admin sees all (no scope).
 
+    A leading synthetic row (id 0, name 'UNASSIGNED') reports the same progress
+    for today's leads that have NO RM assigned — so admins can spot unworked,
+    unassigned intake. It's only included when there are such leads today.
+
     Response: { users: [{ id, name, email, role, total, task1_worked, task2_worked }] }
     """
     conn = get_conn()
@@ -238,6 +242,28 @@ def task_tracking():
                 """,
             )
             users = cur.fetchall()
+
+            # Unassigned bucket: today's leads with no RM (empty/NULL array).
+            cur.execute(
+                f"""
+                SELECT COUNT(*)                                          AS total,
+                       COUNT(*) FILTER (WHERE stage <> 'lead')           AS task1_worked,
+                       COUNT(*) FILTER (WHERE stage NOT IN ('lead','active')) AS task2_worked
+                FROM inventory
+                WHERE (created_at AT TIME ZONE 'Asia/Kolkata')::DATE = {_TODAY_IST}
+                  AND COALESCE(cardinality(assigned_rm_ids), 0) = 0
+                """,
+            )
+            un = cur.fetchone()
     finally:
         conn.close()
+
+    if un and un["total"]:
+        users = [{
+            "id": 0, "name": "UNASSIGNED", "email": None, "role": None,
+            "unassigned": True,
+            "total": un["total"],
+            "task1_worked": un["task1_worked"],
+            "task2_worked": un["task2_worked"],
+        }, *users]
     return jsonify({"users": users})
