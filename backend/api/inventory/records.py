@@ -99,6 +99,12 @@ def create_one():
     if not fields.get("source"):
         fields["source"] = "Website"
 
+    # Stage the new row starts in. Defaults to the intake stage 'lead'; the
+    # Qualified Leads page creates directly into 'qualified'.
+    stage = body.get("stage") or "lead"
+    if stage not in VALID_STAGES:
+        return jsonify({"error": f"invalid stage: {stage}"}), 400
+
     if not (fields.get("listing_link") or "").strip():
         fields["listing_link"] = f"internal://manual/{_uuid.uuid4()}"
 
@@ -161,7 +167,7 @@ def create_one():
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s,
                           %s, %s, %s,
                           %s, %s, %s, %s, %s,
-                          'lead', %s, %s,
+                          %s, %s, %s,
                           (NOW() AT TIME ZONE 'Asia/Kolkata')::DATE, NULL)
                 RETURNING *
                 """,
@@ -171,7 +177,7 @@ def create_one():
                     fields.get("floor"), fields.get("tower"), fields.get("unit_no"),
                     fields.get("price"), fields.get("seller_name"),
                     fields.get("seller_phone"), fields.get("posting_date"), fields["listing_link"],
-                    [rm_id] if rm_id else [], mgr_id,
+                    stage, [rm_id] if rm_id else [], mgr_id,
                 ),
             )
             row = cur.fetchone()

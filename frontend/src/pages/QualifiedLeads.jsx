@@ -62,6 +62,13 @@ export default function QualifiedLeads() {
 
   useEffect(() => { load(); }, [load]);
 
+  // The Add Inventory button lives in the global topbar; refetch when it adds.
+  useEffect(() => {
+    const onAdded = () => load();
+    window.addEventListener('inventory:added', onAdded);
+    return () => window.removeEventListener('inventory:added', onAdded);
+  }, [load]);
+
   function patchItem(updated) { setItems((prev) => prev.map((it) => (it.oh_id === updated.oh_id ? { ...it, ...updated } : it))); }
   function onSearch(e) { e.preventDefault(); setQApplied(qInput.trim()); }
 

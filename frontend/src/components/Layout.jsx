@@ -5,6 +5,7 @@ import { useTheme } from '../contexts/ThemeContext.jsx';
 import NotificationBell from './NotificationBell.jsx';
 import CpScanButton from './CpScanButton.jsx';
 import ReassignLeadsButton from './ReassignLeadsButton.jsx';
+import AddInventoryButton from './AddInventoryButton.jsx';
 import {
   IconHome, IconLeads, IconQualified, IconFollowUp, IconVisit, IconPipeline, IconRejected,
   IconReport, IconUsers, IconLogs, IconTasks, IconSun, IconMoon, IconMenu, IconLogout, IconChevron,
@@ -114,6 +115,7 @@ export default function Layout() {
           <h1>{title}</h1>
           <div className="topbar-spacer" />
           {(seg === '' || seg === 'leads') && <CpScanButton />}
+          {seg === 'qualified-leads' && <AddInventoryButton defaultStage="qualified" />}
           {seg === 'users' && isAdmin && <ReassignLeadsButton />}
           <NotificationBell role={user?.role} />
           <button className="icon-btn" onClick={toggle} aria-label="Toggle theme" title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}>
