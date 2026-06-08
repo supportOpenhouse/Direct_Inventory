@@ -11,7 +11,12 @@ import VisitScheduleModal from './VisitScheduleModal.jsx';
  *   visit_scheduled  → opens the VisitScheduleModal (field exec, date, time…)
  *   rejected         → reject-reason dropdown
  *   others           → straight stage set
+ *
+ * `lead` and `active` are not selectable targets here — intake/working states
+ * aren't set from this dropdown, and a lead must never be moved back to `lead`.
  */
+const STAGE_OPTIONS = STAGES.filter((s) => s !== 'lead' && s !== 'active');
+
 export default function StatusEditModal({ item, onUpdated, onClose }) {
   const [stage, setStage] = useState(item.stage);
   const [followUp, setFollowUp] = useState(item.follow_up_at ? item.follow_up_at.slice(0, 10) : '');
@@ -24,8 +29,11 @@ export default function StatusEditModal({ item, onUpdated, onClose }) {
   const needsReason = stage === 'rejected';
   const needsDate = stage === 'follow_up';
 
+  const stageExcluded = !STAGE_OPTIONS.includes(stage);
+
   async function save() {
     setError(null);
+    if (stageExcluded) { setError('Pick a stage to move to'); return; }
     if (needsVisit) { setShowVisit(true); return; }
     if (needsReason && !reason) { setError('Pick a reject reason'); return; }
     const body = { stage };
@@ -54,7 +62,8 @@ export default function StatusEditModal({ item, onUpdated, onClose }) {
 
           <label>Stage</label>
           <select value={stage} onChange={(e) => setStage(e.target.value)}>
-            {STAGES.map((s) => <option key={s} value={s}>{stageLabel(s)}</option>)}
+            {stageExcluded && <option value={stage} disabled>{stageLabel(stage)} (current)</option>}
+            {STAGE_OPTIONS.map((s) => <option key={s} value={s}>{stageLabel(s)}</option>)}
           </select>
           <div style={{ marginTop: 6, fontSize: 12 }} className="muted">
             <span className="stage-dot" style={{ background: STAGE_DOT_COLOR[stage] }} />

@@ -300,15 +300,25 @@ def update_one(oh_id: str):
             for k, v in body.items():
                 if k not in allowed:
                     continue
-                # Re-follow-up: the lead stays in 'follow_up' but a NEW follow-up
-                # date is set. The stage column doesn't change (so no UPDATE for
-                # it), yet it's genuine work — emit a stage_change anyway so it
-                # surfaces in the user report (which only counts stage_change
-                # rows). The follow_up_at change is written/logged on its own
-                # iteration below.
-                if k == "stage" and v == "follow_up" and existing.get("stage") == "follow_up":
-                    new_fu = body.get("follow_up_at")
-                    if new_fu and str(existing.get("follow_up_at") or "")[:10] != str(new_fu)[:10]:
+                if existing.get(k) == v:
+                    # Same value re-submitted. For every field except `stage`
+                    # this is a true no-op, so we skip it. Re-selecting the
+                    # CURRENT stage is a deliberate re-touch, so we emit a
+                    # stage_change (which counts as an action) WITHOUT issuing an
+                    # UPDATE for the unchanged column. A follow_up→follow_up
+                    # re-touch with a moved date is additionally tagged
+                    # re_follow_up; the follow_up_at change itself is
+                    # written/logged on its own iteration below.
+                    if k == "stage":
+                        meta = {
+                            "actor_role": user["role"],
+                            "cross_assignment": cross_assignment_edit,
+                            "same_stage": True,
+                        }
+                        if v == "follow_up":
+                            new_fu = body.get("follow_up_at")
+                            if new_fu and str(existing.get("follow_up_at") or "")[:10] != str(new_fu)[:10]:
+                                meta["re_follow_up"] = True
                         log_activity(
                             cur,
                             actor_user_id=user["id"],
@@ -317,16 +327,10 @@ def update_one(oh_id: str):
                             entity_id=oh_id,
                             action="stage_change",
                             field="stage",
-                            before_value="follow_up",
-                            after_value="follow_up",
-                            metadata={
-                                "actor_role": user["role"],
-                                "cross_assignment": cross_assignment_edit,
-                                "re_follow_up": True,
-                            },
+                            before_value=v,
+                            after_value=v,
+                            metadata=meta,
                         )
-                    continue
-                if existing.get(k) == v:
                     continue
                 if k == "priority" and user["role"] not in PRIORITY_ROLES:
                     return jsonify({"error": "only admin/manager can change priority"}), 403
