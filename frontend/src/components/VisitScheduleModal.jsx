@@ -25,6 +25,21 @@ function fmtDateTime(iso) {
   return d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
+// Turn a backend error payload into a user-facing message. When the Forms app
+// rejects the request the useful reason is nested in forms_response (an object
+// like { error: "contact_no must be 10 digits…" } or, for a non-JSON reply, a
+// raw string) — surface that instead of the generic top-level "error".
+function errorMessage(data, fallback) {
+  if (!data) return fallback;
+  const top = data.error;
+  if (top === 'forms app rejected request' || top === 'forms app returned non-JSON') {
+    const fr = data.forms_response;
+    const detail = fr && typeof fr === 'object' ? fr.error : (typeof fr === 'string' ? fr.trim() : null);
+    if (detail) return `Forms app rejected the request: ${detail}`;
+  }
+  return top || fallback;
+}
+
 /**
  * Visit-schedule flow (ported). Date + time + field exec (+ assigned-by for
  * admin). Before sending, checks for existing OpenHouse units in the society
@@ -86,7 +101,7 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
       onScheduled(r);
     } catch (e) {
       if (e.status === 409 && e.data?.existing_visit) { setExisting(e.data.existing_visit); return; }
-      setError(e.data?.error || e.message || 'Could not schedule the visit');
+      setError(errorMessage(e.data, e.message || 'Could not schedule the visit'));
     } finally { setSubmitting(false); }
   }
 

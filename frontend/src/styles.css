@@ -145,7 +145,7 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 .btn-danger:hover { background: var(--red); color: #fff; }
 
 input[type=text], input[type=tel], input[type=number], input[type=date],
-input[type=time], input[type=search], select, textarea, .field {
+input[type=time], input[type=search], input:not([type]), select, textarea, .field {
   width: 100%; background: var(--surface); color: var(--text);
   border: 1px solid var(--border); border-radius: var(--r-input);
   padding: 9px 13px; outline: none; transition: border-color .14s, box-shadow .14s;
