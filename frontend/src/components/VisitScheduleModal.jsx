@@ -51,6 +51,8 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
 
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
+  // Per-visit asking price (lakhs), pre-filled from the lead; sent as demand_price.
+  const [demandPrice, setDemandPrice] = useState(item.price != null ? String(item.price / 100000) : '');
   const [execs, setExecs] = useState([]);
   const [execPhone, setExecPhone] = useState('');
   const [loadingExecs, setLoadingExecs] = useState(true);
@@ -69,9 +71,12 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
     if (!execPhone) miss.push('Field Exec');
     if (isAdmin && !assignedBy) miss.push('Assigned By');
     for (const [k, label] of REQUIRED_INV_FIELDS) {
+      // Price is editable in this modal (demand_price), so validate the input.
+      if (k === 'price') continue;
       const v = item?.[k];
       if (v === null || v === undefined || String(v).trim() === '') miss.push(label);
     }
+    if (demandPrice === '' || demandPrice == null) miss.push('Asking Price');
     return miss;
   }
 
@@ -96,6 +101,7 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
       setSubmitting(true);
       const r = await api.post('/api/visits/schedule', {
         oh_id: item.oh_id, schedule_date: date, schedule_time: time, field_exec_phone: execPhone,
+        demand_price: demandPrice === '' ? null : Number(demandPrice),
         ...(isAdmin ? { assigned_by_email: assignedBy } : {}),
       });
       onScheduled(r);
@@ -169,6 +175,8 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         <label style={{ marginTop: 10 }}>Time <span className="req">*</span></label>
         <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+        <label style={{ marginTop: 10 }}>Asking Price (in lakhs) <span className="req">*</span></label>
+        <input type="number" step="0.01" value={demandPrice} onChange={(e) => setDemandPrice(e.target.value)} placeholder="e.g. 150 = ₹1.5 Cr" />
         <label style={{ marginTop: 10 }}>Field Exec <span className="req">*</span></label>
         <select value={execPhone} onChange={(e) => setExecPhone(e.target.value)} disabled={loadingExecs}>
           <option value="">{loadingExecs ? 'Loading…' : 'Select…'}</option>
