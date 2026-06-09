@@ -64,6 +64,17 @@ export default function TrackTasks() {
     return [...ordered, ...extra];
   }, [rmCounts]);
 
+  // RM-column sort for the RM Lead Counts table. null = backend order (total desc).
+  const [rmSort, setRmSort] = useState(null);
+  const sortedRmCounts = useMemo(() => {
+    if (!rmSort) return rmCounts;
+    return [...rmCounts].sort((a, b) => {
+      const an = (a.name || a.email || '').toLowerCase();
+      const bn = (b.name || b.email || '').toLowerCase();
+      return rmSort === 'asc' ? an.localeCompare(bn) : bn.localeCompare(an);
+    });
+  }, [rmCounts, rmSort]);
+
   const cols = 3;
   return (
     <div>
@@ -113,7 +124,11 @@ export default function TrackTasks() {
         <table className="inv-table">
           <thead>
             <tr>
-              <th className="inv-th">RM</th>
+              <th className="inv-th">
+                <button type="button" className="th-sort" onClick={() => setRmSort((d) => (d === 'asc' ? 'desc' : 'asc'))}>
+                  RM {rmSort === 'asc' ? '▲' : rmSort === 'desc' ? '▼' : '⇅'}
+                </button>
+              </th>
               <th className="inv-th inv-th-right">Total</th>
               {stageCols.map((s) => (
                 <th key={s} className="inv-th inv-th-right" title={stageLabel(s)}
@@ -132,7 +147,7 @@ export default function TrackTasks() {
             {!loadingCounts && rmCounts.length === 0 && (
               <tr><td className="inv-empty" colSpan={stageCols.length + 2}>No RMs with assigned leads.</td></tr>
             )}
-            {!loadingCounts && rmCounts.map((u) => (
+            {!loadingCounts && sortedRmCounts.map((u) => (
               <tr className="inv-row" key={u.id}>
                 <td className="inv-td-society">{u.name || u.email}</td>
                 <td className="inv-td-num"><strong>{u.total}</strong></td>
