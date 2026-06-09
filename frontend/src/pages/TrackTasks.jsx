@@ -2,6 +2,20 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
 import { STAGES, SUPPLY_STAGES, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
 
+// Two-line column headers to keep columns narrow. 2-word labels split one word
+// per line; these 3-word labels split at a custom point.
+const STAGE_HEADER_OVERRIDE = {
+  call_not_received: ['Call Not', 'Received'],
+  token_to_ama: ['Token', 'to AMA'],
+  rejected_post_visit: ['Rejected', 'Post Visit'],
+  cancelled_post_token: ['Cancelled', 'Post Token'],
+};
+function stageHeaderLines(stage) {
+  if (STAGE_HEADER_OVERRIDE[stage]) return STAGE_HEADER_OVERRIDE[stage];
+  const words = stageLabel(stage).split(' ');
+  return words.length === 2 ? words : [stageLabel(stage)];
+}
+
 // A worked/total progress meter — orange while in progress, green when done.
 function ProgressCell({ worked, total }) {
   const pct = total > 0 ? Math.round((worked / total) * 100) : 0;
@@ -103,7 +117,11 @@ export default function TrackTasks() {
               <th className="inv-th inv-th-right">Total</th>
               {stageCols.map((s) => (
                 <th key={s} className="inv-th inv-th-right" title={stageLabel(s)}>
-                  <span className="stage-dot" style={{ background: STAGE_DOT_COLOR[s] || '#94a3b8' }} /> {stageLabel(s)}
+                  {stageHeaderLines(s).map((ln, i) => (
+                    <div key={i} className="rmlc-hline">
+                      {i === 0 && <span className="stage-dot" style={{ background: STAGE_DOT_COLOR[s] || '#94a3b8' }} />}{ln}
+                    </div>
+                  ))}
                 </th>
               ))}
             </tr>
@@ -117,10 +135,7 @@ export default function TrackTasks() {
             )}
             {!loadingCounts && rmCounts.map((u) => (
               <tr className="inv-row" key={u.id}>
-                <td className="inv-td-society">
-                  {u.name || u.email}
-                  <div className="inv-td-muted" style={{ fontWeight: 400, fontSize: 12 }}>{u.email || ''}{u.role ? ` · ${u.role}` : ''}</div>
-                </td>
+                <td className="inv-td-society">{u.name || u.email}</td>
                 <td className="inv-td-num"><strong>{u.total}</strong></td>
                 {stageCols.map((s) => (
                   <td key={s} className="inv-td-num">{u.counts?.[s] || 0}</td>
