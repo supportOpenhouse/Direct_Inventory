@@ -239,7 +239,7 @@ export default function Home() {
           <BoardView s={summary} loading={loading} />
         </>
       ) : (
-        <InventoryBoard showReasonCol
+        <InventoryBoard showReasonCol showExport
           extraStageGroups={[{ key: 'post_visit', label: 'Post Visit', stages: SUPPLY_STAGES, color: '#6366f1', before: 'rejected' }]} />
       )}
     </div>

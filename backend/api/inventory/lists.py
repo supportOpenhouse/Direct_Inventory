@@ -1,7 +1,10 @@
 """Inventory read + aggregate endpoints: list, societies, counts, notifications."""
 from __future__ import annotations
 
-from flask import g, jsonify, request
+import csv
+import io
+
+from flask import Response, g, jsonify, request
 
 from ...db import get_conn, get_props_conn
 from ...services.cp_match import annotate_cp_match
@@ -175,6 +178,73 @@ def list_inventory_ids():
     finally:
         conn.close()
     return jsonify({"ids": ids, "capped": len(ids) >= _IDS_CAP})
+
+
+# CSV export — columns and their headers, in order.
+_EXPORT_COLS = [
+    ("oh_id", "OH ID"), ("society", "Society"), ("locality", "Locality"),
+    ("city", "City"), ("bedrooms", "BHK"), ("area_sqft", "Area (sqft)"),
+    ("floor", "Floor"), ("tower", "Tower"), ("unit_no", "Unit No"),
+    ("price", "Asking Price"), ("oh_price", "OH Price"), ("variation_pct", "Variation %"),
+    ("stage", "Stage"), ("stage_reason", "Reason"),
+    ("assigned_rms_str", "Assigned RM(s)"),
+    ("seller_name", "Seller Name"), ("seller_phone", "Seller Phone"),
+    ("source", "Source"), ("posting_date", "Posting Date"),
+    ("created_at", "Created At"), ("listing_link", "Listing Link"),
+]
+_EXPORT_CAP = 100000
+
+
+@bp.get("/export")
+@require_auth()
+def export_inventory():
+    """CSV of every row matching the current filters/scope (no 1000-row cap).
+    Honors the same filters as the list so the download mirrors the on-screen
+    view across all pages, not just the visible one.
+    """
+    user = g.user
+    args = request.args
+    scope, scope_params, base_filters, base_params, post_filters, post_params = \
+        _build_filters(user, args, alias="i")
+    inner_where = f"WHERE TRUE {scope} {' '.join(base_filters)}"
+    outer_where = f"WHERE TRUE {' '.join(post_filters)}"
+
+    sql = f"""
+        SELECT j.oh_id, j.society, j.locality, j.city, j.bedrooms, j.area_sqft,
+               j.floor, j.tower, j.unit_no, j.price, j.oh_price,
+               j.stage, j.stage_reason, j.assigned_rms, j.seller_name,
+               j.seller_phone, j.source, j.posting_date, j.created_at, j.listing_link
+        FROM ({INVENTORY_WITH_PRICING_SQL} {inner_where}) j
+        {outer_where}
+        ORDER BY j.created_at DESC
+        LIMIT %s
+    """
+    params = [*scope_params, *base_params, *post_params, _EXPORT_CAP]
+
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+    finally:
+        conn.close()
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow([h for _, h in _EXPORT_COLS])
+    for r in rows:
+        price, oh = r.get("price"), r.get("oh_price")
+        r["variation_pct"] = round((price - oh) / oh * 100, 1) if (price and oh) else ""
+        r["assigned_rms_str"] = "; ".join(
+            (a.get("name") or a.get("email") or "") for a in (r.get("assigned_rms") or [])
+        )
+        w.writerow(["" if r.get(k) is None else r.get(k) for k, _ in _EXPORT_COLS])
+
+    return Response(
+        buf.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=inventory.csv"},
+    )
 
 
 @bp.get("/societies")

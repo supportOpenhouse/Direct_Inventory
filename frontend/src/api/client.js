@@ -63,12 +63,30 @@ async function request(method, path, body) {
   return data;
 }
 
+// Authenticated GET returning the raw response Blob — for file downloads
+// (CSV export) where the JSON wrapper doesn't apply. Needs the real backend.
+async function download(path) {
+  if (FORCE_MOCKS) throw new Error('Downloads require the live backend (VITE_USE_MOCKS=false).');
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(BASE + path, { method: 'GET', headers });
+  if (!res.ok) {
+    const text = await res.text();
+    const err = new Error(`HTTP ${res.status}`);
+    err.status = res.status;
+    try { err.data = JSON.parse(text); } catch { /* non-JSON error body */ }
+    throw err;
+  }
+  return res.blob();
+}
+
 export const api = {
   get: (p) => request('GET', p),
   post: (p, b) => request('POST', p, b),
   put: (p, b) => request('PUT', p, b),
   patch: (p, b) => request('PATCH', p, b),
   delete: (p) => request('DELETE', p),
+  download,
 };
 
 export const USING_MOCKS = FORCE_MOCKS;

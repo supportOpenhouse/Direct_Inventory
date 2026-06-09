@@ -22,7 +22,7 @@ export default function InventoryBoard({
   fixedStages = null, showAdd = true, stageFilterable = true, toolbarExtra = null,
   allowStatusEdit = true, reasonFilter = false, hideFollowUpFilter = false, reasonOptions = undefined,
   reloadSignal = 0, onReload = null, extraStageGroups = [], annotateVisitOverdue = false,
-  showReasonCol = false,
+  showReasonCol = false, showExport = false,
 }) {
   const { user } = useAuth();
   const [qInput, setQInput] = useState('');
@@ -47,6 +47,7 @@ export default function InventoryBoard({
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState(() => new Set());
   const [selectingAll, setSelectingAll] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const stages = fixedStages || STAGES;
 
@@ -122,6 +123,22 @@ export default function InventoryBoard({
       alert('Select all failed: ' + (e?.data?.error || e?.message || e));
     } finally { setSelectingAll(false); }
   }
+  // Download all rows matching the current filters/scope as CSV (not just this
+  // page) — the backend export honors the same params makeParams() builds.
+  async function downloadCsv() {
+    try {
+      setDownloading(true);
+      const blob = await api.download(`/api/inventory/export?${makeParams()}`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `inventory_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert('Download failed: ' + (e?.data?.error || e?.message || e));
+    } finally { setDownloading(false); }
+  }
   function exitSelectMode() { setSelectMode(false); setSelected(new Set()); }
   function onBulkDone(result) {
     exitSelectMode();
@@ -171,6 +188,11 @@ export default function InventoryBoard({
         {filterCount > 0 && <button className="btn-link" onClick={() => { setFiltersApplied({}); setFilterFormState({}); }}>Reset</button>}
         {showAdd && <button className="btn-primary" onClick={() => setShowAddModal(true)}><IconPlus size={16} /> Add Inventory</button>}
         <div className="toolbar-spacer" />
+        {showExport && (
+          <button className="btn-ghost" onClick={downloadCsv} disabled={downloading || total === 0}>
+            {downloading ? 'Preparing…' : `Download CSV${total ? ` (${total})` : ''}`}
+          </button>
+        )}
         <button className={selectMode ? 'btn-primary' : 'btn-ghost'} onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}>
           {selectMode ? 'Exit Select' : 'Select'}
         </button>
