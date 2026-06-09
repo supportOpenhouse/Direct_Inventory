@@ -357,6 +357,10 @@ def _build_filters(user: dict, args, alias: str = ""):
         base_filters.append(f"AND {p}source = %s")
         base_params.append(source)
 
+    # No-phone filter — rows with a missing/blank seller phone.
+    if str(args.get("no_phone") or "").strip().lower() in ("1", "true", "yes"):
+        base_filters.append(f"AND ({p}seller_phone IS NULL OR TRIM({p}seller_phone) = '')")
+
     priority_raw = args.get("priority")
     if priority_raw not in (None, ""):
         # Accept 1/0, true/false, yes/no. Default to TRUE when the param is just `?priority`.

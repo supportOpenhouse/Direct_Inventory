@@ -31,7 +31,7 @@ const DATE_PRESETS = [
 const EMPTY = {
   society: [], locality: [], bhk: [], star: [], reason: [],
   price_min: '', price_max: '', variation_min: '', variation_max: '',
-  source: '', rm_id: '', oh_price: '',
+  source: '', rm_id: '', oh_price: '', no_phone: false,
   date_preset: '', posting_from: '', posting_to: '', posting_empty: false,
   fu_preset: '', follow_up_from: '', follow_up_to: '', follow_up_empty: false,
 };
@@ -119,6 +119,7 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
     if (f.variation_max !== '') out.variation_max = Number(f.variation_max);
     if (f.source) out.source = f.source;
     if (f.oh_price) out.oh_price = f.oh_price;
+    if (f.no_phone) out.no_phone = 1;
     if (canFilterRm && f.rm_id) out.rm_id = (f.rm_id === 'none' || f.rm_id === 'multiple') ? f.rm_id : Number(f.rm_id);
     if (f.posting_from) out.posting_from = f.posting_from;
     if (f.posting_to) out.posting_to = f.posting_to;
@@ -167,6 +168,13 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
             <div className="bhk-pills">
               <button type="button" className={f.oh_price === 'missing' ? 'pill pill-on' : 'pill'} onClick={() => set('oh_price', f.oh_price === 'missing' ? '' : 'missing')}>Check Price (no match)</button>
               <button type="button" className={f.oh_price === 'matched' ? 'pill pill-on' : 'pill'} onClick={() => set('oh_price', f.oh_price === 'matched' ? '' : 'matched')}>Has OH Price</button>
+            </div>
+          </div>
+
+          <div className="filter-block">
+            <label>Contact</label>
+            <div className="bhk-pills">
+              <button type="button" className={f.no_phone ? 'pill pill-on' : 'pill'} onClick={() => set('no_phone', !f.no_phone)}>No phone no.</button>
             </div>
           </div>
 
