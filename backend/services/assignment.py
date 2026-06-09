@@ -33,6 +33,17 @@ from ..db import get_props_conn
 
 log = logging.getLogger(__name__)
 
+# Placeholder RM that unmatched leads fall back to (created by migration 026).
+# Looked up by this stable email; if the row is absent (migration not yet run)
+# the fallback is skipped and leads stay unassigned as before.
+UNALLOCATED_EMAIL = "unallocated@openhouse.in"
+
+
+def _unallocated_id(cur) -> int | None:
+    cur.execute("SELECT id FROM users WHERE LOWER(email) = %s", (UNALLOCATED_EMAIL,))
+    row = cur.fetchone()
+    return row["id"] if row else None
+
 
 def _expand_cities(cities):
     """Mirror the city-tab convention: 'Noida' includes 'Greater Noida'."""
@@ -130,6 +141,10 @@ def resolve_assignment(cur, *, city: str, locality: str | None = None, society: 
     """
     rm_id, mgr_id = _resolve_rm_for_lead(cur, society, city=city)
 
+    # No real RM matched → fall back to the 'Unallocated' placeholder RM.
+    if rm_id is None:
+        rm_id = _unallocated_id(cur)
+
     if mgr_id is None and city:
         cur.execute(
             """SELECT id FROM users
@@ -189,14 +204,17 @@ def assign_missing_batch(
                ORDER BY id"""
         )
         rms_data = cur.fetchall()
+        unallocated_id = _unallocated_id(cur)
 
+    # The Unallocated placeholder must never auto-match by scope — it's only the
+    # explicit fallback below — so drop it from the matchable set.
     rm_scope = [{
         "id":      rm["id"],
         "manager": rm.get("manager"),
         "soc_lc":  {(s or "").strip().lower() for s in (rm.get("society") or []) if s},
         "micro":   set(rm.get("micro_market") or []),
         "cities":  set(_expand_cities(rm.get("cities") or [])),
-    } for rm in rms_data]
+    } for rm in rms_data if rm["id"] != unallocated_id]
 
     # society_lc -> set of micro_markets that contain it (per master_societies).
     # Filled lazily per chunk; entries persist across chunks.
@@ -272,6 +290,12 @@ def assign_missing_batch(
                         matched_ids.append(rm["id"])
                         if matched_mgr is None:
                             matched_mgr = rm["manager"]
+
+                # No real RM matched → fall back to the 'Unallocated' placeholder
+                # so the lead still gets a POC instead of staying unassigned.
+                if not matched_ids and unallocated_id is not None:
+                    matched_ids = [unallocated_id]
+                    matched_mgr = None
 
                 if matched_ids:
                     updates.append((r["id"], matched_ids, matched_mgr))

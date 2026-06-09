@@ -338,6 +338,8 @@ def update_one(oh_id: str):
                             metadata=meta,
                         )
                     continue
+                if k == "price" and user["role"] != "admin":
+                    return jsonify({"error": "only admin can change asking price"}), 403
                 if k == "priority" and user["role"] not in PRIORITY_ROLES:
                     return jsonify({"error": "only admin/manager can change priority"}), 403
                 if k == "priority":

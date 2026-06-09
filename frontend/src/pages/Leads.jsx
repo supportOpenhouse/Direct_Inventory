@@ -2,10 +2,11 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import ExpandPanel from '../components/ExpandPanel.jsx';
+import FilterPanel from '../components/FilterPanel.jsx';
 import {
   CITIES, displayCity, isCreatedToday, rejectReasonsForStage, starColor,
 } from '../utils/format.js';
-import { IconExternal, IconSearch } from '../components/icons.jsx';
+import { IconExternal, IconFilter, IconSearch } from '../components/icons.jsx';
 
 // Notes intentionally dropped from the Leads expand panel.
 const EXPAND_SECTIONS = ['property', 'seller'];
@@ -147,6 +148,10 @@ export default function Leads() {
   const [active, setActive] = useState([]);
   const [loadingL, setLoadingL] = useState(true);
   const [loadingR, setLoadingR] = useState(true);
+  const [filtersApplied, setFiltersApplied] = useState({});
+  const [filterFormState, setFilterFormState] = useState({});
+  const [showFilters, setShowFilters] = useState(false);
+  const filterCount = Object.keys(filtersApplied).length;
 
   // which pane(s) to show: 'lead' | 'both' | 'active'
   const [paneView, setPaneView] = useState('both');
@@ -159,6 +164,7 @@ export default function Leads() {
     p.set('stage', stage);
     if (qApplied) p.set('q', qApplied);
     if (city) p.set('city', city);
+    for (const [k, v] of Object.entries(filtersApplied)) p.set(k, String(v));
     p.set('limit', '500');
     return p;
   }
@@ -168,7 +174,7 @@ export default function Leads() {
     try { const r = await api.get(`/api/inventory?${baseParams('lead')}`); setLeads(r.items || []); }
     finally { setLoadingL(false); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qApplied, city]);
+  }, [qApplied, city, filtersApplied]);
 
   const loadActive = useCallback(async () => {
     setLoadingR(true);
@@ -179,7 +185,7 @@ export default function Leads() {
       setActive(r.items || []);
     } finally { setLoadingR(false); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qApplied, city]);
+  }, [qApplied, city, filtersApplied]);
 
   useEffect(() => { loadLeads(); loadActive(); }, [loadLeads, loadActive]);
 
@@ -242,6 +248,8 @@ export default function Leads() {
           <button type="submit" className="btn-primary"><IconSearch size={16} /> Search</button>
           {qApplied && <button type="button" className="btn-ghost" onClick={() => { setQInput(''); setQApplied(''); }}>Clear</button>}
         </form>
+        <button className="btn-ghost" onClick={() => setShowFilters(true)}><IconFilter size={16} /> Filters{filterCount ? ` (${filterCount})` : ''}</button>
+        {filterCount > 0 && <button className="btn-link" onClick={() => { setFiltersApplied({}); setFilterFormState({}); }}>Reset</button>}
         <div className="toolbar-spacer" />
         <div className="view-toggle">
           <button className={paneView === 'lead' ? 'on' : ''} onClick={() => setPaneView('lead')}>Lead</button>
@@ -287,6 +295,12 @@ export default function Leads() {
           </div>
         )}
       </div>
+
+      {showFilters && (
+        <FilterPanel initial={filterFormState} defaultCity={city} role={user?.role}
+          onClose={() => setShowFilters(false)}
+          onApply={(applied, form) => { setFiltersApplied(applied); setFilterFormState(form); setShowFilters(false); }} />
+      )}
     </div>
   );
 }

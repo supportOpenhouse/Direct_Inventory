@@ -25,6 +25,8 @@ export default function EditDetailsModal({ item, onUpdated, onClose }) {
     locality: item.locality || '',
     seller_name: item.seller_name || '',
     seller_phone: item.seller_phone || '',
+    // Stored in rupees; shown/edited in lakhs (matches Add Inventory). Admin-only.
+    price: item.price != null ? String(item.price / 100000) : '',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -68,6 +70,8 @@ export default function EditDetailsModal({ item, onUpdated, onClose }) {
       seller_name: f.seller_name.trim() || null,
       seller_phone: f.seller_phone.trim() || null,
     };
+    // Asking price is admin-only (backend enforces too). Lakhs → rupees.
+    if (isAdmin) next.price = f.price === '' ? null : Math.round(Number(f.price) * 100000);
     // Diff against the current row — only send fields that actually changed.
     const body = {};
     for (const [k, v] of Object.entries(next)) {
@@ -122,6 +126,9 @@ export default function EditDetailsModal({ item, onUpdated, onClose }) {
           <div><label>Tower</label><input type="text" value={f.tower} onChange={(e) => set('tower', e.target.value)} placeholder="e.g. T3" /></div>
           <div><label>Unit No.</label><input type="text" value={f.unit_no} onChange={(e) => set('unit_no', e.target.value)} placeholder="e.g. 1502" /></div>
           <div><label>Locality</label><input type="text" value={f.locality} onChange={(e) => set('locality', e.target.value)} /></div>
+          {isAdmin && (
+            <div><label>Asking Price (in lakhs)</label><input type="number" step="0.01" value={f.price} onChange={(e) => set('price', e.target.value)} placeholder="e.g. 150 = ₹1.5 Cr" /></div>
+          )}
         </div>
 
         <h4 className="edit-sec-h">👤 Seller Details</h4>

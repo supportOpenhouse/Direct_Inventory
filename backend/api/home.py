@@ -267,3 +267,42 @@ def task_tracking():
             "task2_worked": un["task2_worked"],
         }, *users]
     return jsonify({"users": users})
+
+
+@bp.get("/rm-stage-counts")
+@require_auth("admin")
+def rm_stage_counts():
+    """Admin-only: per-RM lead counts broken down by stage (all-time).
+
+    Multi-RM leads count toward each assignee (unnest of assigned_rm_ids).
+    Response: { users: [{ id, name, email, role, total, counts: {stage: n} }] }
+    """
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT u.id, u.name, u.email, u.role, i.stage, COUNT(*) AS n
+                FROM inventory i
+                JOIN LATERAL unnest(i.assigned_rm_ids) AS rm_id ON TRUE
+                JOIN users u ON u.id = rm_id AND u.is_active = TRUE
+                WHERE i.stage IS NOT NULL
+                GROUP BY u.id, u.name, u.email, u.role, i.stage
+                """,
+            )
+            rows = cur.fetchall()
+    finally:
+        conn.close()
+
+    users: dict = {}
+    for r in rows:
+        b = users.get(r["id"])
+        if b is None:
+            b = {"id": r["id"], "name": r["name"], "email": r["email"],
+                 "role": r["role"], "total": 0, "counts": {}}
+            users[r["id"]] = b
+        b["counts"][r["stage"]] = r["n"]
+        b["total"] += r["n"]
+
+    ordered = sorted(users.values(), key=lambda u: (-u["total"], (u["name"] or u["email"] or "").lower()))
+    return jsonify({"users": ordered})
