@@ -12,8 +12,22 @@ const LIST_CAP = 200;
 export default function SearchableMultiSelect({
   options, value, onChange, placeholder = 'Select…', disabled = false, single = false,
 }) {
+  // Options may be plain strings or { value, label } objects. Normalize to
+  // objects internally; `value`/`onChange` always speak in `value`s (the string
+  // itself for string options), so existing string usage is unchanged.
+  const opts = useMemo(
+    () => (options || []).map((o) => (o && typeof o === 'object'
+      ? { value: o.value, label: o.label ?? String(o.value) }
+      : { value: o, label: String(o) })),
+    [options],
+  );
+  const labelOf = useMemo(() => {
+    const m = new Map(opts.map((o) => [o.value, o.label]));
+    return (v) => (m.has(v) ? m.get(v) : v);
+  }, [opts]);
+
   const selected = single ? (value || '') : (Array.isArray(value) ? value : []);
-  const isSel = (opt) => (single ? selected === opt : selected.includes(opt));
+  const isSel = (v) => (single ? selected === v : selected.includes(v));
   const selectedCount = single ? (selected ? 1 : 0) : selected.length;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -60,17 +74,17 @@ export default function SearchableMultiSelect({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = q ? options.filter((o) => o.toLowerCase().includes(q)) : options;
+    const list = q ? opts.filter((o) => o.label.toLowerCase().includes(q)) : opts;
     return list.slice(0, LIST_CAP);
-  }, [options, query]);
+  }, [opts, query]);
 
-  function pick(opt) {
-    if (single) { onChange(opt); setOpen(false); setQuery(''); return; }
-    if (selected.includes(opt)) onChange(selected.filter((v) => v !== opt));
-    else onChange([...selected, opt]);
+  function pick(v) {
+    if (single) { onChange(v); setOpen(false); setQuery(''); return; }
+    if (selected.includes(v)) onChange(selected.filter((x) => x !== v));
+    else onChange([...selected, v]);
   }
 
-  const label = single ? (selected || placeholder) : (selectedCount === 0 ? placeholder : `${selectedCount} selected`);
+  const label = single ? (selected ? labelOf(selected) : placeholder) : (selectedCount === 0 ? placeholder : `${selectedCount} selected`);
 
   const menu = open && !disabled && pos
     ? createPortal(
@@ -83,17 +97,17 @@ export default function SearchableMultiSelect({
           <div className="sms-list">
             {filtered.length === 0 && <div className="sms-empty">No matches.</div>}
             {filtered.map((opt) => (single ? (
-              <button key={opt} type="button" className={`sms-item sms-item-single ${isSel(opt) ? 'sms-item-selected' : ''}`} onClick={() => pick(opt)}>
-                <span>{opt}</span>
+              <button key={opt.value} type="button" className={`sms-item sms-item-single ${isSel(opt.value) ? 'sms-item-selected' : ''}`} onClick={() => pick(opt.value)}>
+                <span>{opt.label}</span>
               </button>
             ) : (
-              <label key={opt} className="sms-item">
-                <input type="checkbox" checked={isSel(opt)} onChange={() => pick(opt)} />
-                <span>{opt}</span>
+              <label key={opt.value} className="sms-item">
+                <input type="checkbox" checked={isSel(opt.value)} onChange={() => pick(opt.value)} />
+                <span>{opt.label}</span>
               </label>
             )))}
-            {!query && options.length > filtered.length && (
-              <div className="sms-more">Showing first {filtered.length} of {options.length} — type to search.</div>
+            {!query && opts.length > filtered.length && (
+              <div className="sms-more">Showing first {filtered.length} of {opts.length} — type to search.</div>
             )}
           </div>
         </div>,
@@ -128,7 +142,7 @@ export default function SearchableMultiSelect({
       {!single && selectedCount > 0 && (
         <div className="sms-chips">
           {selected.map((vv) => (
-            <span key={vv} className="sms-chip">{vv}{!disabled && <button type="button" onClick={() => pick(vv)} aria-label={`Remove ${vv}`}>×</button>}</span>
+            <span key={vv} className="sms-chip">{labelOf(vv)}{!disabled && <button type="button" onClick={() => pick(vv)} aria-label={`Remove ${labelOf(vv)}`}>×</button>}</span>
           ))}
         </div>
       )}

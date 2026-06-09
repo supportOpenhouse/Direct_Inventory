@@ -289,6 +289,14 @@ def _build_filters(user: dict, args, alias: str = ""):
     elif rm_id.isdigit():
         base_filters.append(f"AND %s = ANY({p}assigned_rm_ids)")
         base_params.append(int(rm_id))
+
+    # Multi-RM filter — comma-separated ids → rows assigned to ANY of them.
+    rm_ids_raw = (args.get("rm_ids") or "").strip()
+    if rm_ids_raw:
+        rm_ids = [int(x) for x in rm_ids_raw.split(",") if x.strip().isdigit()]
+        if rm_ids:
+            base_filters.append(f"AND {p}assigned_rm_ids && %s")
+            base_params.append(rm_ids)
     if q:
         # Substring ("half") search: each whitespace-separated token must appear
         # case-insensitively, anywhere, in at least one searchable column — so a

@@ -140,6 +140,43 @@ def list_inventory():
         conn.close()
 
 
+# Safety ceiling for the ids endpoint — far above any realistic selection.
+_IDS_CAP = 50000
+
+
+@bp.get("/ids")
+@require_auth()
+def list_inventory_ids():
+    """Every oh_id matching the current filters/scope — powers 'Select All'
+    across pages. Honors the same filters as the list but has NO 1000-row cap
+    (capped at _IDS_CAP) and returns ids only, so it's cheap for huge sets.
+    """
+    user = g.user
+    args = request.args
+    scope, scope_params, base_filters, base_params, post_filters, post_params = \
+        _build_filters(user, args, alias="i")
+    inner_where = f"WHERE TRUE {scope} {' '.join(base_filters)}"
+
+    conn = get_conn()
+    try:
+        if post_filters:
+            # oh_price / variation filters reference the pricing LATERAL.
+            outer_where = f"WHERE TRUE {' '.join(post_filters)}"
+            sql = (f"SELECT j.oh_id FROM ({INVENTORY_WITH_PRICING_SQL} {inner_where}) j "
+                   f"{outer_where} LIMIT %s")
+            params = [*scope_params, *base_params, *post_params, _IDS_CAP]
+        else:
+            # No post-filters → skip the pricing join entirely.
+            sql = f"SELECT i.oh_id FROM inventory i {inner_where} LIMIT %s"
+            params = [*scope_params, *base_params, _IDS_CAP]
+        with conn, conn.cursor() as cur:
+            cur.execute(sql, params)
+            ids = [r["oh_id"] for r in cur.fetchall()]
+    finally:
+        conn.close()
+    return jsonify({"ids": ids, "capped": len(ids) >= _IDS_CAP})
+
+
 @bp.get("/societies")
 @require_auth()
 def list_societies():

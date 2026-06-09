@@ -114,11 +114,10 @@ export default function InventoryBoard({
     if (total <= 0) return;
     try {
       setSelectingAll(true);
-      const params = makeParams();
-      params.set('limit', String(total));
-      params.set('offset', '0');
-      const r = await api.get(`/api/inventory?${params}`);
-      setSelected(new Set((r.items || []).map((it) => it.oh_id)));
+      // ids-only endpoint — no 1000-row list cap, so all matching rows select.
+      const r = await api.get(`/api/inventory/ids?${makeParams()}`);
+      setSelected(new Set(r.ids || []));
+      if (r.capped) alert(`Selection capped at ${(r.ids || []).length} rows.`);
     } catch (e) {
       alert('Select all failed: ' + (e?.data?.error || e?.message || e));
     } finally { setSelectingAll(false); }

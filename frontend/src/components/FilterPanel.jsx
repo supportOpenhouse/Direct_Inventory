@@ -31,7 +31,7 @@ const DATE_PRESETS = [
 const EMPTY = {
   society: [], locality: [], bhk: [], star: [], reason: [],
   price_min: '', price_max: '', variation_min: '', variation_max: '',
-  source: '', rm_id: '', oh_price: '', no_phone: false,
+  source: '', rm_id: '', rm_ids: [], oh_price: '', no_phone: false,
   date_preset: '', posting_from: '', posting_to: '', posting_empty: false,
   fu_preset: '', follow_up_from: '', follow_up_to: '', follow_up_empty: false,
 };
@@ -45,6 +45,7 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
     star: Array.isArray(initial?.star) ? initial.star : [],
     reason: Array.isArray(initial?.reason) ? initial.reason : [],
     rm_id: initial?.rm_id != null && initial?.rm_id !== '' ? String(initial.rm_id) : '',
+    rm_ids: Array.isArray(initial?.rm_ids) ? initial.rm_ids.map(String) : [],
   }));
   const [societies, setSocieties] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -121,6 +122,7 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
     if (f.oh_price) out.oh_price = f.oh_price;
     if (f.no_phone) out.no_phone = 1;
     if (canFilterRm && f.rm_id) out.rm_id = (f.rm_id === 'none' || f.rm_id === 'multiple') ? f.rm_id : Number(f.rm_id);
+    if (canFilterRm && f.rm_ids?.length) out.rm_ids = f.rm_ids.join(',');
     if (f.posting_from) out.posting_from = f.posting_from;
     if (f.posting_to) out.posting_to = f.posting_to;
     if (f.posting_empty) out.posting_empty = 1;
@@ -191,12 +193,17 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
           {canFilterRm && (
             <div className="filter-block">
               <label>RM</label>
-              <select value={f.rm_id} onChange={(e) => set('rm_id', e.target.value)}>
-                <option value="">— All RMs —</option>
-                <option value="none">No RM assigned</option>
-                <option value="multiple">Multiple RMs</option>
-                {rms.map((u) => <option key={u.id} value={String(u.id)}>{u.name || u.email}</option>)}
-              </select>
+              <SearchableMultiSelect
+                options={rms.map((u) => ({ value: String(u.id), label: u.name || u.email }))}
+                value={f.rm_ids}
+                onChange={(v) => setF((p) => ({ ...p, rm_ids: v, rm_id: v.length ? '' : p.rm_id }))}
+                placeholder="Pick RMs…" />
+              <div className="bhk-pills" style={{ marginTop: 6 }}>
+                <button type="button" className={f.rm_id === 'none' ? 'pill pill-on' : 'pill'}
+                  onClick={() => setF((p) => ({ ...p, rm_id: p.rm_id === 'none' ? '' : 'none', rm_ids: [] }))}>No RM assigned</button>
+                <button type="button" className={f.rm_id === 'multiple' ? 'pill pill-on' : 'pill'}
+                  onClick={() => setF((p) => ({ ...p, rm_id: p.rm_id === 'multiple' ? '' : 'multiple', rm_ids: [] }))}>Multiple RMs</button>
+              </div>
             </div>
           )}
 
