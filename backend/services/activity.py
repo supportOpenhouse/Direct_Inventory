@@ -42,3 +42,41 @@ def log(
             json.dumps(metadata) if metadata else None,
         ),
     )
+
+
+def log_many(cur, rows: list[dict]) -> None:
+    """Batch-insert many activity_log rows in ONE round-trip.
+
+    Each dict accepts the same keys as log()'s kwargs. Calling log() in a loop
+    is one INSERT per row, which can blow the request timeout on large bulk
+    operations — use this for per-row audit writes instead.
+    """
+    if not rows:
+        return
+    from psycopg2.extras import execute_values
+
+    values = [
+        (
+            r.get("actor_user_id"),
+            r.get("actor_email"),
+            r.get("entity_type"),
+            r.get("entity_id"),
+            r.get("action"),
+            r.get("field"),
+            None if r.get("before_value") is None else str(r.get("before_value")),
+            None if r.get("after_value") is None else str(r.get("after_value")),
+            json.dumps(r["metadata"]) if r.get("metadata") else None,
+        )
+        for r in rows
+    ]
+    execute_values(
+        cur,
+        """
+        INSERT INTO activity_log (
+            actor_user_id, actor_email, entity_type, entity_id,
+            action, field, before_value, after_value, metadata
+        ) VALUES %s
+        """,
+        values,
+        template="(%s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)",
+    )
