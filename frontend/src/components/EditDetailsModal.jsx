@@ -126,9 +126,6 @@ export default function EditDetailsModal({ item, onUpdated, onClose }) {
           <div><label>Tower</label><input type="text" value={f.tower} onChange={(e) => set('tower', e.target.value)} placeholder="e.g. T3" /></div>
           <div><label>Unit No.</label><input type="text" value={f.unit_no} onChange={(e) => set('unit_no', e.target.value)} placeholder="e.g. 1502" /></div>
           <div><label>Locality</label><input type="text" value={f.locality} onChange={(e) => set('locality', e.target.value)} /></div>
-          {isAdmin && (
-            <div><label>Asking Price (in lakhs)</label><input type="number" step="0.01" value={f.price} onChange={(e) => set('price', e.target.value)} placeholder="e.g. 150 = ₹1.5 Cr" /></div>
-          )}
         </div>
 
         <h4 className="edit-sec-h">👤 Seller Details</h4>
@@ -139,7 +136,7 @@ export default function EditDetailsModal({ item, onUpdated, onClose }) {
 
         {isAdmin && (
           <>
-            <h4 className="edit-sec-h">🧑‍💼 Assigned RM</h4>
+            <h4 className="edit-sec-h">🧑‍💼 Assigned RM &amp; Pricing</h4>
             <div className="form-grid">
               <div>
                 <label>Assigned RM <span className="muted">(currently: {currentRm?.name || currentRm?.email || rms.find((u) => u.id === currentRmId)?.name || (currentRmId != null ? `#${currentRmId}` : 'Unassigned')})</span></label>
@@ -148,6 +145,7 @@ export default function EditDetailsModal({ item, onUpdated, onClose }) {
                   {rmOptions.map((u) => <option key={u.id} value={String(u.id)}>{u.name || u.email}</option>)}
                 </select>
               </div>
+              <div><label>Asking Price (in lakhs)</label><input type="number" step="0.01" value={f.price} onChange={(e) => set('price', e.target.value)} placeholder="e.g. 150 = ₹1.5 Cr" /></div>
             </div>
           </>
         )}
