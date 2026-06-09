@@ -399,6 +399,15 @@ def _build_filters(user: dict, args, alias: str = ""):
                             "AND ((price::FLOAT - oh_price) / oh_price * 100) <= %s")
         post_params.append(variation_max)
 
+    # OH Price match filter — also references the LATERAL result.
+    #   missing -> "Check Price" rows (no strict oh_pricing match)
+    #   matched -> rows with a real oh_price.
+    oh_price_f = (args.get("oh_price") or "").strip().lower()
+    if oh_price_f == "missing":
+        post_filters.append("AND oh_price IS NULL")
+    elif oh_price_f == "matched":
+        post_filters.append("AND oh_price IS NOT NULL")
+
     return scope, scope_params, base_filters, base_params, post_filters, post_params
 
 
