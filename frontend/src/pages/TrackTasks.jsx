@@ -116,11 +116,10 @@ export default function TrackTasks() {
               <th className="inv-th">RM</th>
               <th className="inv-th inv-th-right">Total</th>
               {stageCols.map((s) => (
-                <th key={s} className="inv-th inv-th-right" title={stageLabel(s)}>
+                <th key={s} className="inv-th inv-th-right" title={stageLabel(s)}
+                  style={{ color: STAGE_DOT_COLOR[s] || '#94a3b8' }}>
                   {stageHeaderLines(s).map((ln, i) => (
-                    <div key={i} className="rmlc-hline">
-                      {i === 0 && <span className="stage-dot" style={{ background: STAGE_DOT_COLOR[s] || '#94a3b8' }} />}{ln}
-                    </div>
+                    <div key={i} className="rmlc-hline">{ln}</div>
                   ))}
                 </th>
               ))}
