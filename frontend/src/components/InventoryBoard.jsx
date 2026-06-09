@@ -46,6 +46,7 @@ export default function InventoryBoard({
 
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState(() => new Set());
+  const [selectingAll, setSelectingAll] = useState(false);
 
   const stages = fixedStages || STAGES;
 
@@ -106,6 +107,21 @@ export default function InventoryBoard({
       else visibleIds.forEach((id) => n.add(id));
       return n;
     });
+  }
+  // Select EVERY row matching the current filter/search/stage — across all
+  // pages, not just the visible 50. Fetches all matching oh_ids in one go.
+  async function selectAllMatching() {
+    if (total <= 0) return;
+    try {
+      setSelectingAll(true);
+      const params = makeParams();
+      params.set('limit', String(total));
+      params.set('offset', '0');
+      const r = await api.get(`/api/inventory?${params}`);
+      setSelected(new Set((r.items || []).map((it) => it.oh_id)));
+    } catch (e) {
+      alert('Select all failed: ' + (e?.data?.error || e?.message || e));
+    } finally { setSelectingAll(false); }
   }
   function exitSelectMode() { setSelectMode(false); setSelected(new Set()); }
   function onBulkDone(result) {
@@ -190,6 +206,11 @@ export default function InventoryBoard({
       <div className="filtered-header">
         <span className="muted">Showing {items.length === 0 ? 0 : page * PAGE_SIZE + 1}–{page * PAGE_SIZE + items.length} of {total}</span>
         <span className="toolbar-spacer" />
+        {selectMode && (
+          <button className="btn-ghost" onClick={selectAllMatching} disabled={selectingAll || total === 0}>
+            {selectingAll ? 'Selecting…' : `Select All${total ? ` (${total})` : ''}`}
+          </button>
+        )}
         <button className="btn-ghost" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>← Prev</button>
         <span className="page-num">Page {page + 1} / {totalPages}</span>
         <button className="btn-ghost" disabled={page + 1 >= totalPages} onClick={() => setPage((p) => p + 1)}>Next →</button>
