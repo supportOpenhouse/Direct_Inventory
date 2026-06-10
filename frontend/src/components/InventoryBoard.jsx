@@ -245,7 +245,7 @@ export default function InventoryBoard({
         )}
         <button className="btn-ghost" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>← Prev</button>
         <span className="page-num">
-          Page
+          <span className="page-of">Page</span>
           <input className="page-input" type="number" min="1" max={totalPages} value={pageInput}
             onChange={(e) => {
               const v = e.target.value;
@@ -256,7 +256,7 @@ export default function InventoryBoard({
             }}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); goToPage(); } }}
             onBlur={goToPage} aria-label="Go to page" />
-          / {totalPages}
+          <span className="page-of">/ {totalPages}</span>
         </span>
         <button className="btn-ghost" disabled={page + 1 >= totalPages} onClick={() => setPage((p) => p + 1)}>Next →</button>
         <button className="icon-btn" onClick={async () => { if (onReload) { setLoading(true); try { await onReload(); } catch { /* ignore */ } } refresh(page); refreshCounts(); }} disabled={loading} aria-label="Reload">
