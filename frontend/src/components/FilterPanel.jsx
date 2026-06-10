@@ -155,7 +155,7 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
           <div className="filter-block">
             <label>BHK</label>
             <div className="bhk-pills">
-              {[1, 2, 3, 4, 5].map((n) => (
+              {[1, 2, 2.5, 3, 3.5, 4, 5].map((n) => (
                 <button key={n} type="button" className={f.bhk.includes(n) ? 'pill pill-on' : 'pill'} onClick={() => toggleBhk(n)}>{n} BHK</button>
               ))}
             </div>

@@ -78,7 +78,7 @@ export default function AddInventoryModal({ onClose, onAdded, defaultStage = 'le
           </div>
           <div><label>BHK</label>
             <select value={f.bedrooms} onChange={(e) => set('bedrooms', e.target.value)}>
-              <option value="">Select…</option><option value="2">2 BHK</option><option value="3">3 BHK</option><option value="4">4 BHK</option>
+              <option value="">Select…</option><option value="2">2 BHK</option><option value="2.5">2.5 BHK</option><option value="3">3 BHK</option><option value="3.5">3.5 BHK</option><option value="4">4 BHK</option>
             </select>
           </div>
           <div><label>Area (sqft)</label><input type="number" value={f.area_sqft} onChange={(e) => set('area_sqft', e.target.value)} /></div>

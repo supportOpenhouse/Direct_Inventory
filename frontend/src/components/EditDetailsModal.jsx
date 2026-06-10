@@ -55,7 +55,7 @@ export default function EditDetailsModal({ item, onUpdated, onClose }) {
 
   // Keep the row's existing value selectable even if it falls outside the
   // standard option sets, so a save never silently drops it.
-  const bhkOpts = [...new Set([2, 3, 4, ...(item.bedrooms != null ? [Number(item.bedrooms)] : [])])].sort((a, b) => a - b);
+  const bhkOpts = [...new Set([2, 2.5, 3, 3.5, 4, ...(item.bedrooms != null ? [Number(item.bedrooms)] : [])])].sort((a, b) => a - b);
   const floorOpts = item.floor && !BASE_FLOORS.includes(item.floor) ? [item.floor, ...BASE_FLOORS] : BASE_FLOORS;
 
   async function save() {

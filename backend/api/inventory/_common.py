@@ -330,7 +330,7 @@ def _build_filters(user: dict, args, alias: str = ""):
             base_params.append(names)
     if bhk_csv:
         try:
-            bhks = [int(x) for x in bhk_csv.split(",") if x.strip()]
+            bhks = [float(x) for x in bhk_csv.split(",") if x.strip()]
             if bhks:
                 base_filters.append(f"AND {p}bedrooms = ANY(%s)")
                 base_params.append(bhks)
