@@ -42,7 +42,8 @@ export default function QualifiedLeads() {
   const [filterFormState, setFilterFormState] = useState({});
   const [showFilters, setShowFilters] = useState(false);
   const canPost = ['admin', 'manager', 'rm'].includes(user?.role);
-  const cols = 8;
+  const isAdmin = user?.role === 'admin';
+  const cols = isAdmin ? 9 : 8;
   const filterCount = Object.keys(filtersApplied).length;
 
   const load = useCallback(async () => {
@@ -96,6 +97,7 @@ export default function QualifiedLeads() {
             <tr>
               <th className="inv-th inv-th-star" />
               <th className="inv-th">Society</th>
+              {isAdmin && <th className="inv-th">Assigned RM</th>}
               <th className="inv-th">BHK</th>
               <th className="inv-th">Floor</th>
               <th className="inv-th">Area</th>
@@ -117,6 +119,7 @@ export default function QualifiedLeads() {
                   <tr className={`inv-row ${isOpen ? 'inv-row-open' : ''}`} onClick={() => setOpenId(isOpen ? null : it.oh_id)}>
                     <StarCell item={it} canSet={canPost} onUpdated={patchItem} />
                     <td className="inv-td-society">{it.society || '—'}{it.qualified_today && <img className="new-badge-img" src="/new.png" alt="NEW" />}<div className="inv-td-muted" style={{ fontWeight: 400, fontSize: 12 }}>{displayCity(it.city)} · {it.oh_id}</div></td>
+                    {isAdmin && <td>{(it.assigned_rms || []).map((r) => r.name || r.email).filter(Boolean).join(', ') || '—'}</td>}
                     <td>{it.bedrooms != null ? `${it.bedrooms} BHK` : '—'}</td>
                     <td>{it.floor || '—'}</td>
                     <td>{it.area_sqft != null ? `${it.area_sqft} sqft` : '—'}</td>
