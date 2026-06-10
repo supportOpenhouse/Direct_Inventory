@@ -33,6 +33,7 @@ export default function InventoryBoard({
   const [stageSel, setStageSel] = useState(() => new Set());
   const [sort, setSort] = useState({ field: 'smart', dir: 'desc' });
   const [page, setPage] = useState(0);
+  const [pageInput, setPageInput] = useState('1');
 
   const [filtersApplied, setFiltersApplied] = useState({});
   const [filterFormState, setFilterFormState] = useState({});
@@ -87,6 +88,8 @@ export default function InventoryBoard({
 
   useEffect(() => { setPage(0); refresh(0); refreshCounts(); /* eslint-disable-next-line */ }, [city, qApplied, stageSel, filtersApplied, sort.field, sort.dir]);
   useEffect(() => { refresh(page); /* eslint-disable-next-line */ }, [page]);
+  // Keep the editable page box in sync with the actual page (Prev/Next/reset).
+  useEffect(() => { setPageInput(String(page + 1)); }, [page]);
   // External reload trigger (e.g. the tracker's auto-sync finished).
   useEffect(() => { if (reloadSignal) { refresh(page); refreshCounts(); } /* eslint-disable-next-line */ }, [reloadSignal]);
 
@@ -138,6 +141,14 @@ export default function InventoryBoard({
     } catch (e) {
       alert('Download failed: ' + (e?.data?.error || e?.message || e));
     } finally { setDownloading(false); }
+  }
+  // Jump to a typed page number, clamped to [1, totalPages].
+  function goToPage() {
+    const n = parseInt(pageInput, 10);
+    if (Number.isNaN(n)) { setPageInput(String(page + 1)); return; }
+    const clamped = Math.min(totalPages, Math.max(1, n));
+    setPage(clamped - 1);
+    setPageInput(String(clamped));
   }
   function exitSelectMode() { setSelectMode(false); setSelected(new Set()); }
   function onBulkDone(result) {
@@ -233,7 +244,20 @@ export default function InventoryBoard({
           </button>
         )}
         <button className="btn-ghost" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>← Prev</button>
-        <span className="page-num">Page {page + 1} / {totalPages}</span>
+        <span className="page-num">
+          Page
+          <input className="page-input" type="number" min="1" max={totalPages} value={pageInput}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === '') { setPageInput(''); return; }
+              const n = parseInt(v, 10);
+              if (Number.isNaN(n)) return;
+              setPageInput(String(Math.min(totalPages, Math.max(1, n))));  // clamp to [1, max] as typed
+            }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); goToPage(); } }}
+            onBlur={goToPage} aria-label="Go to page" />
+          / {totalPages}
+        </span>
         <button className="btn-ghost" disabled={page + 1 >= totalPages} onClick={() => setPage((p) => p + 1)}>Next →</button>
         <button className="icon-btn" onClick={async () => { if (onReload) { setLoading(true); try { await onReload(); } catch { /* ignore */ } } refresh(page); refreshCounts(); }} disabled={loading} aria-label="Reload">
           <span className={`reload-icon ${loading ? 'reload-icon-spinning' : ''}`}><IconReload size={16} /></span>
