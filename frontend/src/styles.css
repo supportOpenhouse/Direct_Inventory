@@ -394,7 +394,9 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .page-num { display: flex; align-items: center; gap: 10px; color: var(--text-2); white-space: nowrap; }
 .page-of { white-space: nowrap; flex: none; }
 /* Higher specificity than the generic input[type=number] rule (width:100%). */
-.page-num input.page-input { width: 46px; text-align: center; padding: 5px 6px; flex: none; }
+.page-num input.page-input { width: 58px; text-align: center; padding: 5px 6px; flex: none; -moz-appearance: textfield; appearance: textfield; }
+.page-input::-webkit-outer-spin-button,
+.page-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .page-jump { width: 50px; text-align: center; padding: 6px; }
 .reload-icon { display: inline-flex; align-items: center; justify-content: center; line-height: 0; }
 .reload-icon-spinning { animation: spin .7s linear infinite; transform-origin: 50% 50%; }

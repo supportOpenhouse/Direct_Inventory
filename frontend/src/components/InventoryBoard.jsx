@@ -246,13 +246,11 @@ export default function InventoryBoard({
         <button className="btn-ghost" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>← Prev</button>
         <span className="page-num">
           <span className="page-of">Page</span>
-          <input className="page-input" type="number" min="1" max={totalPages} value={pageInput}
+          <input className="page-input" type="text" inputMode="numeric" value={pageInput}
             onChange={(e) => {
-              const v = e.target.value;
+              const v = e.target.value.replace(/\D/g, '');  // digits only — strips . - e + etc.
               if (v === '') { setPageInput(''); return; }
-              const n = parseInt(v, 10);
-              if (Number.isNaN(n)) return;
-              setPageInput(String(Math.min(totalPages, Math.max(1, n))));  // clamp to [1, max] as typed
+              setPageInput(String(Math.min(totalPages, Math.max(1, parseInt(v, 10)))));  // clamp to [1, max]
             }}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); goToPage(); } }}
             onBlur={goToPage} aria-label="Go to page" />
