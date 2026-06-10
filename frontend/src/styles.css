@@ -391,9 +391,10 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .count-pill .lbl { font-size: 10px; font-weight: 700; letter-spacing: .04em; color: var(--text-muted); }
 
 .filtered-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 13px; }
-.page-num { display: flex; align-items: center; gap: 8px; color: var(--text-2); white-space: nowrap; }
+.page-num { display: flex; align-items: center; gap: 10px; color: var(--text-2); white-space: nowrap; }
 .page-of { white-space: nowrap; flex: none; }
-.page-input { width: 56px; text-align: center; padding: 4px 6px; flex: none; }
+/* Higher specificity than the generic input[type=number] rule (width:100%). */
+.page-num input.page-input { width: 46px; text-align: center; padding: 5px 6px; flex: none; }
 .page-jump { width: 50px; text-align: center; padding: 6px; }
 .reload-icon { display: inline-flex; align-items: center; justify-content: center; line-height: 0; }
 .reload-icon-spinning { animation: spin .7s linear infinite; transform-origin: 50% 50%; }
