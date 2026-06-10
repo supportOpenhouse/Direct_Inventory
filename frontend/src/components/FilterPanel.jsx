@@ -158,6 +158,7 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
               {[1, 2, 2.5, 3, 3.5, 4, 5].map((n) => (
                 <button key={n} type="button" className={f.bhk.includes(n) ? 'pill pill-on' : 'pill'} onClick={() => toggleBhk(n)}>{n} BHK</button>
               ))}
+              <button type="button" className={f.bhk.includes('other') ? 'pill pill-on' : 'pill'} onClick={() => toggleBhk('other')} title="BHK values outside the standard options">Other</button>
             </div>
           </div>
           <div className="filter-block">

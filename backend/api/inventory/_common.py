@@ -182,6 +182,10 @@ BULK_ALLOWED_FIELDS = {
     "priority",
 }
 
+# Standard BHK options offered in the UI. The BHK filter's "Other" bucket matches
+# anything outside this set. Keep in sync with the FilterPanel BHK pills.
+STANDARD_BHKS = [1, 2, 2.5, 3, 3.5, 4, 5]
+
 # Roles allowed to flag a lead as Priority / set star_color.
 PRIORITY_ROLES = {"admin", "manager", "rm"}
 
@@ -329,13 +333,23 @@ def _build_filters(user: dict, args, alias: str = ""):
             base_filters.append(f"AND LOWER(TRIM({p}locality)) = ANY(%s)")
             base_params.append(names)
     if bhk_csv:
+        tokens = [x.strip() for x in bhk_csv.split(",") if x.strip()]
+        want_other = any(t.lower() == "other" for t in tokens)
         try:
-            bhks = [float(x) for x in bhk_csv.split(",") if x.strip()]
-            if bhks:
-                base_filters.append(f"AND {p}bedrooms = ANY(%s)")
-                base_params.append(bhks)
+            nums = [float(t) for t in tokens if t.lower() != "other"]
         except ValueError:
-            pass
+            nums = []
+        conds, cond_params = [], []
+        if nums:
+            conds.append(f"{p}bedrooms = ANY(%s)")
+            cond_params.append(nums)
+        if want_other:
+            # Anomalies: a BHK value present but outside the standard options.
+            conds.append(f"({p}bedrooms IS NOT NULL AND {p}bedrooms <> ALL(%s))")
+            cond_params.append(STANDARD_BHKS)
+        if conds:
+            base_filters.append("AND (" + " OR ".join(conds) + ")")
+            base_params.extend(cond_params)
     if price_min is not None:
         base_filters.append(f"AND {p}price >= %s")
         base_params.append(price_min)
