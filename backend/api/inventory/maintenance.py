@@ -39,7 +39,8 @@ def supply_sync():
     try:
         with pconn, pconn.cursor() as pcur:
             pcur.execute(
-                "SELECT cp_id, direct_stage, supply_status FROM cp_inventory_status "
+                "SELECT cp_id, direct_stage, supply_status, visit_scheduled_date "
+                "FROM cp_inventory_status "
                 "WHERE valid_direct_id IS TRUE AND cp_id IS NOT NULL AND cp_id <> ''"
             )
             rows = pcur.fetchall()
@@ -54,6 +55,11 @@ def supply_sync():
         oh = str(r.get("cp_id")).strip()
         stage = _slug(r.get("direct_stage"))
         reason = _slug(r.get("supply_status")) or None
+        # No post-visit progress yet but a visit IS booked in the tracker →
+        # reflect that as the 'visit_scheduled' stage on the lead.
+        if not stage and (str(r.get("visit_scheduled_date") or "").strip()):
+            stage = "visit_scheduled"
+            reason = None
         if oh and stage:
             pairs.append((oh, stage, reason))
     if not pairs:

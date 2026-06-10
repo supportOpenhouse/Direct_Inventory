@@ -28,3 +28,4 @@ backend_example
 
 # Google Apps Script source (runs in the Sheet, not this repo).
 apps_script/
+.pytest_cache/
