@@ -21,15 +21,10 @@ function appendPage(prev, items) {
   return [...prev, ...items.filter((it) => !seen.has(it.oh_id))];
 }
 
-// Inline SVG replacement for the old /new.png starburst badge — same 20px
-// footprint via .new-badge-img, without shipping a 394 KB image.
+// The original starburst badge — new.png is now a 60×60 (~5 KB) asset sized
+// for its 20px render (3× DPR headroom), so shipping the image is cheap.
 function NewBadge() {
-  return (
-    <svg className="new-badge-img" viewBox="0 0 48 48" role="img" aria-label="NEW">
-      <polygon fill="#fb0103" points="24.0,0.5 27.7,5.2 33.0,2.3 34.7,8.0 40.6,7.4 40.0,13.3 45.7,15.0 42.8,20.3 47.5,24.0 42.8,27.7 45.7,33.0 40.0,34.7 40.6,40.6 34.7,40.0 33.0,45.7 27.7,42.8 24.0,47.5 20.3,42.8 15.0,45.7 13.3,40.0 7.4,40.6 8.0,34.7 2.3,33.0 5.2,27.7 0.5,24.0 5.2,20.3 2.3,15.0 8.0,13.3 7.4,7.4 13.3,8.0 15.0,2.3 20.3,5.2" />
-      <text x="24" y="29" textAnchor="middle" fill="#fff" fontFamily="Arial, Helvetica, sans-serif" fontSize="13" fontWeight="800">NEW</text>
-    </svg>
-  );
+  return <img className="new-badge-img" src="/new.png" alt="NEW" />;
 }
 
 // ── star cell (priority toggle) ──────────────────────────────────────────

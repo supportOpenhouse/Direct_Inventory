@@ -11,14 +11,10 @@ const PAGE_SIZE = 50;
 
 // Inline "NEW" chip — replaces the old /new.png <img> so the badge renders
 // without an image fetch (same chip approach as the other tables).
+// The original starburst badge — new.png is now a 60×60 (~5 KB) asset sized
+// for its 20px render (3× DPR headroom), so shipping the image is cheap.
 function NewChip() {
-  return (
-    <span style={{
-      display: 'inline-block', marginLeft: 8, padding: '1px 7px', borderRadius: 999,
-      fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em',
-      color: '#fff', background: 'var(--red, #dc2626)', verticalAlign: 'middle',
-    }}>New</span>
-  );
+  return <img className="new-badge-img" src="/new.png" alt="NEW" />;
 }
 
 function formatAssignedRms(rms) {
