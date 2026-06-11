@@ -22,6 +22,10 @@ from . import config
 _pools: dict[str, psycopg2.pool.ThreadedConnectionPool] = {}
 _pools_lock = threading.Lock()
 
+# TCP keepalives so idle pooled connections aren't silently killed by the
+# Neon proxy / NAT between Render and the database.
+_KEEPALIVE_KW = dict(keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=3)
+
 
 def _get_pool(dsn: str, maxconn: int) -> psycopg2.pool.ThreadedConnectionPool:
     """Lazily create (once, thread-safely) and return the pool for ``dsn``."""
@@ -31,10 +35,24 @@ def _get_pool(dsn: str, maxconn: int) -> psycopg2.pool.ThreadedConnectionPool:
             pool = _pools.get(dsn)
             if pool is None:
                 pool = psycopg2.pool.ThreadedConnectionPool(
-                    1, maxconn, dsn, cursor_factory=RealDictCursor
+                    1, maxconn, dsn, cursor_factory=RealDictCursor, **_KEEPALIVE_KW
                 )
                 _pools[dsn] = pool
     return pool
+
+
+def _ping(conn) -> bool:
+    """True if the connection still reaches the server. Neon (serverless)
+    drops every pooled socket when its compute suspends, and conn.closed
+    stays False client-side — a cheap SELECT 1 is the only reliable check."""
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+            cur.fetchone()
+        conn.rollback()  # don't hand out a conn with the ping's txn open
+        return True
+    except Exception:
+        return False
 
 
 class _PooledConnection:
@@ -103,11 +121,18 @@ def _checkout(dsn: str, maxconn: int, readonly: bool = False) -> _PooledConnecti
     try:
         pool = _get_pool(dsn, maxconn)
         conn = pool.getconn()
-        while conn.closed:
+        # Each failed ping discards that conn (freeing its slot), so after
+        # maxconn+1 attempts the database itself is unreachable — raise
+        # rather than loop forever creating doomed connections.
+        attempts = 0
+        while conn.closed or not _ping(conn):
             pool.putconn(conn, close=True)
+            attempts += 1
+            if attempts > maxconn:
+                raise psycopg2.OperationalError("database unreachable (pre-ping failed)")
             conn = pool.getconn()
     except psycopg2.pool.PoolError:
-        conn = psycopg2.connect(dsn, cursor_factory=RealDictCursor)
+        conn = psycopg2.connect(dsn, cursor_factory=RealDictCursor, **_KEEPALIVE_KW)
         if readonly:
             conn.set_session(readonly=True)
         return _PooledConnection(conn, None)

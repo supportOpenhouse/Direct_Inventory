@@ -71,18 +71,25 @@ export default function Users() {
 
       <div className="card-block">
         <h3>All users</h3>
-        {loading ? <div className="muted">Loading…</div> : (
-          <table className="data-table">
-            <thead><tr>
-              <SortTh field="email" label="Email" sort={sort} onSort={setSort} />
-              <SortTh field="name" label="Name" sort={sort} onSort={setSort} />
-              <th>Phone</th>
-              <SortTh field="role" label="Role" sort={sort} onSort={setSort} />
-              <SortTh field="manager" label="Manager" sort={sort} onSort={setSort} />
-              <th>Area scope</th><th />
-            </tr></thead>
-            <tbody>
-              {sortedUsers.map((u) => (
+        <table className="data-table">
+          <thead><tr>
+            <SortTh field="email" label="Email" sort={sort} onSort={setSort} />
+            <SortTh field="name" label="Name" sort={sort} onSort={setSort} />
+            <th>Phone</th>
+            <SortTh field="role" label="Role" sort={sort} onSort={setSort} />
+            <SortTh field="manager" label="Manager" sort={sort} onSort={setSort} />
+            <th>Area scope</th><th />
+          </tr></thead>
+          <tbody>
+            {loading ? (
+              // Skeleton rows — headers stay visible, cells shimmer until data lands.
+              Array.from({ length: 8 }).map((_, i) => (
+                <tr key={`skel-${i}`}>
+                  {Array.from({ length: 7 }).map((__, c) => <td key={c}><span className="inv-skel" /></td>)}
+                </tr>
+              ))
+            ) : (
+              sortedUsers.map((u) => (
                 <tr key={u.id} className={u.is_active ? '' : 'usr-inactive'}>
                   <td>{u.email}</td>
                   <td>{u.name || '—'}</td>
@@ -92,10 +99,10 @@ export default function Users() {
                   <td><span className="usr-scope" title={scopeSummary(u)}>{scopeSummary(u)}</span></td>
                   <td><button className="btn-edit" onClick={() => setEditUser(u)}>✎ Edit</button></td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
 
       {editUser && <UserEditModal user={editUser} managers={managers} areas={areas} onClose={() => setEditUser(null)} onSaved={() => { setEditUser(null); refresh(); }} />}

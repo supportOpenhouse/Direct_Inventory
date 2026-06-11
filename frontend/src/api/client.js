@@ -97,10 +97,17 @@ const TTL_RULES = [
   ['/api/inventory/societies', 600],
   ['/api/inventory/notifications', 60],
   ['/api/tickets/pending-count', 30],
+  ['/api/tickets?oh_id=', 120],
+  ['/api/tickets?', 60],
   ['/api/geo/', 1800],
   ['/api/users', 60],
 ];
+// Single-record detail (/api/inventory/<oh_id>) — re-expanding a row shouldn't
+// refetch. Static sub-routes are excluded; /<oh_id>/visible-rms has an extra
+// segment so it never matches.
+const INV_DETAIL_RE = /^\/api\/inventory\/(?!counts$|ids$|badges|notifications$|societies|export)[^/?]+$/;
 function ttlFor(path) {
+  if (INV_DETAIL_RE.test(path)) return 120 * 1000;
   const rule = TTL_RULES.find(([prefix]) => path.startsWith(prefix));
   return rule ? rule[1] * 1000 : 0;
 }

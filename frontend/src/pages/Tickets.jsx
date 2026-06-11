@@ -10,6 +10,19 @@ const TABS = [
   { key: 'closed', label: 'Closed' },
 ];
 
+const PAGE_SIZE = 50;
+
+// Deterministic URL per tab/page so prefetches and tab clicks hit the same
+// client-cache key.
+function tabQuery(key, offset = 0) {
+  const p = new URLSearchParams();
+  if (key === 'action') p.set('scope', 'action');
+  else p.set('status', key);
+  p.set('limit', String(PAGE_SIZE));
+  if (offset) p.set('offset', String(offset));
+  return `/api/tickets?${p}`;
+}
+
 function fmtTime(iso) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
@@ -23,19 +36,40 @@ export default function Tickets() {
   const { user } = useAuth();
   const [tab, setTab] = useState('action');
   const [items, setItems] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [open, setOpen] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const p = new URLSearchParams();
-      if (tab === 'action') p.set('scope', 'action');
-      else p.set('status', tab);
-      const r = await api.get(`/api/tickets?${p}`);
+      const r = await api.get(tabQuery(tab));
       setItems(r.items || []);
+      setTotal(r.total || 0);
     } finally { setLoading(false); }
+    // Warm the other tabs AFTER the active one renders (sequentially, so the
+    // visible list always wins the bandwidth) — switching tabs then serves
+    // from the client cache instead of refetching on click.
+    TABS.filter((t) => t.key !== tab).reduce(
+      (chain, t) => chain.then(() => api.get(tabQuery(t.key))).catch(() => {}),
+      Promise.resolve()
+    );
   }, [tab]);
+
+  // "Load more" → append the next page (the list endpoint pages at 50).
+  async function loadMore() {
+    setLoadingMore(true);
+    try {
+      const r = await api.get(tabQuery(tab, items.length));
+      // Dedupe by id — replies/closes shift server offsets between pages.
+      setItems((prev) => {
+        const seen = new Set(prev.map((t) => t.id));
+        return [...prev, ...(r.items || []).filter((t) => !seen.has(t.id))];
+      });
+      setTotal(r.total || 0);
+    } finally { setLoadingMore(false); }
+  }
 
   useEffect(() => { load(); }, [load]);
 
@@ -60,7 +94,7 @@ export default function Tickets() {
           ))}
         </div>
         <div className="toolbar-spacer" />
-        <span className="muted" style={{ fontSize: 13 }}>{items.length} ticket{items.length === 1 ? '' : 's'}</span>
+        <span className="muted" style={{ fontSize: 13 }}>{total} ticket{total === 1 ? '' : 's'}</span>
       </div>
 
       {loading ? (
@@ -71,6 +105,7 @@ export default function Tickets() {
           <p>{tab === 'action' ? 'Nothing needs your action right now.' : `No ${tab} tickets.`}</p>
         </div>
       ) : (
+        <>
         <div className="tk-list">
           {items.map((t) => (
             <button key={t.id} type="button" className="tk-card" onClick={() => setOpen(t)}>
@@ -87,6 +122,14 @@ export default function Tickets() {
             </button>
           ))}
         </div>
+        {items.length < total && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
+            <button type="button" className="btn-ghost" onClick={loadMore} disabled={loadingMore}>
+              {loadingMore ? 'Loading…' : `Load more (${items.length} of ${total})`}
+            </button>
+          </div>
+        )}
+        </>
       )}
 
       {open && <TicketModal ticket={open} onChanged={onChanged} onClose={() => { setOpen(null); load(); }} />}
