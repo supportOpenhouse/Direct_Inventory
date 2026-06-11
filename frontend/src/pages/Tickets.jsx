@@ -81,7 +81,7 @@ export default function Tickets() {
               <div className="tk-card-prop">{t.oh_id ? `${t.society || '—'} · ${t.oh_id}` : 'Direct ticket'}{t.assigned_rm_name ? ` · RM: ${t.assigned_rm_name}` : ''}</div>
               {t.summary && <div className="tk-card-summary">{t.summary}</div>}
               <div className="tk-card-foot">
-                <span>{(t.messages || []).length} repl{(t.messages || []).length === 1 ? 'y' : 'ies'}</span>
+                <span>{t.message_count ?? 0} repl{(t.message_count ?? 0) === 1 ? 'y' : 'ies'}</span>
                 <span>{fmtTime(t.last_activity_at)}</span>
               </div>
             </button>

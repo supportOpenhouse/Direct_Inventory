@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { CITIES, STAGE_DOT_COLOR, STAGES, stageLabel } from '../utils/format.js';
@@ -62,7 +62,6 @@ export default function InventoryBoard({
     const effectiveStages = stageSel.size > 0 ? Array.from(stageSel) : stages;
     if (effectiveStages.length) p.set('stage', effectiveStages.join(','));
     if (sort.field) { p.set('sort', sort.field); p.set('dir', sort.dir); }
-    if (annotateVisitOverdue) p.set('annotate_visit_overdue', '1');
     for (const [k, v] of Object.entries(filtersApplied)) p.set(k, String(v));
     return p;
   }
@@ -75,6 +74,7 @@ export default function InventoryBoard({
       params.set('offset', String(cur * PAGE_SIZE));
       const r = await api.get(`/api/inventory?${params}`);
       setItems(r.items); setTotal(r.total);
+      hydrateBadges(r.items); // fire-and-forget — rows render now, badges merge in when they arrive
     } finally { setLoading(false); }
   }
   async function refreshCounts() {
@@ -85,9 +85,40 @@ export default function InventoryBoard({
       setCounts(r);
     } catch { /* non-blocking */ }
   }
+  // The list API no longer annotates visit_overdue inline. Boards that need it
+  // (annotateVisitOverdue) hydrate the visible page from the cheap badges
+  // endpoint after the rows render and merge the flags into row state.
+  async function hydrateBadges(rows) {
+    if (!annotateVisitOverdue || !rows?.length) return;
+    try {
+      const ids = rows.map((it) => it.oh_id).join(',');
+      const r = await api.get(`/api/inventory/badges?ids=${encodeURIComponent(ids)}&flags=visit_overdue`);
+      const badges = r.badges || {};
+      setItems((prev) => prev.map((it) => (badges[it.oh_id] ? { ...it, ...badges[it.oh_id] } : it)));
+    } catch { /* non-blocking — rows just show without the overdue badge */ }
+  }
 
-  useEffect(() => { setPage(0); refresh(0); refreshCounts(); /* eslint-disable-next-line */ }, [city, qApplied, stageSel, filtersApplied, sort.field, sort.dir]);
-  useEffect(() => { refresh(page); /* eslint-disable-next-line */ }, [page]);
+  // Mount + any filter/search/city/sort change: reset to page 0 and run exactly
+  // ONE counts request then ONE rows request. Counts go first so the stage
+  // pills update the moment they arrive; the rows page follows.
+  const skipPageFetch = useRef(true); // true on mount — the effect below owns the first rows fetch
+  useEffect(() => {
+    if (page !== 0) { skipPageFetch.current = true; setPage(0); }
+    let stale = false;
+    (async () => {
+      await refreshCounts();
+      if (!stale) await refresh(0);
+    })();
+    return () => { stale = true; };
+    /* eslint-disable-next-line */
+  }, [city, qApplied, stageSel, filtersApplied, sort.field, sort.dir]);
+  // Page-only change (Prev/Next/jump) → fetch just that rows page. Skipped when
+  // the effect above already fetched page 0 (mount or a filter-driven reset).
+  useEffect(() => {
+    if (skipPageFetch.current) { skipPageFetch.current = false; return; }
+    refresh(page);
+    /* eslint-disable-next-line */
+  }, [page]);
   // Keep the editable page box in sync with the actual page (Prev/Next/reset).
   useEffect(() => { setPageInput(String(page + 1)); }, [page]);
   // External reload trigger (e.g. the tracker's auto-sync finished).

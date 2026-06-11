@@ -38,6 +38,8 @@ SORTABLE = {
 
 HARD_LIMIT = 500   # the page caps here; FE shows a banner when total > limit
 
+LEADS_LIMIT = 1000  # /user-report/leads cap; response sets capped=true when hit
+
 
 def _scope_clause(user: dict) -> tuple[str, list]:
     """Restrict managers to inventory activity in their cities. Admin sees all.
@@ -628,6 +630,9 @@ def user_report_leads():
         "          ORDER BY (n->>'created_at')::timestamptz DESC LIMIT 1 ) AS day_note "
         " FROM winners w LEFT JOIN inventory i ON i.oh_id = w.oh_id "
         " ORDER BY w.last_change_at DESC"
+        # Safety cap — one user/day should never approach this, but a runaway
+        # bulk action could. Fetch one extra row to detect truncation exactly.
+        " LIMIT %s"
     )
     conn = get_conn()
     try:
@@ -637,8 +642,11 @@ def user_report_leads():
                 return err
             if not email:
                 return jsonify({"error": "email and date are required"}), 400
-            cur.execute(sql, (start_utc, end_utc, email, start_utc, end_utc))
+            cur.execute(sql, (start_utc, end_utc, email, start_utc, end_utc, LEADS_LIMIT + 1))
             rows = cur.fetchall()
     finally:
         conn.close()
-    return jsonify({"email": email, "date": day_ist.isoformat(), "leads": rows})
+    capped = len(rows) > LEADS_LIMIT
+    if capped:
+        rows = rows[:LEADS_LIMIT]
+    return jsonify({"email": email, "date": day_ist.isoformat(), "leads": rows, "capped": capped})

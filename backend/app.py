@@ -11,6 +11,7 @@ from decimal import Decimal
 
 from flask import Flask, jsonify
 from flask.json.provider import DefaultJSONProvider
+from flask_compress import Compress
 from flask_cors import CORS
 
 from . import config
@@ -54,25 +55,30 @@ def create_app() -> Flask:
     app = Flask(__name__)
     app.json = _JSONProvider(app)
     CORS(app, origins=[config.FRONTEND_ORIGIN], supports_credentials=False)
+    Compress(app)  # default config: gzip application/json (and friends) >500 bytes
 
     @app.get("/api/health")
     def health():
         out = {"status": "ok", "db": "unknown", "properties_db": "unknown"}
         try:
             c = get_conn()
-            with c, c.cursor() as cur:
-                cur.execute("SELECT 1")
-                cur.fetchone()
-            c.close()
+            try:
+                with c, c.cursor() as cur:
+                    cur.execute("SELECT 1")
+                    cur.fetchone()
+            finally:
+                c.close()  # always return the conn to the pool, even on failure
             out["db"] = "connected"
         except Exception as e:
             out["db"] = f"error: {e}"
         try:
             c = get_props_conn()
-            with c, c.cursor() as cur:
-                cur.execute("SELECT 1")
-                cur.fetchone()
-            c.close()
+            try:
+                with c, c.cursor() as cur:
+                    cur.execute("SELECT 1")
+                    cur.fetchone()
+            finally:
+                c.close()
             out["properties_db"] = "connected"
         except Exception as e:
             out["properties_db"] = f"error: {e}"

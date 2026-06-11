@@ -163,7 +163,7 @@ function TicketsSection({ item, role }) {
                   <span className="tk-mini-title">{t.title}</span>
                   <span className={`tk-badge ${ticketStatusClass(t)}`}>{ticketStatusLabel(t)}</span>
                 </span>
-                <span className="tk-mini-meta">{(t.messages || []).length} repl{(t.messages || []).length === 1 ? 'y' : 'ies'}</span>
+                <span className="tk-mini-meta">{t.message_count ?? 0} repl{(t.message_count ?? 0) === 1 ? 'y' : 'ies'}</span>
               </button>
             </li>
           ))}
@@ -184,8 +184,23 @@ function TicketsSection({ item, role }) {
  */
 export default function ExpandPanel({ item, role, onUpdated, canPost = true, sections, canEditStatus = true, showAssignedRm = true }) {
   const show = sections || ['property', 'pricing', 'seller', 'notes', 'tickets'];
-  const v = variation(item.price, item.oh_price);
-  const listing = item.listing_link && !/^internal:\/\//.test(item.listing_link) ? item.listing_link : null;
+  // List rows are slim (no note_thread); fetch the full record on mount and
+  // render detail sections from it. The slim parent row doubles as the
+  // placeholder while it loads.
+  const [detail, setDetail] = useState(null); // null = loading
+  useEffect(() => {
+    let alive = true;
+    setDetail(null);
+    api.get(`/api/inventory/${encodeURIComponent(item.oh_id)}`)
+      .then((r) => { if (alive) setDetail(r); })
+      .catch(() => { if (alive) setDetail({}); });
+    return () => { alive = false; };
+  }, [item.oh_id]);
+  // Parent row wins for shared fields — it carries optimistic edits made after
+  // the fetch; detail only contributes the heavy fields (note_thread, activity).
+  const full = detail ? { ...detail, ...item } : item;
+  const v = variation(full.price, full.oh_price);
+  const listing = full.listing_link && !/^internal:\/\//.test(full.listing_link) ? full.listing_link : null;
   const canEdit = canEditStatus && (['admin', 'manager', 'rm'].includes(role) || canPost);
   // Editing the raw property/seller fields is allowed wherever editing is
   // enabled, for the same roles the backend PATCH accepts.
@@ -203,12 +218,12 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
             )}
           </h4>
           <div className="field-grid-2">
-            <Field label="Area">{item.area_sqft != null ? `${item.area_sqft} sqft` : '—'}</Field>
-            <Field label="BHK">{item.bedrooms != null ? `${item.bedrooms} BHK` : '—'}</Field>
-            <Field label="Tower">{item.tower || '—'}</Field>
-            <Field label="Unit no.">{item.unit_no || '—'}</Field>
-            <Field label="Floor">{item.floor || '—'}</Field>
-            <Field label="Locality">{item.locality || '—'}</Field>
+            <Field label="Area">{full.area_sqft != null ? `${full.area_sqft} sqft` : '—'}</Field>
+            <Field label="BHK">{full.bedrooms != null ? `${full.bedrooms} BHK` : '—'}</Field>
+            <Field label="Tower">{full.tower || '—'}</Field>
+            <Field label="Unit no.">{full.unit_no || '—'}</Field>
+            <Field label="Floor">{full.floor || '—'}</Field>
+            <Field label="Locality">{full.locality || '—'}</Field>
           </div>
         </div>
       )}
@@ -217,13 +232,13 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
         <div className="expand-sec">
           <h4>💰 Pricing &amp; Source</h4>
           <div className="field-grid-2">
-            <Field label="Asking"><span className="val-orange">{formatPrice(item.price)}</span></Field>
-            <Field label="OH Price"><OhPrice item={item} /></Field>
+            <Field label="Asking"><span className="val-orange">{formatPrice(full.price)}</span></Field>
+            <Field label="OH Price"><OhPrice item={full} /></Field>
             <Field label="Variation">
               {v ? <span className={`val-var-${v.sign}`}>{v.label}</span> : '—'}
             </Field>
-            <Field label="Source">{item.source || '—'}</Field>
-            <Field label="Posted">{formatDateShort(item.posting_date)}</Field>
+            <Field label="Source">{full.source || '—'}</Field>
+            <Field label="Posted">{formatDateShort(full.posting_date)}</Field>
             <Field label="Listing">
               {listing ? <a className="inv-link" href={listing} target="_blank" rel="noreferrer">Open ↗</a> : <span className="muted">—</span>}
             </Field>
@@ -234,13 +249,13 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
       {show.includes('seller') && (
         <div className="expand-sec">
           <h4>👤 Seller Details</h4>
-          <Field label="Seller name">{item.seller_name || '—'}</Field>
+          <Field label="Seller name">{full.seller_name || '—'}</Field>
           <Field label="Phone no.">
-            {item.seller_phone
-              ? <a className="inv-link" href={`tel:${item.seller_phone}`}>{item.seller_phone}</a>
+            {full.seller_phone
+              ? <a className="inv-link" href={`tel:${full.seller_phone}`}>{full.seller_phone}</a>
               : '—'}
           </Field>
-          {showAssignedRm && <AssignedRmField item={item} role={role} onUpdated={onUpdated} />}
+          {showAssignedRm && <AssignedRmField item={full} role={role} onUpdated={onUpdated} />}
         </div>
       )}
 
@@ -257,12 +272,19 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
               <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowStatus(true)}>✎ Edit Status</button>
             )}
           </div>
-          <NoteThread
-            ohId={item.oh_id}
-            initial={item.note_thread || []}
-            canPost={canPost}
-            onChange={(next) => onUpdated?.({ ...item, note_thread: next })}
-          />
+          {detail === null ? (
+            <div className="muted" style={{ fontSize: 13 }}>Loading notes…</div>
+          ) : (
+            <NoteThread
+              ohId={item.oh_id}
+              initial={full.note_thread || []}
+              canPost={canPost}
+              onChange={(next) => {
+                setDetail((d) => ({ ...(d || {}), note_thread: next }));
+                onUpdated?.({ ...item, note_count: next.length });
+              }}
+            />
+          )}
         </div>
       )}
 

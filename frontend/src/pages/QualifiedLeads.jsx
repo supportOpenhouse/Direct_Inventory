@@ -7,6 +7,20 @@ import OhPrice from '../components/OhPrice.jsx';
 import { CITIES, displayCity, formatPrice, starColor, variation } from '../utils/format.js';
 import { IconFilter, IconSearch } from '../components/icons.jsx';
 
+const PAGE_SIZE = 50;
+
+// Inline "NEW" chip — replaces the old /new.png <img> so the badge renders
+// without an image fetch (same chip approach as the other tables).
+function NewChip() {
+  return (
+    <span style={{
+      display: 'inline-block', marginLeft: 8, padding: '1px 7px', borderRadius: 999,
+      fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em',
+      color: '#fff', background: 'var(--red, #dc2626)', verticalAlign: 'middle',
+    }}>New</span>
+  );
+}
+
 function formatAssignedRms(rms) {
   if (!Array.isArray(rms) || rms.length === 0) return '—';
   const first = rms[0];
@@ -48,7 +62,9 @@ export default function QualifiedLeads() {
   const [qApplied, setQApplied] = useState('');
   const [city, setCity] = useState('');
   const [items, setItems] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [openId, setOpenId] = useState(null);
   const [filtersApplied, setFiltersApplied] = useState({});
   const [filterFormState, setFilterFormState] = useState({});
@@ -58,20 +74,58 @@ export default function QualifiedLeads() {
   const cols = isAdmin ? 9 : 8;
   const filterCount = Object.keys(filtersApplied).length;
 
+  const makeParams = useCallback(() => {
+    const p = new URLSearchParams();
+    p.set('stage', 'qualified');
+    if (qApplied) p.set('q', qApplied);
+    if (city) p.set('city', city);
+    for (const [k, v] of Object.entries(filtersApplied)) p.set(k, String(v));
+    return p;
+  }, [qApplied, city, filtersApplied]);
+
+  // The list API no longer annotates qualified_today inline; hydrate the rows
+  // just fetched from the cheap badges endpoint and merge the flag in.
+  const hydrateBadges = useCallback(async (rows) => {
+    if (!rows?.length) return;
+    try {
+      const ids = rows.map((it) => it.oh_id).join(',');
+      const r = await api.get(`/api/inventory/badges?ids=${encodeURIComponent(ids)}&flags=qualified_today`);
+      const badges = r.badges || {};
+      setItems((prev) => prev.map((it) => (badges[it.oh_id] ? { ...it, ...badges[it.oh_id] } : it)));
+    } catch { /* non-blocking — rows just show without the NEW badge */ }
+  }, []);
+
+  // Search/city/filter change (and mount) → reset to the first page.
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const p = new URLSearchParams();
-      p.set('stage', 'qualified');
-      p.set('annotate_qualified_today', '1'); // stamps qualified_today → "NEW" badge
-      if (qApplied) p.set('q', qApplied);
-      if (city) p.set('city', city);
-      for (const [k, v] of Object.entries(filtersApplied)) p.set(k, String(v));
-      p.set('limit', '500');
+      const p = makeParams();
+      p.set('limit', String(PAGE_SIZE));
       const r = await api.get(`/api/inventory?${p}`);
       setItems(r.items || []);
+      setTotal(r.total || 0);
+      hydrateBadges(r.items || []); // fire-and-forget — rows render now, badges merge in when they arrive
     } finally { setLoading(false); }
-  }, [qApplied, city, filtersApplied]);
+  }, [makeParams, hydrateBadges]);
+
+  // "Load more" → append the next page after the rows fetched so far.
+  async function loadMore() {
+    setLoadingMore(true);
+    try {
+      const p = makeParams();
+      p.set('limit', String(PAGE_SIZE));
+      p.set('offset', String(items.length));
+      const r = await api.get(`/api/inventory?${p}`);
+      // Dedupe by oh_id — edits by other users shift server offsets, which
+      // would otherwise append duplicate rows (and duplicate React keys).
+      setItems((prev) => {
+        const seen = new Set(prev.map((it) => it.oh_id));
+        return [...prev, ...(r.items || []).filter((it) => !seen.has(it.oh_id))];
+      });
+      setTotal(r.total || 0);
+      hydrateBadges(r.items || []);
+    } finally { setLoadingMore(false); }
+  }
 
   useEffect(() => { load(); }, [load]);
 
@@ -100,7 +154,7 @@ export default function QualifiedLeads() {
         <button className="btn-ghost" onClick={() => setShowFilters(true)}><IconFilter size={16} /> Filters{filterCount ? ` (${filterCount})` : ''}</button>
         {filterCount > 0 && <button className="btn-link" onClick={() => { setFiltersApplied({}); setFilterFormState({}); }}>Reset</button>}
         <div className="toolbar-spacer" />
-        <span className="muted" style={{ fontSize: 13 }}>{items.length} qualified</span>
+        <span className="muted" style={{ fontSize: 13 }}>{total} qualified</span>
       </div>
 
       <div className="inv-table-wrap">
@@ -130,7 +184,7 @@ export default function QualifiedLeads() {
                 <Fragment key={it.oh_id}>
                   <tr className={`inv-row ${isOpen ? 'inv-row-open' : ''}`} onClick={() => setOpenId(isOpen ? null : it.oh_id)}>
                     <StarCell item={it} canSet={canPost} onUpdated={patchItem} />
-                    <td className="inv-td-society">{it.society || '—'}{it.qualified_today && <img className="new-badge-img" src="/new.png" alt="NEW" />}<div className="inv-td-muted" style={{ fontWeight: 400, fontSize: 12 }}>{displayCity(it.city)} · {it.oh_id}</div></td>
+                    <td className="inv-td-society">{it.society || '—'}{it.qualified_today && <NewChip />}<div className="inv-td-muted" style={{ fontWeight: 400, fontSize: 12 }}>{displayCity(it.city)} · {it.oh_id}</div></td>
                     <td>{it.bedrooms != null ? `${it.bedrooms} BHK` : '—'}</td>
                     <td>{it.floor || '—'}</td>
                     <td>{it.area_sqft != null ? `${it.area_sqft} sqft` : '—'}</td>
@@ -150,6 +204,14 @@ export default function QualifiedLeads() {
           </tbody>
         </table>
       </div>
+
+      {!loading && items.length < total && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '14px 0' }}>
+          <button className="btn-ghost" onClick={loadMore} disabled={loadingMore}>
+            {loadingMore ? 'Loading…' : `Load more (${items.length} of ${total})`}
+          </button>
+        </div>
+      )}
 
       {showFilters && (
         <FilterPanel initial={filterFormState} defaultCity={city} role={user?.role}

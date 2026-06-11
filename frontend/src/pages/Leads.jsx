@@ -11,6 +11,27 @@ import { IconExternal, IconFilter, IconSearch } from '../components/icons.jsx';
 // Notes intentionally dropped from the Leads expand panel.
 const EXPAND_SECTIONS = ['property', 'seller'];
 
+// Per-pane page size — "Load more" appends the next page.
+const PAGE_SIZE = 50;
+
+// Append a page, dropping rows already present (optimistic moves shift server
+// offsets, which would otherwise duplicate keys).
+function appendPage(prev, items) {
+  const seen = new Set(prev.map((it) => it.oh_id));
+  return [...prev, ...items.filter((it) => !seen.has(it.oh_id))];
+}
+
+// Inline SVG replacement for the old /new.png starburst badge — same 20px
+// footprint via .new-badge-img, without shipping a 394 KB image.
+function NewBadge() {
+  return (
+    <svg className="new-badge-img" viewBox="0 0 48 48" role="img" aria-label="NEW">
+      <polygon fill="#fb0103" points="24.0,0.5 27.7,5.2 33.0,2.3 34.7,8.0 40.6,7.4 40.0,13.3 45.7,15.0 42.8,20.3 47.5,24.0 42.8,27.7 45.7,33.0 40.0,34.7 40.6,40.6 34.7,40.0 33.0,45.7 27.7,42.8 24.0,47.5 20.3,42.8 15.0,45.7 13.3,40.0 7.4,40.6 8.0,34.7 2.3,33.0 5.2,27.7 0.5,24.0 5.2,20.3 2.3,15.0 8.0,13.3 7.4,7.4 13.3,8.0 15.0,2.3 20.3,5.2" />
+      <text x="24" y="29" textAnchor="middle" fill="#fff" fontFamily="Arial, Helvetica, sans-serif" fontSize="13" fontWeight="800">NEW</text>
+    </svg>
+  );
+}
+
 // ── star cell (priority toggle) ──────────────────────────────────────────
 function StarCell({ item, canSet, onUpdated }) {
   const color = starColor(item);
@@ -87,7 +108,7 @@ function ActionTable({ items, loading, role, onUpdated, primaryLabel, primaryMod
                   <StarCell item={it} canSet={canSet} onUpdated={onUpdated} />
                   <td className="inv-td-society">
                     {it.society || '—'}
-                    {isNew(it) && <img className="new-badge-img" src="/new.png" alt="NEW" />}
+                    {isNew(it) && <NewBadge />}
                     <div className="inv-td-muted" style={{ fontWeight: 400, fontSize: 12 }}>{displayCity(it.city)} · {it.oh_id}</div>
                   </td>
                   <td>
@@ -146,8 +167,12 @@ export default function Leads() {
   const [city, setCity] = useState('');
   const [leads, setLeads] = useState([]);
   const [active, setActive] = useState([]);
+  const [leadsTotal, setLeadsTotal] = useState(0);
+  const [activeTotal, setActiveTotal] = useState(0);
   const [loadingL, setLoadingL] = useState(true);
   const [loadingR, setLoadingR] = useState(true);
+  const [moreL, setMoreL] = useState(false);
+  const [moreR, setMoreR] = useState(false);
   const [filtersApplied, setFiltersApplied] = useState({});
   const [filterFormState, setFilterFormState] = useState({});
   const [showFilters, setShowFilters] = useState(false);
@@ -159,31 +184,53 @@ export default function Leads() {
   const containerRef = useRef(null);
   const draggingRef = useRef(false);
 
-  function baseParams(stage) {
+  function baseParams(stage, offset) {
     const p = new URLSearchParams();
     p.set('stage', stage);
     if (qApplied) p.set('q', qApplied);
     if (city) p.set('city', city);
     for (const [k, v] of Object.entries(filtersApplied)) p.set(k, String(v));
-    p.set('limit', '500');
+    p.set('limit', String(PAGE_SIZE));
+    p.set('offset', String(offset));
     return p;
   }
 
-  const loadLeads = useCallback(async () => {
-    setLoadingL(true);
-    try { const r = await api.get(`/api/inventory?${baseParams('lead')}`); setLeads(r.items || []); }
-    finally { setLoadingL(false); }
+  // The list ships without the active_today annotation (cheap query); the
+  // "NEW" badges hydrate afterwards from /badges and merge into the rows.
+  async function hydrateActiveBadges(items) {
+    const ids = items.map((it) => it.oh_id).filter(Boolean);
+    if (!ids.length) return;
+    try {
+      const r = await api.get(`/api/inventory/badges?ids=${ids.join(',')}&flags=active_today`);
+      const badges = r?.badges || {};
+      setActive((prev) => prev.map((it) => (badges[it.oh_id] ? { ...it, active_today: !!badges[it.oh_id].active_today } : it)));
+    } catch { /* badges are cosmetic — leave rows un-stamped on failure */ }
+  }
+
+  // offset 0 replaces the pane (fresh load / filter change); a positive offset
+  // appends the next page ("Load more").
+  const loadLeads = useCallback(async (offset = 0) => {
+    const setBusy = offset ? setMoreL : setLoadingL;
+    setBusy(true);
+    try {
+      const r = await api.get(`/api/inventory?${baseParams('lead', offset)}`);
+      const items = r.items || [];
+      setLeads((prev) => (offset ? appendPage(prev, items) : items));
+      setLeadsTotal(r.total ?? items.length);
+    } finally { setBusy(false); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qApplied, city, filtersApplied]);
 
-  const loadActive = useCallback(async () => {
-    setLoadingR(true);
+  const loadActive = useCallback(async (offset = 0) => {
+    const setBusy = offset ? setMoreR : setLoadingR;
+    setBusy(true);
     try {
-      const p = baseParams('active');
-      p.set('annotate_active_today', '1'); // stamps active_today → "NEW" badge
-      const r = await api.get(`/api/inventory?${p}`);
-      setActive(r.items || []);
-    } finally { setLoadingR(false); }
+      const r = await api.get(`/api/inventory?${baseParams('active', offset)}`);
+      const items = r.items || [];
+      setActive((prev) => (offset ? appendPage(prev, items) : items));
+      setActiveTotal(r.total ?? items.length);
+      hydrateActiveBadges(items); // async "NEW" stamp — don't block the rows
+    } finally { setBusy(false); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qApplied, city, filtersApplied]);
 
@@ -210,7 +257,9 @@ export default function Leads() {
   // active_today optimistically for an immediate NEW badge.
   async function activate(item) {
     setLeads((prev) => prev.filter((it) => it.oh_id !== item.oh_id));
+    setLeadsTotal((t) => Math.max(0, t - 1));
     setActive((prev) => [{ ...item, stage: 'active', active_today: true }, ...prev]);
+    setActiveTotal((t) => t + 1);
     try { await api.patch(`/api/inventory/${item.oh_id}`, { stage: 'active' }); }
     catch { loadLeads(); loadActive(); }
   }
@@ -218,6 +267,7 @@ export default function Leads() {
   // seller's phone first; saving it auto-advances the lead to qualified.
   async function qualify(item, phone) {
     setActive((prev) => prev.filter((it) => it.oh_id !== item.oh_id));
+    setActiveTotal((t) => Math.max(0, t - 1));
     const body = { stage: 'qualified' };
     if (phone && phone !== item.seller_phone) body.seller_phone = phone;
     try { await api.patch(`/api/inventory/${item.oh_id}`, body); }
@@ -225,11 +275,13 @@ export default function Leads() {
   }
   async function rejectLead(item, reason) {
     setLeads((prev) => prev.filter((it) => it.oh_id !== item.oh_id));
+    setLeadsTotal((t) => Math.max(0, t - 1));
     try { await api.patch(`/api/inventory/${item.oh_id}`, { stage: 'rejected', stage_reason: reason }); }
     catch { loadLeads(); }
   }
   async function rejectActive(item, reason) {
     setActive((prev) => prev.filter((it) => it.oh_id !== item.oh_id));
+    setActiveTotal((t) => Math.max(0, t - 1));
     try { await api.patch(`/api/inventory/${item.oh_id}`, { stage: 'rejected', stage_reason: reason }); }
     catch { loadActive(); }
   }
@@ -263,13 +315,19 @@ export default function Leads() {
           <div className="leads-pane" style={{ width: paneView === 'both' ? `calc(${leftPct}% - 7px)` : '100%' }}>
             <div className="leads-pane-head">
               <h3>Leads</h3>
-              <span className="lph-count accent">{leads.length}</span>
+              <span className="lph-count accent">{leadsTotal}</span>
               <span className="muted" style={{ fontSize: 12 }}>status: lead</span>
             </div>
             <ActionTable items={leads} loading={loadingL} role={user?.role} onUpdated={patch(setLeads)}
               primaryLabel="Active" onPrimary={activate} onReject={rejectLead}
               reasons={rejectReasonsForStage('lead')} emptyText="No leads."
               isNew={(it) => isCreatedToday(it.created_at)} />
+            {!loadingL && leads.length < leadsTotal && (
+              <button className="btn-ghost" style={{ display: 'block', margin: '10px auto' }}
+                disabled={moreL} onClick={() => loadLeads(leads.length)}>
+                {moreL ? 'Loading…' : `Load more (${leads.length} of ${leadsTotal})`}
+              </button>
+            )}
           </div>
         )}
 
@@ -285,13 +343,19 @@ export default function Leads() {
           <div className="leads-pane" style={{ width: paneView === 'both' ? `calc(${100 - leftPct}% - 7px)` : '100%' }}>
             <div className="leads-pane-head">
               <h3>Active Leads</h3>
-              <span className="lph-count">{active.length}</span>
+              <span className="lph-count">{activeTotal}</span>
               <span className="muted" style={{ fontSize: 12 }}>status: active</span>
             </div>
             <ActionTable items={active} loading={loadingR} role={user?.role} onUpdated={patch(setActive)}
               primaryLabel="Add Phone No." primaryMode="phone" onPrimary={qualify} onReject={rejectActive}
               reasons={rejectReasonsForStage('active')} emptyText="No active leads."
               isNew={(it) => !!it.active_today} />
+            {!loadingR && active.length < activeTotal && (
+              <button className="btn-ghost" style={{ display: 'block', margin: '10px auto' }}
+                disabled={moreR} onClick={() => loadActive(active.length)}>
+                {moreR ? 'Loading…' : `Load more (${active.length} of ${activeTotal})`}
+              </button>
+            )}
           </div>
         )}
       </div>

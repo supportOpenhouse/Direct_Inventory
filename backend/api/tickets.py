@@ -2,7 +2,7 @@
 RM replies, back-and-forth until the creator/admin closes it.
 
 Routes (all under /api/tickets):
-  GET    /                  list (scoped); filters: oh_id, status, scope=action
+  GET    /                  list (scoped); filters: oh_id, status, scope=action; paging: limit, offset
   GET    /<id>              one ticket + full message thread (scoped)
   POST   /                  create {oh_id, title, summary}        (admin, manager)
   POST   /<id>/reply        append {body}                         (assigned RM / creator / admin)
@@ -32,6 +32,24 @@ _SELECT = """
   SELECT t.id, t.oh_id, t.title, t.summary, t.status, t.awaiting,
          t.created_by_id, t.created_by_name, t.created_by_email,
          t.assigned_rm_id, t.city, t.messages,
+         t.last_activity_at, t.created_at, t.closed_at, t.closed_by_id,
+         i.society AS society,
+         ru.name AS assigned_rm_name, ru.email AS assigned_rm_email
+  FROM tickets t
+  LEFT JOIN inventory i ON i.oh_id = t.oh_id
+  LEFT JOIN users ru ON ru.id = t.assigned_rm_id
+"""
+
+# List projection — same columns minus the messages blob; the list UI only
+# needs the reply count and the last message timestamp, not the full thread.
+_LIST_SELECT = """
+  SELECT t.id, t.oh_id, t.title, t.summary, t.status, t.awaiting,
+         t.created_by_id, t.created_by_name, t.created_by_email,
+         t.assigned_rm_id, t.city,
+         CASE WHEN jsonb_typeof(t.messages) = 'array'
+              THEN jsonb_array_length(t.messages) ELSE 0 END AS message_count,
+         CASE WHEN jsonb_typeof(t.messages) = 'array' AND jsonb_array_length(t.messages) > 0
+              THEN (t.messages -> -1 ->> 'created_at')::timestamptz ELSE NULL END AS last_message_at,
          t.last_activity_at, t.created_at, t.closed_at, t.closed_by_id,
          i.society AS society,
          ru.name AS assigned_rm_name, ru.email AS assigned_rm_email
@@ -113,14 +131,22 @@ def list_tickets():
         where.append(clause)
         params.extend(aparams)
 
+    limit = max(1, min(request.args.get("limit", default=50, type=int) or 50, 500))
+    offset = max(0, request.args.get("offset", default=0, type=int) or 0)
+
+    where_sql = " WHERE " + " AND ".join(where)
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
+            # Total uses the same visibility/filter WHERE; no joins needed —
+            # the clauses only touch tickets columns.
+            cur.execute("SELECT COUNT(*) AS n FROM tickets t" + where_sql, params)
+            total = cur.fetchone()["n"]
             cur.execute(
-                _SELECT + " WHERE " + " AND ".join(where) + " ORDER BY t.last_activity_at DESC LIMIT 500",
-                params,
+                _LIST_SELECT + where_sql + " ORDER BY t.last_activity_at DESC LIMIT %s OFFSET %s",
+                [*params, limit, offset],
             )
-            return jsonify({"items": cur.fetchall()})
+            return jsonify({"items": cur.fetchall(), "total": total})
     finally:
         conn.close()
 

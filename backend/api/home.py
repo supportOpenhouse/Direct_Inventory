@@ -27,6 +27,15 @@ Shape:
   created-today leads moved out of 'lead' (Task 1: lead→active). active.worked =
   created-today leads moved past 'active' (Task 2: active→qualified) — only
   computed once Task 1 is complete, else null (the card is locked client-side).
+
+Split endpoints — same shapes as the matching /summary keys, so the Home page
+can ship the cheap above-the-fold numbers first and load the heavy cards behind
+them (/summary itself is unchanged for backward compat):
+  GET /api/home/summary/quick   — { todays_task, unresolved_tickets } only; one
+                                  small aggregate over today's scoped rows.
+  GET /api/home/summary/stages  — the six stage-card keys, app-DB only
+                                  (visit.overdue is a 0 placeholder here).
+  GET /api/home/summary/visits  — { visit } incl. the property-DB overdue split.
 """
 from __future__ import annotations
 
@@ -34,7 +43,7 @@ from flask import Blueprint, g, jsonify
 
 from ..db import get_conn
 from .auth import require_auth
-from .inventory._common import _scope_clause, overdue_visit_ids
+from .inventory._common import SUPPLY_STAGES, _scope_clause, overdue_visit_ids
 from .tickets import pending_count as tickets_pending_count
 
 # Morning-cohort task progress. For a given stage, count the rows that were in
@@ -77,6 +86,107 @@ _QUALIFIED_TODAY = _entered_today("qualified")
 _ACTIVE_TODAY = _entered_today("active")
 _FOLLOW_UP_TODAY = _entered_today("follow_up")
 
+# Stage-card counts, shared by /summary and /summary/stages — one conditional-
+# aggregation pass over the scoped inventory rows. "new" = entered the stage
+# today (IST); for the intake 'lead' stage that's created-today.
+_STAGE_COUNT_COLS = f"""
+                  COUNT(*) FILTER (WHERE stage = 'lead' AND {_CREATED_IST} = {_TODAY_IST}) AS lead_new,
+                  COUNT(*) FILTER (WHERE stage = 'lead' AND {_CREATED_IST} < {_TODAY_IST}) AS lead_old,
+                  COUNT(*) FILTER (WHERE stage = 'active' AND {_ACTIVE_TODAY}) AS active_new,
+                  COUNT(*) FILTER (WHERE stage = 'active' AND NOT {_ACTIVE_TODAY}) AS active_old,
+                  COUNT(*) FILTER (WHERE stage = 'qualified' AND {_QUALIFIED_TODAY}) AS qualified_new,
+                  COUNT(*) FILTER (WHERE stage = 'qualified' AND NOT {_QUALIFIED_TODAY}) AS qualified_old,
+                  COUNT(*) FILTER (WHERE stage = 'follow_up' AND {_FOLLOW_UP_TODAY}) AS follow_up_new,
+                  COUNT(*) FILTER (WHERE stage = 'follow_up' AND NOT {_FOLLOW_UP_TODAY}) AS follow_up_old,
+
+                  COUNT(*) FILTER (WHERE stage = 'rejected') AS rejected_total,
+
+                  COUNT(*) FILTER (WHERE stage = 'pipeline') AS sup_pipeline,
+                  COUNT(*) FILTER (WHERE stage = 'token_to_ama') AS sup_token_to_ama,
+                  COUNT(*) FILTER (WHERE stage = 'onboarded') AS sup_onboarded,
+                  COUNT(*) FILTER (WHERE stage = 'rejected_post_visit') AS sup_rejected_post_visit,
+                  COUNT(*) FILTER (WHERE stage = 'cancelled_post_token') AS sup_cancelled_post_token"""
+
+
+def _rejected_by_reason(cur, where: str, scope_params: list) -> dict:
+    """Rejected breakdown by reason (NULL stage_reason → 'unspecified')."""
+    cur.execute(
+        f"""SELECT COALESCE(stage_reason, 'unspecified') AS reason, COUNT(*) AS n
+            FROM inventory
+            {where} AND stage = 'rejected'
+            GROUP BY COALESCE(stage_reason, 'unspecified')""",
+        scope_params,
+    )
+    return {r["reason"]: r["n"] for r in cur.fetchall()}
+
+
+def _tickets_pending_failsoft(cur, user: dict) -> int:
+    """Tickets needing this user's action (powers the Home third card).
+
+    Fail-soft: if the tickets table isn't migrated yet, don't take the whole
+    response down — just report 0. A failed statement aborts the transaction,
+    so use a SAVEPOINT to keep the conn usable.
+    """
+    try:
+        cur.execute("SAVEPOINT tickets_count")
+        n = tickets_pending_count(cur, user)
+        cur.execute("RELEASE SAVEPOINT tickets_count")
+        return n
+    except Exception:
+        cur.execute("ROLLBACK TO SAVEPOINT tickets_count")
+        return 0
+
+
+def _todays_task_payload(row, user: dict) -> dict:
+    """Today's Task progress from a row with tt_total / tt_task1_worked /
+    tt_task2_worked. Denominator = leads created today. Task 2's worked count
+    is only exposed once Task 1 is complete (gating); until then it's null and
+    the card is locked client-side. Admins are never gated.
+    """
+    tt_total = row["tt_total"]
+    tt_task1_worked = row["tt_task1_worked"]
+    task1_done = tt_task1_worked >= tt_total
+    if task1_done or user["role"] == "admin":
+        tt_task2_worked = row["tt_task2_worked"]
+    else:
+        tt_task2_worked = None
+    return {
+        "leads": {"total": tt_total, "worked": tt_task1_worked},
+        "active": {"total": tt_total, "worked": tt_task2_worked},
+    }
+
+
+def _stage_cards_payload(row, by_reason: dict, visit_to_be_completed, visit_overdue) -> dict:
+    """The six stage-card keys from a _STAGE_COUNT_COLS row. The visit
+    to-be-completed/overdue split is passed in (it needs the property DB; the
+    /stages endpoint sends app-DB placeholders instead)."""
+    supply = {
+        "pipeline": row["sup_pipeline"],
+        "token_to_ama": row["sup_token_to_ama"],
+        "onboarded": row["sup_onboarded"],
+        "rejected_post_visit": row["sup_rejected_post_visit"],
+        "cancelled_post_token": row["sup_cancelled_post_token"],
+    }
+    # A completed visit progresses into the Supply Closure Tracker, so
+    # "visits completed" = everything currently in those supply stages.
+    return {
+        "leads": {
+            "lead_new": row["lead_new"],
+            "lead_old": row["lead_old"],
+            "active_new": row["active_new"],
+            "active_old": row["active_old"],
+        },
+        "qualified": {"new": row["qualified_new"], "old": row["qualified_old"]},
+        "follow_up": {"new": row["follow_up_new"], "old": row["follow_up_old"]},
+        "visit": {
+            "completed": sum(supply.values()),
+            "to_be_completed": visit_to_be_completed,
+            "overdue": visit_overdue,
+        },
+        "supply": supply,
+        "rejected": {"total": row["rejected_total"], "by_reason": by_reason},
+    }
+
 
 def _visit_buckets(user) -> tuple[int, int]:
     """(to_be_completed, overdue) for rows currently in stage='visit_scheduled',
@@ -115,27 +225,10 @@ def summary():
     try:
         with conn, conn.cursor() as cur:
             # All summary-card counts in one conditional-aggregation pass.
-            # "new" = entered the stage today (IST); for the intake 'lead' stage
-            # that's created-today.
             cur.execute(
                 f"""
                 SELECT
-                  COUNT(*) FILTER (WHERE stage = 'lead' AND {_CREATED_IST} = {_TODAY_IST}) AS lead_new,
-                  COUNT(*) FILTER (WHERE stage = 'lead' AND {_CREATED_IST} < {_TODAY_IST}) AS lead_old,
-                  COUNT(*) FILTER (WHERE stage = 'active' AND {_ACTIVE_TODAY}) AS active_new,
-                  COUNT(*) FILTER (WHERE stage = 'active' AND NOT {_ACTIVE_TODAY}) AS active_old,
-                  COUNT(*) FILTER (WHERE stage = 'qualified' AND {_QUALIFIED_TODAY}) AS qualified_new,
-                  COUNT(*) FILTER (WHERE stage = 'qualified' AND NOT {_QUALIFIED_TODAY}) AS qualified_old,
-                  COUNT(*) FILTER (WHERE stage = 'follow_up' AND {_FOLLOW_UP_TODAY}) AS follow_up_new,
-                  COUNT(*) FILTER (WHERE stage = 'follow_up' AND NOT {_FOLLOW_UP_TODAY}) AS follow_up_old,
-
-                  COUNT(*) FILTER (WHERE stage = 'rejected') AS rejected_total,
-
-                  COUNT(*) FILTER (WHERE stage = 'pipeline') AS sup_pipeline,
-                  COUNT(*) FILTER (WHERE stage = 'token_to_ama') AS sup_token_to_ama,
-                  COUNT(*) FILTER (WHERE stage = 'onboarded') AS sup_onboarded,
-                  COUNT(*) FILTER (WHERE stage = 'rejected_post_visit') AS sup_rejected_post_visit,
-                  COUNT(*) FILTER (WHERE stage = 'cancelled_post_token') AS sup_cancelled_post_token,
+                  {_STAGE_COUNT_COLS},
 
                   -- Today's Task: denominator = leads created today (IST). Task 1
                   -- (lead→active) worked = created today & moved out of lead.
@@ -150,77 +243,122 @@ def summary():
             )
             row = cur.fetchone()
 
-            # Rejected breakdown by reason.
-            cur.execute(
-                f"""SELECT COALESCE(stage_reason, 'unspecified') AS reason, COUNT(*) AS n
-                    FROM inventory
-                    {where} AND stage = 'rejected'
-                    GROUP BY COALESCE(stage_reason, 'unspecified')""",
-                scope_params,
-            )
-            by_reason = {r["reason"]: r["n"] for r in cur.fetchall()}
+            by_reason = _rejected_by_reason(cur, where, scope_params)
+            unresolved_tickets = _tickets_pending_failsoft(cur, g.user)
 
-            # Tickets needing this user's action (powers the Home third card).
-            # Fail-soft: if the tickets table isn't migrated yet, don't take the
-            # whole summary down — just report 0. A failed statement aborts the
-            # transaction, so use a SAVEPOINT to keep the conn usable.
-            try:
-                cur.execute("SAVEPOINT tickets_count")
-                unresolved_tickets = tickets_pending_count(cur, g.user)
-                cur.execute("RELEASE SAVEPOINT tickets_count")
-            except Exception:
-                cur.execute("ROLLBACK TO SAVEPOINT tickets_count")
-                unresolved_tickets = 0
-
-        # Today's Task progress. Denominator = leads created today. Task 2's
-        # worked count is only exposed once Task 1 is complete (gating); until
-        # then it's null and the card is locked client-side.
-        tt_total = row["tt_total"]
-        tt_task1_worked = row["tt_task1_worked"]
-        task1_done = tt_task1_worked >= tt_total
-        # Task 2 is gated behind Task 1 for RMs/managers (card locked + worked
-        # not computed). Admins are never gated, so always expose it for them.
-        if task1_done or g.user["role"] == "admin":
-            tt_task2_worked = row["tt_task2_worked"]
-        else:
-            tt_task2_worked = None
-
-        supply = {
-            "pipeline": row["sup_pipeline"],
-            "token_to_ama": row["sup_token_to_ama"],
-            "onboarded": row["sup_onboarded"],
-            "rejected_post_visit": row["sup_rejected_post_visit"],
-            "cancelled_post_token": row["sup_cancelled_post_token"],
-        }
-        # A completed visit progresses into the Supply Closure Tracker, so
-        # "visits completed" = everything currently in those supply stages.
-        visit_completed = sum(supply.values())
         visit_to_be_completed, visit_overdue = _visit_buckets(g.user)
 
         return jsonify({
-            "leads": {
-                "lead_new": row["lead_new"],
-                "lead_old": row["lead_old"],
-                "active_new": row["active_new"],
-                "active_old": row["active_old"],
-            },
-            "qualified": {"new": row["qualified_new"], "old": row["qualified_old"]},
-            "follow_up": {"new": row["follow_up_new"], "old": row["follow_up_old"]},
-            "visit": {
-                "completed": visit_completed,
-                "to_be_completed": visit_to_be_completed,
-                "overdue": visit_overdue,
-            },
-            "supply": supply,
-            "rejected": {"total": row["rejected_total"], "by_reason": by_reason},
-            "todays_task": {
-                "leads": {"total": tt_total, "worked": tt_task1_worked},
-                "active": {"total": tt_total, "worked": tt_task2_worked},
-            },
+            **_stage_cards_payload(row, by_reason, visit_to_be_completed, visit_overdue),
+            "todays_task": _todays_task_payload(row, g.user),
             "unresolved_tickets": unresolved_tickets,
         })
     finally:
         conn.close()
+
+
+@bp.get("/summary/quick")
+@require_auth()
+def summary_quick():
+    """Above-the-fold Home numbers only: Today's Task progress + unresolved
+    tickets, same shapes as those keys in /summary. The cheapest slice — one
+    small aggregate over today's (IST) scoped inventory rows plus the tickets
+    count. No property-DB call, no visit buckets, no full-table stage
+    aggregation; the heavy cards load behind it via /summary/stages and
+    /summary/visits.
+    """
+    scope, scope_params = _scope_clause(g.user)
+
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            # Created-today is the WHERE, not a per-FILTER condition, so only
+            # today's slice of the table is scanned.
+            cur.execute(
+                f"""
+                SELECT
+                  COUNT(*) AS tt_total,
+                  COUNT(*) FILTER (WHERE stage <> 'lead') AS tt_task1_worked,
+                  COUNT(*) FILTER (WHERE stage NOT IN ('lead','active')) AS tt_task2_worked
+                FROM inventory
+                WHERE {_CREATED_IST} = {_TODAY_IST} {scope}
+                """,
+                scope_params,
+            )
+            row = cur.fetchone()
+
+            unresolved_tickets = _tickets_pending_failsoft(cur, g.user)
+
+        return jsonify({
+            "todays_task": _todays_task_payload(row, g.user),
+            "unresolved_tickets": unresolved_tickets,
+        })
+    finally:
+        conn.close()
+
+
+@bp.get("/summary/stages")
+@require_auth()
+def summary_stages():
+    """The six stage-card keys of /summary (leads / qualified / follow_up /
+    visit / supply / rejected), identical shapes, app DB only — no property-DB
+    round-trip. visit.overdue needs the property-DB scheduled date, so here
+    it's a 0 placeholder and to_be_completed counts every stage=
+    'visit_scheduled' row; /summary/visits refines that split.
+    """
+    scope, scope_params = _scope_clause(g.user)
+    where = f"WHERE TRUE {scope}"
+
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT
+                  {_STAGE_COUNT_COLS},
+                  COUNT(*) FILTER (WHERE stage = 'visit_scheduled') AS visit_scheduled_total
+                FROM inventory
+                {where}
+                """,
+                scope_params,
+            )
+            row = cur.fetchone()
+
+            by_reason = _rejected_by_reason(cur, where, scope_params)
+    finally:
+        conn.close()
+
+    return jsonify(_stage_cards_payload(row, by_reason, row["visit_scheduled_total"], 0))
+
+
+@bp.get("/summary/visits")
+@require_auth()
+def summary_visits():
+    """The full visit bucket of /summary, identical shape, including the
+    property-DB overdue split. completed = rows now in any Supply Closure
+    Tracker stage (a completed visit progresses there); to_be_completed /
+    overdue bucket the stage='visit_scheduled' rows by the property-DB
+    scheduled date (guarded — a property-DB failure yields overdue=0).
+    """
+    scope, scope_params = _scope_clause(g.user)
+
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                f"SELECT COUNT(*) AS n FROM inventory WHERE stage = ANY(%s) {scope}",
+                [SUPPLY_STAGES, *scope_params],
+            )
+            completed = cur.fetchone()["n"]
+    finally:
+        conn.close()
+
+    to_be_completed, overdue = _visit_buckets(g.user)
+    return jsonify({"visit": {
+        "completed": completed,
+        "to_be_completed": to_be_completed,
+        "overdue": overdue,
+    }})
 
 
 @bp.get("/task-tracking")

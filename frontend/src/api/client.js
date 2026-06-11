@@ -12,7 +12,13 @@ const BASE = import.meta.env.VITE_API_BASE || '';
 const FORCE_MOCKS = String(import.meta.env.VITE_USE_MOCKS ?? 'true') !== 'false';
 
 let token = null;
-export function setAuthToken(t) { token = t; }
+export function setAuthToken(t) {
+  token = t;
+  // User changed (login/logout) — drop everything cached for the old identity.
+  epoch += 1;
+  cache.clear();
+  inflight.clear();
+}
 
 function fromMock(method, path, body) {
   // Simulate a tiny latency so loading states are visible.
@@ -80,12 +86,63 @@ async function download(path) {
   return res.blob();
 }
 
+// Tiny in-memory GET layer: identical concurrent GETs share one promise, and a
+// few hot read endpoints get a short TTL cache (keyed on full path+query).
+// Any write wipes the whole cache — correctness over cleverness. Cache hits
+// hand out structuredClone copies so components can't mutate shared data.
+
+// Path-prefix → TTL in seconds. First match wins (most specific first).
+const TTL_RULES = [
+  ['/api/users/master-areas', 600],
+  ['/api/inventory/societies', 600],
+  ['/api/inventory/notifications', 60],
+  ['/api/tickets/pending-count', 30],
+  ['/api/geo/', 1800],
+  ['/api/users', 60],
+];
+function ttlFor(path) {
+  const rule = TTL_RULES.find(([prefix]) => path.startsWith(prefix));
+  return rule ? rule[1] * 1000 : 0;
+}
+
+const cache = new Map();    // path -> { data, expires }
+const inflight = new Map(); // path -> promise
+let epoch = 0;              // bumped on writes so stale in-flight GETs never cache
+
+function cachedGet(path) {
+  const hit = cache.get(path);
+  if (hit && hit.expires > Date.now()) return Promise.resolve(structuredClone(hit.data));
+  let p = inflight.get(path);
+  if (!p) {
+    const started = epoch;
+    p = request('GET', path)
+      .then((data) => {
+        const ttl = ttlFor(path);
+        if (ttl && epoch === started) cache.set(path, { data, expires: Date.now() + ttl });
+        return data;
+      })
+      .finally(() => inflight.delete(path));
+    inflight.set(path, p);
+  }
+  return p.then((data) => structuredClone(data));
+}
+
+function mutate(method, path, body) {
+  return request(method, path, body).finally(() => {
+    epoch += 1;
+    cache.clear();
+    // Drop in-flight GETs too: a fetch issued after this write must not
+    // join a pre-write request and render stale rows.
+    inflight.clear();
+  });
+}
+
 export const api = {
-  get: (p) => request('GET', p),
-  post: (p, b) => request('POST', p, b),
-  put: (p, b) => request('PUT', p, b),
-  patch: (p, b) => request('PATCH', p, b),
-  delete: (p) => request('DELETE', p),
+  get: (p) => cachedGet(p),
+  post: (p, b) => mutate('POST', p, b),
+  put: (p, b) => mutate('PUT', p, b),
+  patch: (p, b) => mutate('PATCH', p, b),
+  delete: (p) => mutate('DELETE', p),
   download,
 };
 

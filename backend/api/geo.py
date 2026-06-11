@@ -21,6 +21,13 @@ from .auth import require_auth
 bp = Blueprint("geo", __name__, url_prefix="/api/geo")
 log = logging.getLogger(__name__)
 
+
+def _cached(payload):
+    """jsonify + a day-long public Cache-Control — geo data changes rarely."""
+    resp = jsonify(payload)
+    resp.headers["Cache-Control"] = "public, max-age=86400"
+    return resp
+
 # City boundary polygons, fetched once from OpenStreetMap (Nominatim, keyless)
 # and cached for the worker's lifetime. Used to shade/outline the user's scope
 # city on the profile map.
@@ -42,7 +49,7 @@ def city_boundary():
         return jsonify({"error": "city required"}), 400
     key = city.lower()
     if key in _city_cache:
-        return jsonify(_city_cache[key])
+        return _cached(_city_cache[key])
     out = {"city": city, "geometry": None}
 
     def _fetch_polygon(endpoint, params):
@@ -71,8 +78,11 @@ def city_boundary():
     except Exception as e:  # network/provider issue — non-fatal, no shading
         log.warning("city-boundary fetch failed for %r: %s", city, e)
         out["error"] = str(e)
+        # Transient failure — don't seed the worker cache or tell browsers
+        # to keep the empty result for a day; let the next request retry.
+        return jsonify(out)
     _city_cache[key] = out
-    return jsonify(out)
+    return _cached(out)
 
 _SOC_COORDS: list | None = None
 _SOC_COORDS_PATH = os.path.join(os.path.dirname(__file__), "..", "migrations", "socities_coords.json")
@@ -114,7 +124,7 @@ def _load_society_coords() -> list:
 def society_coords():
     """Society coordinates for the profile coverage map: [{name, city, lat, lng}]."""
     items = _load_society_coords()
-    return jsonify({"items": items, "count": len(items)})
+    return _cached({"items": items, "count": len(items)})
 
 
 # Extracted micro-market coordinates — same approach as societies: a bundled
@@ -191,13 +201,13 @@ def micro_markets():
     """
     global _MM_CACHE
     if _MM_CACHE is not None:
-        return jsonify({"items": _MM_CACHE})
+        return _cached({"items": _MM_CACHE})
 
     # Preferred: exact extracted coordinates.
     extracted = _load_micromarket_coords()
     if extracted:
         _MM_CACHE = extracted
-        return jsonify({"items": extracted})
+        return _cached({"items": extracted})
 
     # Fallback: derive from society coords + master_societies.
     by_name: dict[str, list] = {}
@@ -207,13 +217,15 @@ def micro_markets():
     groups: dict[str, list] = {}
     try:
         conn = get_props_conn()
-        with conn, conn.cursor() as cur:
-            cur.execute(
-                "SELECT society_name, micro_market FROM master_societies "
-                "WHERE micro_market IS NOT NULL AND micro_market <> '' AND society_name IS NOT NULL"
-            )
-            rows = cur.fetchall()
-        conn.close()
+        try:
+            with conn, conn.cursor() as cur:
+                cur.execute(
+                    "SELECT society_name, micro_market FROM master_societies "
+                    "WHERE micro_market IS NOT NULL AND micro_market <> '' AND society_name IS NOT NULL"
+                )
+                rows = cur.fetchall()
+        finally:
+            conn.close()  # always return the conn to the pool, even on failure
     except Exception as e:
         log.warning("micro-markets: master_societies read failed: %s", e)
         return jsonify({"items": [], "error": str(e)})
@@ -238,4 +250,4 @@ def micro_markets():
         items.append({"name": mm, "center": [lat, lng], "geometry": geometry, "count": len(pts)})
 
     _MM_CACHE = items
-    return jsonify({"items": items})
+    return _cached({"items": items})

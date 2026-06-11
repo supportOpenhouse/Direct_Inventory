@@ -34,7 +34,8 @@ function fmtTime(iso) {
 /**
  * Multi-author notes thread. Reads/writes inventory.note_thread (JSONB array)
  * via POST /api/inventory/:ohId/notes. Used inside the expand panel and the
- * card detail modal.
+ * card detail modal. `initial` must come from the GET /api/inventory/:ohId
+ * detail fetch — list rows no longer carry note_thread (only note_count).
  */
 export default function NoteThread({ ohId, initial = [], canPost = true, onChange }) {
   const { user } = useAuth();

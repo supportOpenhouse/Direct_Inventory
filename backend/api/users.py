@@ -121,11 +121,14 @@ def master_areas():
                 "WHERE society_name IS NOT NULL AND society_name <> '' ORDER BY society_name"
             )
             societies = [r["society_name"] for r in cur.fetchall()]
-        return jsonify({
+        resp = jsonify({
             "cities": cities,
             "micro_markets": micro_markets,
             "societies": societies,
         })
+        # Master areas change rarely; let the browser skip refetches for 10 min.
+        resp.headers["Cache-Control"] = "private, max-age=600"
+        return resp
     finally:
         conn.close()
 

@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from flask import g, jsonify, request
 
 from ...db import get_conn
-from ...services.activity import log as log_activity
+from ...services.activity import log as log_activity, log_many
 from ...services.assignment import resolve_assignment
 from ...services.cp_match import MATCH_INPUT_FIELDS
 from ...services.oh_id import next_oh_id
@@ -287,6 +287,7 @@ def update_one(oh_id: str):
 
             updates = []
             params: list = []
+            log_entries: list[dict] = []   # one per audit row; flushed in ONE batched INSERT
             requires_visit_form = False
             invalidate_cp_match = False
 
@@ -325,18 +326,17 @@ def update_one(oh_id: str):
                             new_fu = body.get("follow_up_at")
                             if new_fu and str(existing.get("follow_up_at") or "")[:10] != str(new_fu)[:10]:
                                 meta["re_follow_up"] = True
-                        log_activity(
-                            cur,
-                            actor_user_id=user["id"],
-                            actor_email=user["email"],
-                            entity_type="inventory",
-                            entity_id=oh_id,
-                            action="stage_change",
-                            field="stage",
-                            before_value=v,
-                            after_value=v,
-                            metadata=meta,
-                        )
+                        log_entries.append({
+                            "actor_user_id": user["id"],
+                            "actor_email": user["email"],
+                            "entity_type": "inventory",
+                            "entity_id": oh_id,
+                            "action": "stage_change",
+                            "field": "stage",
+                            "before_value": v,
+                            "after_value": v,
+                            "metadata": meta,
+                        })
                     continue
                 if k == "price" and user["role"] != "admin":
                     return jsonify({"error": "only admin can change asking price"}), 403
@@ -373,21 +373,24 @@ def update_one(oh_id: str):
                     invalidate_cp_match = True
                 updates.append(f"{k} = %s")
                 params.append(v)
-                log_activity(
-                    cur,
-                    actor_user_id=user["id"],
-                    actor_email=user["email"],
-                    entity_type="inventory",
-                    entity_id=oh_id,
-                    action=("stage_change" if k == "stage" else "update"),
-                    field=k,
-                    before_value=existing.get(k),
-                    after_value=v,
-                    metadata={
+                log_entries.append({
+                    "actor_user_id": user["id"],
+                    "actor_email": user["email"],
+                    "entity_type": "inventory",
+                    "entity_id": oh_id,
+                    "action": ("stage_change" if k == "stage" else "update"),
+                    "field": k,
+                    "before_value": existing.get(k),
+                    "after_value": v,
+                    "metadata": {
                         "actor_role": user["role"],
                         "cross_assignment": cross_assignment_edit,
                     },
-                )
+                })
+
+            # Flush every audit row in one round-trip — BEFORE the noop return so
+            # a same-stage re-touch with no column changes still gets logged.
+            log_many(cur, log_entries)
 
             if not updates:
                 return jsonify({"oh_id": oh_id, "noop": True})

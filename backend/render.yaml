@@ -3,9 +3,9 @@ services:
     name: direct-inventory-portal
     env: python
     region: singapore
-    plan: free
+    plan: standard
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --timeout 180
+    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --worker-class gthread --threads 4 --timeout 180 --keep-alive 65
     healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION

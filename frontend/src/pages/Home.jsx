@@ -138,8 +138,10 @@ function TodaysTask({ task, loading, role, tickets }) {
   );
 }
 
-function BoardView({ s, loading }) {
+function BoardView({ s, loading, visitsLoading }) {
   const d = (x) => (loading ? '—' : (x ?? 0));
+  // Overdue needs the slower properties-DB call, so it loads one phase later.
+  const dv = (x) => ((loading || visitsLoading) ? '—' : (x ?? 0));
 
   // Rejected breakdown: top 3 reasons by count, the rest folded into "Others".
   const byReason = s?.rejected?.by_reason || {};
@@ -189,7 +191,7 @@ function BoardView({ s, loading }) {
             </div>
             <div className="stat-row">
               <span className="sr-lbl"><span className="stage-dot" style={{ background: '#f97316' }} />Overdue</span>
-              <span className="sr-num" style={{ color: '#f97316' }}>{d(s?.visit?.overdue)}</span>
+              <span className="sr-num" style={{ color: '#f97316' }}>{dv(s?.visit?.overdue)}</span>
             </div>
           </div>
         </div>
@@ -238,14 +240,30 @@ export default function Home() {
   const { user } = useAuth();
   const [view, setView] = useState('board'); // board | table
   const [summary, setSummary] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [quickLoading, setQuickLoading] = useState(true);
+  const [stagesLoading, setStagesLoading] = useState(true);
+  const [visitsLoading, setVisitsLoading] = useState(true);
 
+  // Progressive summary: three phased calls, cheapest first, each merged into
+  // the same `summary` shape the cards already read. A failed phase just leaves
+  // its keys absent (cards fall back to 0, same as the old single-call error).
   useEffect(() => {
     let alive = true;
-    api.get('/api/home/summary')
-      .then((r) => { if (alive) setSummary(r); })
-      .catch(() => { if (alive) setSummary(null); })
-      .finally(() => { if (alive) setLoading(false); });
+    const merge = (patch) => { if (alive) setSummary((s) => ({ ...(s || {}), ...patch })); };
+    (async () => {
+      // Phase 1 — today's tasks + unresolved tickets render immediately.
+      await api.get('/api/home/summary/quick').then(merge).catch(() => {});
+      if (!alive) return;
+      setQuickLoading(false);
+      // Phase 2 — stage aggregation fills the six summary cards (visit overdue
+      // stays a placeholder until phase 3).
+      await api.get('/api/home/summary/stages').then(merge).catch(() => {});
+      if (!alive) return;
+      setStagesLoading(false);
+      // Phase 3 — properties-DB overdue lookup patches the Visit card.
+      await api.get('/api/home/summary/visits').then(merge).catch(() => {});
+      if (alive) setVisitsLoading(false);
+    })();
     return () => { alive = false; };
   }, []);
 
@@ -262,9 +280,9 @@ export default function Home() {
       <div className="home-viewbar">{toggle}</div>
       {view === 'board' ? (
         <>
-          <TodaysTask task={summary?.todays_task} loading={loading} role={user?.role} tickets={summary?.unresolved_tickets} />
+          <TodaysTask task={summary?.todays_task} loading={quickLoading} role={user?.role} tickets={summary?.unresolved_tickets} />
           <div className="page-head"><h2>Summary</h2></div>
-          <BoardView s={summary} loading={loading} />
+          <BoardView s={summary} loading={stagesLoading} visitsLoading={visitsLoading} />
         </>
       ) : (
         <InventoryBoard showReasonCol showExport

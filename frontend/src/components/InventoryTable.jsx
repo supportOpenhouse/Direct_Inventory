@@ -13,20 +13,6 @@ const SORTABLE = new Set([
   'posting_date', 'created_at', 'follow_up_at',
 ]);
 
-function latestNote(thread) {
-  if (!Array.isArray(thread) || thread.length === 0) return null;
-  return thread.reduce((best, n) => (!best || new Date(n.created_at) > new Date(best.created_at) ? n : best), null);
-}
-
-// Initials of a note author — "Jyoti Singh" -> "JS", "ravi@openhouse.in" -> "RA".
-function authorInitials(note) {
-  const src = (note?.author_name || '').trim() || (note?.author_email || '').split('@')[0] || '';
-  const parts = src.split(/[\s._-]+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
 // Assigned RMs are joined onto each row as [{id, name, email}, ...].
 function formatAssignedRms(rms) {
   if (!Array.isArray(rms) || rms.length === 0) return '—';
@@ -139,7 +125,8 @@ export default function InventoryTable({
             const flag = rowFlag(item);
             const isOpen = openId === item.oh_id;
             const isSel = selected?.has?.(item.oh_id);
-            const note = latestNote(item.note_thread);
+            // List rows are slim: note_count int instead of the full note_thread.
+            const noteCount = Number(item.note_count) || 0;
             return (
               <Fragment key={item.oh_id}>
                 <tr
@@ -190,10 +177,10 @@ export default function InventoryTable({
                   <td className="inv-td-muted">{item.created_at ? formatDateRel(item.created_at) : '—'}</td>
                   {isAdmin && <td className="inv-td-muted" title={assignedRmsTitle(item.assigned_rms)}><span className="inv-clip inv-clip-rm">{formatAssignedRms(item.assigned_rms)}</span></td>}
                   <td className="inv-td-notes">
-                    {note ? (
+                    {noteCount > 0 ? (
                       <span className="inv-td-notes-wrap">
-                        <span className="note-initials" title={note.author_name || note.author_email || ''}>{authorInitials(note)}</span>
-                        <span className="inv-td-notes-body" title={note.body}>{note.body}</span>
+                        <span className="note-initials" title={`${noteCount} note${noteCount === 1 ? '' : 's'}`}>{noteCount}</span>
+                        <span className="inv-td-notes-body">{noteCount === 1 ? 'note' : 'notes'}</span>
                       </span>
                     ) : '—'}
                   </td>

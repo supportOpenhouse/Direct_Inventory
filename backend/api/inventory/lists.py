@@ -1,4 +1,4 @@
-"""Inventory read + aggregate endpoints: list, societies, counts, notifications."""
+"""Inventory read + aggregate endpoints: list, badges, societies, counts, notifications."""
 from __future__ import annotations
 
 import csv
@@ -18,6 +18,29 @@ from ._common import (
     _scope_clause,
     bp,
     overdue_visit_ids,
+)
+
+
+# List projection: every inventory + pricing column EXCEPT the two heavyweight
+# blobs the table never renders — note_thread (JSONB) and search_tsv (tsvector).
+# note_count stands in for the thread so the Notes column can still show a
+# summary badge; the full thread loads on demand via GET /:oh_id. The ?q search
+# is unaffected: it filters on i.* columns inside the subquery, not on this
+# projection.
+_LIST_COLS = ", ".join(f"j.{c}" for c in (
+    # inventory columns (001_init + later migrations), minus note_thread/search_tsv
+    "id", "oh_id", "source", "city", "locality", "society", "bedrooms",
+    "area_sqft", "floor", "tower", "unit_no", "price", "seller_name",
+    "seller_phone", "posting_date", "listing_link", "stage", "stage_reason",
+    "notes", "assigned_rm_id", "assigned_rm_ids", "assigned_mgr_id",
+    "forms_visit_id", "visit_at", "visit_exec", "follow_up_at", "priority",
+    "cp_match", "star_color", "created_at", "updated_at", "last_synced_at",
+    # derived by INVENTORY_WITH_PRICING_SQL
+    "oh_price", "oh_price_area", "oh_price_bhk", "oh_price_match",
+    "oh_price_reason", "oh_near_diff", "assigned_rms",
+)) + (
+    ", CASE WHEN jsonb_typeof(j.note_thread) = 'array' "
+    "THEN jsonb_array_length(j.note_thread) ELSE 0 END AS note_count"
 )
 
 
@@ -109,7 +132,7 @@ def list_inventory():
         qt_select = "".join(qt_parts)
 
         list_sql = f"""
-            SELECT j.*{qt_select} FROM ({INVENTORY_WITH_PRICING_SQL} {inner_where}) j
+            SELECT {_LIST_COLS}{qt_select} FROM ({INVENTORY_WITH_PRICING_SQL} {inner_where}) j
             {outer_where}
             ORDER BY {order_clause}
             LIMIT %s OFFSET %s
@@ -141,6 +164,65 @@ def list_inventory():
         return jsonify({"items": rows, "total": total, "limit": limit, "offset": offset})
     finally:
         conn.close()
+
+
+# Badge flags /badges can compute. The two *_today flags mirror the list's
+# opt-in annotate_* logic: a stage_change to the given stage on today's IST
+# date. visit_overdue is special-cased through overdue_visit_ids.
+_BADGE_STAGE_FLAGS = {"qualified_today": "qualified", "active_today": "active"}
+_BADGES_CAP = 1000
+
+
+@bp.get("/badges")
+@require_auth()
+def inventory_badges():
+    """Per-row badge flags for ids already on screen.
+
+    GET /badges?ids=OH1,OH2&flags=qualified_today,active_today,visit_overdue
+    -> { "badges": { "<oh_id>": { "<flag>": bool, ... } } }
+
+    Lets pages render rows immediately and decorate them afterwards. Only the
+    flags listed in &flags= are computed, and every requested id carries every
+    requested flag (default False). Each flag is one set-based query — never a
+    per-id loop. ids capped at _BADGES_CAP.
+    """
+    args = request.args
+    ids = [s.strip() for s in (args.get("ids") or "").split(",") if s.strip()]
+    ids = ids[:_BADGES_CAP]
+    want = {s.strip() for s in (args.get("flags") or "").split(",") if s.strip()}
+    flags = [f for f in (*_BADGE_STAGE_FLAGS, "visit_overdue") if f in want]
+    if not ids or not flags:
+        return jsonify({"badges": {}})
+
+    badges = {oh_id: {f: False for f in flags} for oh_id in ids}
+
+    stage_flags = [f for f in flags if f in _BADGE_STAGE_FLAGS]
+    if stage_flags:
+        conn = get_conn()
+        try:
+            with conn, conn.cursor() as cur:
+                for flag in stage_flags:
+                    cur.execute(
+                        "SELECT DISTINCT al.entity_id FROM activity_log al "
+                        "WHERE al.entity_type = 'inventory' AND al.entity_id = ANY(%s) "
+                        "  AND al.action IN ('stage_change', 'bulk_stage_change') "
+                        "  AND al.after_value = %s "
+                        "  AND (al.created_at AT TIME ZONE 'Asia/Kolkata')::DATE "
+                        "      = (NOW() AT TIME ZONE 'Asia/Kolkata')::DATE",
+                        (ids, _BADGE_STAGE_FLAGS[flag]),
+                    )
+                    for r in cur.fetchall():
+                        if r["entity_id"] in badges:
+                            badges[r["entity_id"]][flag] = True
+        finally:
+            conn.close()
+
+    if "visit_overdue" in flags:
+        for oh_id in overdue_visit_ids(ids):
+            if oh_id in badges:
+                badges[oh_id]["visit_overdue"] = True
+
+    return jsonify({"badges": badges})
 
 
 # Safety ceiling for the ids endpoint — far above any realistic selection.
@@ -258,7 +340,9 @@ def list_societies():
     """
     city = (request.args.get("city") or "").strip()
     if not city:
-        return jsonify({"items": []})
+        resp = jsonify({"items": []})
+        resp.headers["Cache-Control"] = "private, max-age=600"
+        return resp
 
     cities = ["Noida", "Greater Noida"] if city == "Noida" else [city]
 
@@ -273,7 +357,10 @@ def list_societies():
                 (cities,),
             )
             rows = cur.fetchall()
-        return jsonify({"items": rows})
+        # The master list changes rarely — let the browser reuse it for 10 min.
+        resp = jsonify({"items": rows})
+        resp.headers["Cache-Control"] = "private, max-age=600"
+        return resp
     finally:
         conn.close()
 
@@ -283,8 +370,10 @@ def list_societies():
 def inventory_counts():
     """Per-stage counts (and grand total) honoring ALL current filters.
 
-    Uses the same LATERAL-joined subquery as the list endpoint so variation
-    filters and oh_price-dependent filters stay in sync between chips and rows.
+    When variation/oh_price filters are active this uses the same
+    LATERAL-joined subquery as the list endpoint so chips and rows stay in
+    sync. Otherwise it aggregates straight off the inventory table — no
+    oh_pricing LATERALs, no per-row json_agg — which is far cheaper.
     """
     user = g.user
     args = request.args
@@ -311,24 +400,40 @@ def inventory_counts():
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
-            cur.execute(
-                f"""SELECT stage, COUNT(*) AS n FROM (
-                       {INVENTORY_WITH_PRICING_SQL} {inner_where}
-                   ) j {outer_where}
-                   GROUP BY stage""",
-                [*scope_params, *base_params, *post_params],
-            )
             by_stage = {s: 0 for s in (*ALL_STAGES, *SUPPLY_STAGES)}
-            for r in cur.fetchall():
-                if r["stage"] in by_stage:
-                    by_stage[r["stage"]] += r["n"]
-            cur.execute(
-                f"""SELECT COUNT(*) AS n FROM (
-                       {INVENTORY_WITH_PRICING_SQL} {inner_where}
-                   ) j {outer_where}""",
-                [*scope_params, *base_params, *post_params],
-            )
-            total = cur.fetchone()["n"]
+            if post_filters:
+                # oh_price / variation filters reference the pricing LATERAL.
+                cur.execute(
+                    f"""SELECT stage, COUNT(*) AS n FROM (
+                           {INVENTORY_WITH_PRICING_SQL} {inner_where}
+                       ) j {outer_where}
+                       GROUP BY stage""",
+                    [*scope_params, *base_params, *post_params],
+                )
+                for r in cur.fetchall():
+                    if r["stage"] in by_stage:
+                        by_stage[r["stage"]] += r["n"]
+                cur.execute(
+                    f"""SELECT COUNT(*) AS n FROM (
+                           {INVENTORY_WITH_PRICING_SQL} {inner_where}
+                       ) j {outer_where}""",
+                    [*scope_params, *base_params, *post_params],
+                )
+                total = cur.fetchone()["n"]
+            else:
+                # No post-filters → skip the pricing join entirely. One GROUP BY
+                # also yields the grand total: stage is NOT NULL, so the groups
+                # partition every matching row.
+                cur.execute(
+                    f"SELECT i.stage, COUNT(*) AS n FROM inventory i {inner_where} "
+                    f"GROUP BY i.stage",
+                    [*scope_params, *base_params],
+                )
+                total = 0
+                for r in cur.fetchall():
+                    total += r["n"]
+                    if r["stage"] in by_stage:
+                        by_stage[r["stage"]] += r["n"]
         return jsonify({"total": total, "by_stage": by_stage})
     finally:
         conn.close()
