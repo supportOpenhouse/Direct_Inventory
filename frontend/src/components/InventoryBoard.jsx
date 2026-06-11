@@ -123,6 +123,13 @@ export default function InventoryBoard({
   useEffect(() => { setPageInput(String(page + 1)); }, [page]);
   // External reload trigger (e.g. the tracker's auto-sync finished).
   useEffect(() => { if (reloadSignal) { refresh(page); refreshCounts(); } /* eslint-disable-next-line */ }, [reloadSignal]);
+  // A row was added via the topbar Add Inventory button → refetch in place.
+  useEffect(() => {
+    const onAdded = () => { refreshCounts(); refresh(page); };
+    window.addEventListener('inventory:added', onAdded);
+    return () => window.removeEventListener('inventory:added', onAdded);
+    /* eslint-disable-next-line */
+  }, [page]);
 
   function onSearch(e) { e?.preventDefault(); setQApplied(qInput.trim()); }
   function toggleStage(s) {

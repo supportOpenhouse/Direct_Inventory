@@ -160,7 +160,7 @@ export default function Layout() {
           <h1>{title}</h1>
           <div className="topbar-spacer" />
           {(seg === '' || seg === 'leads') && <CpScanButton />}
-          {seg === 'qualified-leads' && <AddInventoryButton defaultStage="qualified" />}
+          {(seg === 'qualified-leads' || seg === 'follow-ups') && <AddInventoryButton defaultStage="follow_up" />}
           {seg === 'tickets' && (isAdmin || isManager) && <CreateTicketButton />}
           {seg === 'users' && isAdmin && <ReassignLeadsButton />}
           <NotificationBell role={user?.role} />
