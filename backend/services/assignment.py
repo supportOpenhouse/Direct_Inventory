@@ -312,7 +312,11 @@ def assign_missing_batch(
                        WHERE i.id = v.id
                          {update_guard}""",
                     updates,
-                    template="(%s, %s::INT[], %s)",
+                    # Type every column: when an entire batch falls back to the
+                    # Unallocated placeholder, mgr_id is all-NULL and Postgres
+                    # would otherwise infer it as text, breaking the COALESCE
+                    # against the integer assigned_mgr_id column.
+                    template="(%s::INT, %s::INT[], %s::INT)",
                 )
 
             total_scanned += len(rows)

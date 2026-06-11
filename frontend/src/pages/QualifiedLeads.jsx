@@ -7,6 +7,18 @@ import OhPrice from '../components/OhPrice.jsx';
 import { CITIES, displayCity, formatPrice, starColor, variation } from '../utils/format.js';
 import { IconFilter, IconSearch } from '../components/icons.jsx';
 
+function formatAssignedRms(rms) {
+  if (!Array.isArray(rms) || rms.length === 0) return '—';
+  const first = rms[0];
+  const label = first.name || first.email || `#${first.id}`;
+  const extra = rms.length - 1;
+  return extra > 0 ? `${label} +${extra}` : label;
+}
+function assignedRmsTitle(rms) {
+  if (!Array.isArray(rms) || rms.length === 0) return '';
+  return rms.map((r) => r.name || r.email || `#${r.id}`).join(', ');
+}
+
 function StarCell({ item, canSet, onUpdated }) {
   const color = starColor(item);
   if (!color && !canSet) return <td className="inv-td-star" />;
@@ -97,13 +109,13 @@ export default function QualifiedLeads() {
             <tr>
               <th className="inv-th inv-th-star" />
               <th className="inv-th">Society</th>
-              {isAdmin && <th className="inv-th">Assigned RM</th>}
               <th className="inv-th">BHK</th>
               <th className="inv-th">Floor</th>
               <th className="inv-th">Area</th>
               <th className="inv-th inv-th-right">Asking</th>
               <th className="inv-th inv-th-right">OH Price</th>
               <th className="inv-th inv-th-right">Variation</th>
+              {isAdmin && <th className="inv-th">RM</th>}
             </tr>
           </thead>
           <tbody>
@@ -119,13 +131,13 @@ export default function QualifiedLeads() {
                   <tr className={`inv-row ${isOpen ? 'inv-row-open' : ''}`} onClick={() => setOpenId(isOpen ? null : it.oh_id)}>
                     <StarCell item={it} canSet={canPost} onUpdated={patchItem} />
                     <td className="inv-td-society">{it.society || '—'}{it.qualified_today && <img className="new-badge-img" src="/new.png" alt="NEW" />}<div className="inv-td-muted" style={{ fontWeight: 400, fontSize: 12 }}>{displayCity(it.city)} · {it.oh_id}</div></td>
-                    {isAdmin && <td>{(it.assigned_rms || []).map((r) => r.name || r.email).filter(Boolean).join(', ') || '—'}</td>}
                     <td>{it.bedrooms != null ? `${it.bedrooms} BHK` : '—'}</td>
                     <td>{it.floor || '—'}</td>
                     <td>{it.area_sqft != null ? `${it.area_sqft} sqft` : '—'}</td>
                     <td className="inv-td-num val-orange">{formatPrice(it.price)}</td>
                     <td className="inv-td-num"><OhPrice item={it} /></td>
                     <td className={`inv-td-num ${v ? `val-var-${v.sign}` : 'muted'}`}>{v ? v.label : '—'}</td>
+                    {isAdmin && <td className="inv-td-muted" title={assignedRmsTitle(it.assigned_rms)}><span className="inv-clip inv-clip-rm">{formatAssignedRms(it.assigned_rms)}</span></td>}
                   </tr>
                   {isOpen && (
                     <tr className="expand-row"><td colSpan={cols}>

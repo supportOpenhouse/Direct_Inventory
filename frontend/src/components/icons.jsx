@@ -36,3 +36,5 @@ export const IconDownload = (p) => <S {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2
 export const IconLock = (p) => <S {...p}><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></S>;
 // Clipboard with a check — task tracking.
 export const IconTasks = (p) => <S {...p}><rect x="6" y="4" width="12" height="17" rx="2" /><path d="M9 4V3h6v1" /><path d="m9.5 12.5 1.8 1.8 3.2-3.6" /></S>;
+// Speech bubble — tickets / conversations on a property.
+export const IconTicket = (p) => <S {...p}><path d="M21 11.5a8.38 8.38 0 0 1-9 8.5 9.06 9.06 0 0 1-4-1L3 20l1-3.8A8.38 8.38 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5Z" /><path d="M8.5 11h7M8.5 14h4" /></S>;

@@ -311,17 +311,17 @@ def update_one(oh_id: str):
                     # this is a true no-op, so we skip it. Re-selecting the
                     # CURRENT stage is a deliberate re-touch, so we emit a
                     # stage_change (which counts as an action) WITHOUT issuing an
-                    # UPDATE for the unchanged column. A follow_up→follow_up
-                    # re-touch with a moved date is additionally tagged
-                    # re_follow_up; the follow_up_at change itself is
-                    # written/logged on its own iteration below.
+                    # UPDATE for the unchanged column. A follow_up→follow_up or
+                    # call_not_received→call_not_received re-touch with a moved
+                    # date is additionally tagged re_follow_up; the follow_up_at
+                    # change itself is written/logged on its own iteration below.
                     if k == "stage":
                         meta = {
                             "actor_role": user["role"],
                             "cross_assignment": cross_assignment_edit,
                             "same_stage": True,
                         }
-                        if v == "follow_up":
+                        if v in ("follow_up", "call_not_received"):
                             new_fu = body.get("follow_up_at")
                             if new_fu and str(existing.get("follow_up_at") or "")[:10] != str(new_fu)[:10]:
                                 meta["re_follow_up"] = True

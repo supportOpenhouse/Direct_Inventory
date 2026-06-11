@@ -27,7 +27,8 @@ export default function StatusEditModal({ item, onUpdated, onClose }) {
 
   const needsVisit = stage === 'visit_scheduled';
   const needsReason = stage === 'rejected';
-  const needsDate = stage === 'follow_up';
+  // Both follow-up and call-not-received carry a callback/follow-up date.
+  const needsDate = stage === 'follow_up' || stage === 'call_not_received';
 
   const stageExcluded = !STAGE_OPTIONS.includes(stage);
 

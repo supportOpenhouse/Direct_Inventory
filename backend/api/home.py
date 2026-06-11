@@ -13,6 +13,7 @@ Shape:
     supply:    { pipeline, token_to_ama, onboarded, rejected_post_visit, cancelled_post_token },
     rejected:  { total, by_reason: { <reason>: n } },
     todays_task: { leads: { total, worked }, active: { total, worked } },
+    unresolved_tickets: <int>,   # tickets needing this user's action
   }
 
   "new" = the row ENTERED that stage today (IST), read from activity_log; "old"
@@ -34,6 +35,7 @@ from flask import Blueprint, g, jsonify
 from ..db import get_conn
 from .auth import require_auth
 from .inventory._common import _scope_clause, overdue_visit_ids
+from .tickets import pending_count as tickets_pending_count
 
 # Morning-cohort task progress. For a given stage, count the rows that were in
 # that stage at the START of today (IST) and how many have since moved out
@@ -158,6 +160,18 @@ def summary():
             )
             by_reason = {r["reason"]: r["n"] for r in cur.fetchall()}
 
+            # Tickets needing this user's action (powers the Home third card).
+            # Fail-soft: if the tickets table isn't migrated yet, don't take the
+            # whole summary down — just report 0. A failed statement aborts the
+            # transaction, so use a SAVEPOINT to keep the conn usable.
+            try:
+                cur.execute("SAVEPOINT tickets_count")
+                unresolved_tickets = tickets_pending_count(cur, g.user)
+                cur.execute("RELEASE SAVEPOINT tickets_count")
+            except Exception:
+                cur.execute("ROLLBACK TO SAVEPOINT tickets_count")
+                unresolved_tickets = 0
+
         # Today's Task progress. Denominator = leads created today. Task 2's
         # worked count is only exposed once Task 1 is complete (gating); until
         # then it's null and the card is locked client-side.
@@ -203,6 +217,7 @@ def summary():
                 "leads": {"total": tt_total, "worked": tt_task1_worked},
                 "active": {"total": tt_total, "worked": tt_task2_worked},
             },
+            "unresolved_tickets": unresolved_tickets,
         })
     finally:
         conn.close()

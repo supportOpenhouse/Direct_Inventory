@@ -35,6 +35,7 @@ from .api import geo as geo_api
 from .api import home as home_api
 from .api import post_token as post_token_api
 from .api import sync as sync_api
+from .api import tickets as tickets_api
 from .api import users as users_api
 from .api import visits as visits_api
 from .api.inventory import bp as inventory_bp
@@ -86,6 +87,7 @@ def create_app() -> Flask:
     app.register_blueprint(visits_api.bp)
     app.register_blueprint(activity_api.bp)
     app.register_blueprint(geo_api.bp)
+    app.register_blueprint(tickets_api.bp)
     return app
 
 

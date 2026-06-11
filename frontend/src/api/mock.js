@@ -11,6 +11,19 @@ import { todayISO } from '../utils/format.js';
 let _seq = 1000;
 const nextId = () => (_seq += 1);
 
+// The "logged in" user for the mock session (switchable via the login mock).
+function mockUser() {
+  const email = (typeof localStorage !== 'undefined' && localStorage.getItem('di_mock_email')) || 'admin@openhouse.in';
+  return DB.users.find((u) => u.email === email) || DB.users[0];
+}
+// Tickets the given user needs to act on right now (mirrors backend pending count).
+function ticketsNeedingAction(user) {
+  if (user.role === 'rm') {
+    return DB.tickets.filter((t) => t.status === 'open' && t.assigned_rm_id === user.id && t.awaiting === 'rm');
+  }
+  return DB.tickets.filter((t) => t.status === 'open' && t.created_by_id === user.id && t.awaiting === 'creator');
+}
+
 function daysFromNow(n) {
   const d = new Date();
   d.setDate(d.getDate() + n);
@@ -118,6 +131,7 @@ function seedInventory() {
 
 const DB = {
   inventory: seedInventory(),
+  tickets: [],
   users: [
     { id: 1, email: 'admin@openhouse.in', name: 'Aarav Admin', phone: '9900000001', role: 'admin', is_active: true, manager: null, manager_name: null, manager_email: null, cities: [...CITIES], micro_market: [], society: [] },
     { id: 2, email: 'manager@openhouse.in', name: 'Meera Manager', phone: '9900000002', role: 'manager', is_active: true, manager: null, manager_name: null, manager_email: null, cities: ['Gurgaon'], micro_market: [], society: [] },
@@ -469,6 +483,93 @@ export function mockApi(method, path, body) {
     return { by_stage: { token_transferred: 12, docs_received: 8, ama_signed: 5, key_handover: 3 } };
   }
 
+  // ── tickets ──
+  function ticketView(t) {
+    const it = findItem(t.oh_id);
+    const rm = DB.users.find((u) => u.id === t.assigned_rm_id);
+    return { ...t, society: it?.society || null, assigned_rm_name: rm?.name || null, assigned_rm_email: rm?.email || null };
+  }
+  if (p === '/api/tickets/pending-count') {
+    return { count: ticketsNeedingAction(mockUser()).length };
+  }
+  if (p === '/api/tickets' && method === 'GET') {
+    const me = mockUser();
+    let items = DB.tickets.slice();
+    if (me.role === 'manager') {
+      // Tickets they raised OR on a property whose RM reports to them.
+      items = items.filter((t) => t.created_by_id === me.id
+        || (DB.users.find((u) => u.id === t.assigned_rm_id)?.manager === me.id));
+    } else if (me.role === 'rm') {
+      items = items.filter((t) => t.assigned_rm_id === me.id);
+    }
+    const ohId = params.get('oh_id');
+    if (ohId) items = items.filter((t) => t.oh_id === ohId);
+    const status = params.get('status');
+    if (status === 'open' || status === 'closed') items = items.filter((t) => t.status === status);
+    if (params.get('scope') === 'action') {
+      const ids = new Set(ticketsNeedingAction(me).map((t) => t.id));
+      items = items.filter((t) => ids.has(t.id));
+    }
+    items.sort((a, b) => (b.last_activity_at || '').localeCompare(a.last_activity_at || ''));
+    return { items: items.map(ticketView) };
+  }
+  if (p === '/api/tickets' && method === 'POST') {
+    const me = mockUser();
+    if (!body?.title) throw { status: 400, data: { error: 'title is required' } };
+    let ohId = null; let city = null; let assignedRmId;
+    if (body.oh_id) {
+      const it = findItem(body.oh_id);
+      if (!it) throw { status: 404, data: { error: 'property not found' } };
+      const rmIds = it.assigned_rm_ids || [];
+      if (!rmIds.length) throw { status: 400, data: { error: 'property has no assigned RM to raise a ticket for' } };
+      ohId = it.oh_id; city = it.city; assignedRmId = rmIds[0];
+    } else if (body.rm_id || body.assigned_rm_id) {
+      assignedRmId = Number(body.rm_id || body.assigned_rm_id);
+      const rm = DB.users.find((u) => u.id === assignedRmId);
+      if (!rm || rm.role !== 'rm') throw { status: 400, data: { error: 'invalid RM' } };
+    } else {
+      throw { status: 400, data: { error: 'a property (oh_id) or an RM (rm_id) is required' } };
+    }
+    const t = {
+      id: nextId(), oh_id: ohId, title: body.title, summary: body.summary || null,
+      status: 'open', awaiting: 'rm',
+      created_by_id: me.id, created_by_name: me.name, created_by_email: me.email,
+      assigned_rm_id: assignedRmId, city, messages: [],
+      last_activity_at: new Date().toISOString(), created_at: new Date().toISOString(),
+      closed_at: null, closed_by_id: null,
+    };
+    DB.tickets.push(t);
+    return ticketView(t);
+  }
+  const tkMatch = p.match(/^\/api\/tickets\/(\d+)(\/reply|\/close|\/reopen)?$/);
+  if (tkMatch) {
+    const t = DB.tickets.find((x) => x.id === Number(tkMatch[1]));
+    if (!t) throw { status: 404, data: { error: 'not found' } };
+    const me = mockUser();
+    const sub = tkMatch[2];
+    if (!sub && method === 'GET') return ticketView(t);
+    if (sub === '/reply' && method === 'POST') {
+      if (t.status !== 'open') throw { status: 409, data: { error: 'ticket is closed' } };
+      t.messages = [...t.messages, {
+        id: nextId(), author_id: me.id, author_name: me.name, author_email: me.email,
+        author_role: me.role, body: body.body, created_at: new Date().toISOString(),
+      }];
+      t.awaiting = me.role === 'rm' ? 'creator' : 'rm';
+      t.last_activity_at = new Date().toISOString();
+      return ticketView(t);
+    }
+    if (sub === '/close' && method === 'POST') {
+      t.status = 'closed'; t.awaiting = null; t.closed_at = new Date().toISOString(); t.closed_by_id = me.id;
+      t.last_activity_at = new Date().toISOString();
+      return ticketView(t);
+    }
+    if (sub === '/reopen' && method === 'POST') {
+      t.status = 'open'; t.awaiting = 'rm'; t.closed_at = null; t.closed_by_id = null;
+      t.last_activity_at = new Date().toISOString();
+      return ticketView(t);
+    }
+  }
+
   // Home board summary — the Leads / Follow Ups / Rejected quadrants. (The
   // Pipeline quadrant uses the separate post-token dataset, computed client-
   // side.) Backend should implement this as one scoped aggregate.
@@ -514,6 +615,7 @@ export function mockApi(method, path, body) {
         const ttTask2 = task1Done ? createdToday.filter((it) => !['lead', 'unqualified', 'active'].includes(it.stage)).length : null;
         return { leads: { total: ttTotal, worked: ttTask1 }, active: { total: ttTotal, worked: ttTask2 } };
       })(),
+      unresolved_tickets: ticketsNeedingAction(mockUser()).length,
     };
   }
 

@@ -4,7 +4,7 @@ import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { rejectReasonLabel, stageLabel, STAGE_DOT_COLOR, SUPPLY_STAGES } from '../utils/format.js';
 import InventoryBoard from '../components/InventoryBoard.jsx';
-import { IconLeads, IconFollowUp, IconPipeline, IconRejected, IconQualified, IconVisit, IconLock } from '../components/icons.jsx';
+import { IconLeads, IconFollowUp, IconPipeline, IconRejected, IconQualified, IconVisit, IconLock, IconTicket } from '../components/icons.jsx';
 
 const REJECTED_TOP = 3;
 
@@ -78,7 +78,34 @@ function TaskCard({ color, Icon, title, total, worked, loading, locked = false, 
   );
 }
 
-function TodaysTask({ task, loading, role }) {
+// Third Today's-Task slot: unresolved tickets needing this user's action. Not a
+// progress card — a big count that links to the Tickets page.
+function TicketTaskCard({ count, loading }) {
+  const noTickets = !loading && !count;
+  return (
+    <Link to="/tickets" className="task-card task-card-link" style={{ '--tc': '#0ea5e9' }}>
+      <div className="tc-content">
+        <div className="tc-head">
+          <span className="tc-ic" style={{ color: '#0ea5e9' }}><IconTicket size={18} /></span>
+          <h4>UNRESOLVED TICKETS</h4>
+        </div>
+        {noTickets ? (
+          <div className="tc-notask">No tickets</div>
+        ) : (
+          <>
+            <div className="tc-frac">
+              <span className="tc-worked">{loading ? '—' : count}</span>
+              <span className="tc-frac-lbl">need your action</span>
+            </div>
+            <div className="tc-sub">{loading ? '—' : 'Tap to open the Tickets page'}</div>
+          </>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+function TodaysTask({ task, loading, role, tickets }) {
   const isAdmin = role === 'admin';
   const total1 = task?.leads?.total ?? 0;
   const worked1 = task?.leads?.worked ?? 0;
@@ -104,6 +131,7 @@ function TodaysTask({ task, loading, role }) {
           to={taskTo}
           onMouseEnter={() => task2Locked && setShowToast(true)}
           onMouseLeave={() => setShowToast(false)} />
+        <TicketTaskCard count={tickets} loading={loading} />
       </div>
       {showToast && <div className="task-toast">COMPLETE TASK 1 FIRST</div>}
     </section>
@@ -234,7 +262,7 @@ export default function Home() {
       <div className="home-viewbar">{toggle}</div>
       {view === 'board' ? (
         <>
-          <TodaysTask task={summary?.todays_task} loading={loading} role={user?.role} />
+          <TodaysTask task={summary?.todays_task} loading={loading} role={user?.role} tickets={summary?.unresolved_tickets} />
           <div className="page-head"><h2>Summary</h2></div>
           <BoardView s={summary} loading={loading} />
         </>

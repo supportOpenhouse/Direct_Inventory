@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import NotificationBell from './NotificationBell.jsx';
 import CpScanButton from './CpScanButton.jsx';
 import ReassignLeadsButton from './ReassignLeadsButton.jsx';
 import AddInventoryButton from './AddInventoryButton.jsx';
+import CreateTicketButton from './CreateTicketButton.jsx';
 import {
   IconHome, IconLeads, IconQualified, IconFollowUp, IconVisit, IconPipeline, IconRejected,
-  IconReport, IconUsers, IconLogs, IconTasks, IconSun, IconMoon, IconMenu, IconLogout, IconChevron,
+  IconReport, IconUsers, IconLogs, IconTasks, IconTicket, IconSun, IconMoon, IconMenu, IconLogout, IconChevron,
 } from './icons.jsx';
 
 const PRIMARY = [
@@ -19,11 +21,12 @@ const PRIMARY = [
   { to: '/visit-scheduled', label: 'Visit Scheduled', Icon: IconVisit },
   { to: '/pipeline', label: 'Supply Closure Tracker', Icon: IconPipeline },
   { to: '/rejected', label: 'Rejected', Icon: IconRejected },
+  { to: '/tickets', label: 'Tickets', Icon: IconTicket, dotKey: 'tickets' },
 ];
 
 const TITLES = {
   '': 'Home', leads: 'Leads', 'qualified-leads': 'Qualified Leads', 'follow-ups': 'Follow Ups', 'visit-scheduled': 'Visit Scheduled',
-  pipeline: 'Supply Closure Tracker',
+  pipeline: 'Supply Closure Tracker', tickets: 'Tickets',
   'post-token': 'Post Token', rejected: 'Rejected', report: 'Report',
   'my-report': 'My Report', users: 'Users', logs: 'Activity Logs',
   'track-tasks': 'Track Tasks', profile: 'My Profile',
@@ -43,6 +46,20 @@ export default function Layout() {
   const loc = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('di_sidebar_collapsed') === '1');
+  const [ticketDot, setTicketDot] = useState(0);
+
+  // Poll the "needs my action" ticket count for the nav dot. Refresh on mount,
+  // on an interval, and whenever a ticket is created/replied/closed.
+  useEffect(() => {
+    let alive = true;
+    const refresh = () => api.get('/api/tickets/pending-count')
+      .then((r) => { if (alive) setTicketDot(r?.count || 0); })
+      .catch(() => {});
+    refresh();
+    const id = setInterval(refresh, 60000);
+    window.addEventListener('tickets:changed', refresh);
+    return () => { alive = false; clearInterval(id); window.removeEventListener('tickets:changed', refresh); };
+  }, []);
 
   const isAdmin = user?.role === 'admin';
   const isManager = user?.role === 'manager';
@@ -54,14 +71,21 @@ export default function Layout() {
     setCollapsed((c) => { const n = !c; localStorage.setItem('di_sidebar_collapsed', n ? '1' : '0'); return n; });
   }
 
-  const navItem = ({ to, label, Icon, end }) => (
-    <NavLink key={to} to={to} end={end}
-      className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-      onClick={() => setMobileOpen(false)} title={collapsed ? label : undefined}>
-      <span className="nav-ic"><Icon /></span>
-      <span className="nav-label">{label}</span>
-    </NavLink>
-  );
+  const navItem = ({ to, label, Icon, end, dotKey }) => {
+    const showDot = dotKey === 'tickets' && ticketDot > 0;
+    return (
+      <NavLink key={to} to={to} end={end}
+        className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+        onClick={() => setMobileOpen(false)} title={collapsed ? label : undefined}>
+        <span className="nav-ic">
+          <Icon />
+          {showDot && <span className="nav-dot" aria-label="Needs your action" />}
+        </span>
+        <span className="nav-label">{label}</span>
+        {showDot && <span className="nav-count">{ticketDot}</span>}
+      </NavLink>
+    );
+  };
 
   return (
     <div className={`app-shell ${collapsed ? 'collapsed' : ''}`}>
@@ -108,7 +132,6 @@ export default function Layout() {
       </aside>
 
       {mobileOpen && <div className="modal-backdrop" style={{ zIndex: 400 }} onClick={() => setMobileOpen(false)} />}
-
       <div className="main-col">
         <header className="topbar">
           <button className="icon-btn topbar-menu" onClick={() => setMobileOpen(true)} aria-label="Menu"><IconMenu /></button>
@@ -116,6 +139,7 @@ export default function Layout() {
           <div className="topbar-spacer" />
           {(seg === '' || seg === 'leads') && <CpScanButton />}
           {seg === 'qualified-leads' && <AddInventoryButton defaultStage="qualified" />}
+          {seg === 'tickets' && (isAdmin || isManager) && <CreateTicketButton />}
           {seg === 'users' && isAdmin && <ReassignLeadsButton />}
           <NotificationBell role={user?.role} />
           <button className="icon-btn" onClick={toggle} aria-label="Toggle theme" title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}>

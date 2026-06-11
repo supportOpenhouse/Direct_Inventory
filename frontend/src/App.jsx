@@ -14,6 +14,7 @@ import ReportDetail from './pages/ReportDetail.jsx';
 import Users from './pages/Users.jsx';
 import Logs from './pages/Logs.jsx';
 import TrackTasks from './pages/TrackTasks.jsx';
+import Tickets from './pages/Tickets.jsx';
 import MyProfile from './pages/MyProfile.jsx';
 
 function RequireAuth({ children, roles }) {
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/pipeline" element={<SupplyClosureTracker />} />
         <Route path="/post-token" element={<Navigate to="/pipeline" replace />} />
         <Route path="/rejected" element={<Rejected />} />
+        <Route path="/tickets" element={<Tickets />} />
         {/* Report — admin/manager see all (scoped on the backend); RMs are
             redirected to their own report via the sidebar's "My Report". */}
         <Route path="/report" element={<RequireAuth roles={['manager']}><Report /></RequireAuth>} />

@@ -4,6 +4,7 @@ import NoteThread from './NoteThread.jsx';
 import StatusEditModal from './StatusEditModal.jsx';
 import EditDetailsModal from './EditDetailsModal.jsx';
 import OhPrice from './OhPrice.jsx';
+import TicketModal, { emitTicketsChanged, ticketStatusClass, ticketStatusLabel } from './TicketModal.jsx';
 import { formatDateShort, formatPrice, STAGE_DOT_COLOR, stageLabel, supplyReasonLabel, variation } from '../utils/format.js';
 
 function Field({ label, children }) {
@@ -86,13 +87,103 @@ function AssignedRmField({ item, role, onUpdated }) {
   );
 }
 
+// 5th column: tickets raised on this property. Lazy-loads on mount, shows the
+// latest on top with a "+N more" toggle, and lets admin/manager raise a new one.
+function TicketsSection({ item, role }) {
+  const canCreate = role === 'admin' || role === 'manager';
+  const [tickets, setTickets] = useState(null); // null = loading
+  const [expanded, setExpanded] = useState(false);
+  const [open, setOpen] = useState(null);
+  const [creating, setCreating] = useState(false);
+  const [title, setTitle] = useState('');
+  const [summary, setSummary] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    api.get(`/api/tickets?oh_id=${encodeURIComponent(item.oh_id)}`)
+      .then((r) => { if (alive) setTickets(r.items || []); })
+      .catch(() => { if (alive) setTickets([]); });
+    return () => { alive = false; };
+  }, [item.oh_id]);
+
+  function patch(updated) {
+    setTickets((prev) => (prev || []).map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
+  }
+
+  async function create() {
+    const t = title.trim();
+    if (!t || busy) return;
+    setError(null); setBusy(true);
+    try {
+      const created = await api.post('/api/tickets', { oh_id: item.oh_id, title: t, summary: summary.trim() });
+      setTickets((prev) => [created, ...(prev || [])]);
+      setTitle(''); setSummary(''); setCreating(false);
+      emitTicketsChanged();
+    } catch (e) { setError(e?.data?.error || e?.message || 'Failed to create ticket'); }
+    finally { setBusy(false); }
+  }
+
+  const list = tickets || [];
+  const ordered = [...list].sort((a, b) => new Date(b.last_activity_at) - new Date(a.last_activity_at));
+  const shown = expanded ? ordered : ordered.slice(0, 1);
+  const extra = ordered.length - shown.length;
+
+  return (
+    <div className="expand-sec">
+      <h4>🎫 Tickets
+        {canCreate && !creating && (
+          <button type="button" className="btn-edit-details" onClick={() => setCreating(true)}>+ New Ticket</button>
+        )}
+      </h4>
+
+      {creating && (
+        <div className="tk-create">
+          <input className="tk-create-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" disabled={busy} />
+          <textarea className="tk-create-summary" value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="Summary (optional)" rows={2} disabled={busy} />
+          {error && <div className="note-error">{error}</div>}
+          <div className="tk-create-actions">
+            <button type="button" className="btn-soft" onClick={create} disabled={busy || !title.trim()}>{busy ? '…' : 'Create'}</button>
+            <button type="button" className="btn-link" onClick={() => { setCreating(false); setError(null); }} disabled={busy}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {tickets === null ? (
+        <div className="muted" style={{ fontSize: 13 }}>Loading…</div>
+      ) : ordered.length === 0 ? (
+        <div className="muted" style={{ fontSize: 13 }}>{creating ? '' : 'No tickets.'}</div>
+      ) : (
+        <ul className="tk-mini-list">
+          {shown.map((t) => (
+            <li key={t.id}>
+              <button type="button" className="tk-mini" onClick={() => setOpen(t)}>
+                <span className="tk-mini-top">
+                  <span className="tk-mini-title">{t.title}</span>
+                  <span className={`tk-badge ${ticketStatusClass(t)}`}>{ticketStatusLabel(t)}</span>
+                </span>
+                <span className="tk-mini-meta">{(t.messages || []).length} repl{(t.messages || []).length === 1 ? 'y' : 'ies'}</span>
+              </button>
+            </li>
+          ))}
+          {extra > 0 && <li><button type="button" className="btn-link tk-more" onClick={() => setExpanded(true)}>+{extra} more</button></li>}
+          {expanded && ordered.length > 1 && <li><button type="button" className="btn-link tk-more" onClick={() => setExpanded(false)}>Show less</button></li>}
+        </ul>
+      )}
+
+      {open && <TicketModal ticket={open} onChanged={patch} onClose={() => setOpen(null)} />}
+    </div>
+  );
+}
+
 /**
  * Inline drill-down panel revealed beneath a clicked table row.
- * Distributed columns: Property Details · Pricing · Seller Details · Notes.
+ * Distributed columns: Property Details · Pricing · Seller Details · Notes · Tickets.
  * `sections` lets a host trim what's shown (Leads keeps it lean).
  */
 export default function ExpandPanel({ item, role, onUpdated, canPost = true, sections, canEditStatus = true, showAssignedRm = true }) {
-  const show = sections || ['property', 'pricing', 'seller', 'notes'];
+  const show = sections || ['property', 'pricing', 'seller', 'notes', 'tickets'];
   const v = variation(item.price, item.oh_price);
   const listing = item.listing_link && !/^internal:\/\//.test(item.listing_link) ? item.listing_link : null;
   const canEdit = canEditStatus && (['admin', 'manager', 'rm'].includes(role) || canPost);
@@ -174,6 +265,8 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
           />
         </div>
       )}
+
+      {show.includes('tickets') && <TicketsSection item={item} role={role} />}
 
       {showStatus && (
         <StatusEditModal item={item} onUpdated={(u) => onUpdated?.(u)} onClose={() => setShowStatus(false)} />
