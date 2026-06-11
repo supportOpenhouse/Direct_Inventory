@@ -211,7 +211,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
   return (
     <div className="expand-inner">
       {show.includes('property') && (
-        <div className="expand-sec">
+        <div className="expand-sec expand-sec-wide">
           <h4>🏠 Property Details
             {canEditDetails && (
               <button type="button" className="btn-edit-details" onClick={() => setShowEdit(true)}>✎ Edit Details</button>
@@ -247,7 +247,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
       )}
 
       {show.includes('seller') && (
-        <div className="expand-sec">
+        <div className="expand-sec expand-sec-narrow">
           <h4>👤 Seller Details</h4>
           <Field label="Seller name">{full.seller_name || '—'}</Field>
           <Field label="Phone no.">

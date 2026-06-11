@@ -533,8 +533,12 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 
 /* ── expand row ──────────────────────────────────────────────────────── */
 .expand-row > td { padding: 0 !important; background: var(--surface-2); }
-.expand-inner { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0; border-top: 1px solid var(--border); }
-.expand-sec { padding: 18px 22px; border-right: 1px solid var(--hairline); }
+/* Flex (not auto-fit grid) so sections can carry width weights: Property
+   Details gets more room, Seller Details less. Wraps like auto-fit did. */
+.expand-inner { display: flex; flex-wrap: wrap; gap: 0; border-top: 1px solid var(--border); }
+.expand-sec { padding: 18px 22px; border-right: 1px solid var(--hairline); flex: 1 1 240px; min-width: 240px; }
+.expand-sec-wide { flex-grow: 1.7; }
+.expand-sec-narrow { flex-grow: 0.6; min-width: 190px; flex-basis: 190px; }
 .expand-sec:last-child { border-right: 0; }
 .expand-sec h4 { font-family: 'Inter', sans-serif; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-strong); margin-bottom: 12px; display: flex; align-items: center; gap: 7px; }
 .field-row { display: flex; flex-direction: column; gap: 2px; margin-bottom: 11px; }
