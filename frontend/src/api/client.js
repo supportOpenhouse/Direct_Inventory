@@ -134,8 +134,18 @@ function cachedGet(path) {
   return p.then((data) => structuredClone(data));
 }
 
-function mutate(method, path, body) {
+// Global busy counter for writes — BusyOverlay listens to 'api:busy' and
+// shows a "Saving…" animation while any mutation is awaiting its response.
+let busyCount = 0;
+function busyDelta(d) {
+  busyCount = Math.max(0, busyCount + d);
+  window.dispatchEvent(new CustomEvent('api:busy', { detail: busyCount }));
+}
+
+function mutate(method, path, body, opts = {}) {
+  if (!opts.silent) busyDelta(1);
   return request(method, path, body).finally(() => {
+    if (!opts.silent) busyDelta(-1);
     epoch += 1;
     cache.clear();
     // Drop in-flight GETs too: a fetch issued after this write must not
@@ -153,10 +163,12 @@ function invalidate(prefix) {
 
 export const api = {
   get: (p) => cachedGet(p),
-  post: (p, b) => mutate('POST', p, b),
-  put: (p, b) => mutate('PUT', p, b),
-  patch: (p, b) => mutate('PATCH', p, b),
-  delete: (p) => mutate('DELETE', p),
+  // opts.silent = true skips the global "Saving…" overlay (for background
+  // writes that shouldn't block the user, e.g. fire-and-forget syncs).
+  post: (p, b, opts) => mutate('POST', p, b, opts),
+  put: (p, b, opts) => mutate('PUT', p, b, opts),
+  patch: (p, b, opts) => mutate('PATCH', p, b, opts),
+  delete: (p, opts) => mutate('DELETE', p, undefined, opts),
   download,
   invalidate,
 };

@@ -18,7 +18,8 @@ export default function SupplyClosureTracker() {
   const ran = useRef(false);
 
   const sync = useCallback(
-    () => api.post('/api/inventory/supply-sync', {}).then((res) => {
+    // silent: background sync — the board renders meanwhile, no blocking overlay.
+    () => api.post('/api/inventory/supply-sync', {}, { silent: true }).then((res) => {
       sessionStorage.setItem(SYNC_AT_KEY, String(Date.now()));
       return res;
     }),

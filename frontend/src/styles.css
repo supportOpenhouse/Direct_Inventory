@@ -1071,3 +1071,11 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .tk-picked-rm { font-size: 13px; }
 .tk-picked .btn-link { align-self: flex-start; font-size: 12px; }
 .tk-warn { color: #c2410c; font-size: 12.5px; }
+
+/* ── Global saving overlay ─────────────────────────────────────────────── */
+/* Shown by BusyOverlay while any write awaits its response. Above modals
+   (1000) so in-modal saves are covered; below toasts (2000) so errors show. */
+.busy-overlay { position: fixed; inset: 0; z-index: 1500; background: rgba(20, 16, 14, 0.18); display: grid; place-items: center; }
+.busy-card { display: inline-flex; align-items: center; gap: 10px; padding: 12px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-lg); font-size: 14px; font-weight: 600; color: var(--text); }
+.busy-spinner { width: 16px; height: 16px; border: 2.5px solid var(--surface-3); border-top-color: var(--brand); border-radius: 50%; animation: busy-spin 0.7s linear infinite; }
+@keyframes busy-spin { to { transform: rotate(360deg); } }

@@ -4,6 +4,7 @@ import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import NotificationBell from './NotificationBell.jsx';
+import BusyOverlay from './BusyOverlay.jsx';
 import CpScanButton from './CpScanButton.jsx';
 import ReassignLeadsButton from './ReassignLeadsButton.jsx';
 import AddInventoryButton from './AddInventoryButton.jsx';
@@ -170,6 +171,7 @@ export default function Layout() {
         </header>
         <main className="main"><Outlet /></main>
       </div>
+      <BusyOverlay />
     </div>
   );
 }

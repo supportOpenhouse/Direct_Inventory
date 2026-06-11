@@ -21,7 +21,8 @@ export default function CpScanButton() {
       let totals = { perfect: 0, partial: 0, no_match: 0 };
       let processed = 0;
       for (;;) {
-        const r = await api.post('/api/inventory/cp-match-scan', { cursor, prior_totals: totals });
+        // silent: chunked background scan — the button shows its own progress.
+        const r = await api.post('/api/inventory/cp-match-scan', { cursor, prior_totals: totals }, { silent: true });
         totals = {
           perfect: totals.perfect + r.perfect,
           partial: totals.partial + r.partial,
