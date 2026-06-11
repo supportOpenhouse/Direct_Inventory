@@ -48,17 +48,38 @@ export default function Layout() {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('di_sidebar_collapsed') === '1');
   const [ticketDot, setTicketDot] = useState(0);
 
-  // Poll the "needs my action" ticket count for the nav dot. Refresh on mount,
-  // on an interval, and whenever a ticket is created/replied/closed.
+  // Poll the "needs my action" ticket count for the nav dot: every 15s while
+  // the tab is visible (paused when hidden), immediately on focus/return, and
+  // whenever a ticket is created/replied/closed locally. When the count
+  // CHANGES between polls, someone else's ticket affected this user — drop
+  // the cached ticket lists and broadcast so open pages refresh themselves.
   useEffect(() => {
     let alive = true;
+    let last = null;
     const refresh = () => api.get('/api/tickets/pending-count')
-      .then((r) => { if (alive) setTicketDot(r?.count || 0); })
+      .then((r) => {
+        if (!alive) return;
+        const n = r?.count || 0;
+        if (last !== null && n !== last) {
+          api.invalidate('/api/tickets');
+          window.dispatchEvent(new Event('tickets:updated'));
+        }
+        last = n;
+        setTicketDot(n);
+      })
       .catch(() => {});
     refresh();
-    const id = setInterval(refresh, 60000);
+    const id = setInterval(() => { if (!document.hidden) refresh(); }, 15000);
+    const onVisible = () => { if (!document.hidden) refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
     window.addEventListener('tickets:changed', refresh);
-    return () => { alive = false; clearInterval(id); window.removeEventListener('tickets:changed', refresh); };
+    return () => {
+      alive = false; clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+      window.removeEventListener('tickets:changed', refresh);
+    };
   }, []);
 
   const isAdmin = user?.role === 'admin';

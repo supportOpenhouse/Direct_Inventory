@@ -73,12 +73,17 @@ export default function Tickets() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Refetch when a ticket is created/replied/closed anywhere (e.g. the topbar
-  // New Ticket button).
+  // Refetch when a ticket is created/replied/closed anywhere: locally
+  // ('tickets:changed', e.g. the topbar New Ticket button) or by another user
+  // ('tickets:updated', broadcast by Layout's pending-count poll).
   useEffect(() => {
     const onChanged = () => load();
     window.addEventListener('tickets:changed', onChanged);
-    return () => window.removeEventListener('tickets:changed', onChanged);
+    window.addEventListener('tickets:updated', onChanged);
+    return () => {
+      window.removeEventListener('tickets:changed', onChanged);
+      window.removeEventListener('tickets:updated', onChanged);
+    };
   }, [load]);
 
   function onChanged(updated) {

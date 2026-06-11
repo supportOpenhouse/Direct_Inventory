@@ -17,7 +17,20 @@ export default function NotificationBell({ role }) {
   async function refresh() {
     try { setData(await api.get('/api/inventory/notifications')); } catch { /* non-blocking */ }
   }
-  useEffect(() => { refresh(); }, []);
+  // Refresh on mount, every 60s while the tab is visible, and on focus/return —
+  // so the badge count stays live without waiting for the user to open the bell.
+  useEffect(() => {
+    refresh();
+    const id = setInterval(() => { if (!document.hidden) refresh(); }, 60000);
+    const onVisible = () => { if (!document.hidden) refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, []);
   useEffect(() => {
     if (!open) return undefined;
     function onDoc(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }

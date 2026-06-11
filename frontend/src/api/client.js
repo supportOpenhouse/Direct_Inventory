@@ -95,8 +95,8 @@ async function download(path) {
 const TTL_RULES = [
   ['/api/users/master-areas', 600],
   ['/api/inventory/societies', 600],
-  ['/api/inventory/notifications', 60],
-  ['/api/tickets/pending-count', 30],
+  ['/api/inventory/notifications', 30],
+  ['/api/tickets/pending-count', 10],
   ['/api/tickets?oh_id=', 120],
   ['/api/tickets?', 60],
   ['/api/geo/', 1800],
@@ -144,6 +144,13 @@ function mutate(method, path, body) {
   });
 }
 
+// Targeted invalidation for cross-user changes detected by polling (our own
+// writes already clear everything via mutate()).
+function invalidate(prefix) {
+  for (const k of [...cache.keys()]) if (k.startsWith(prefix)) cache.delete(k);
+  for (const k of [...inflight.keys()]) if (k.startsWith(prefix)) inflight.delete(k);
+}
+
 export const api = {
   get: (p) => cachedGet(p),
   post: (p, b) => mutate('POST', p, b),
@@ -151,6 +158,7 @@ export const api = {
   patch: (p, b) => mutate('PATCH', p, b),
   delete: (p) => mutate('DELETE', p),
   download,
+  invalidate,
 };
 
 export const USING_MOCKS = FORCE_MOCKS;
