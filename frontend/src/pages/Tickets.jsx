@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import TicketModal, { ticketStatusClass, ticketStatusLabel } from '../components/TicketModal.jsx';
+import CardDetailModal from '../components/CardDetailModal.jsx';
 import { IconTicket } from '../components/icons.jsx';
 
 const TABS = [
@@ -40,6 +41,17 @@ export default function Tickets() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [open, setOpen] = useState(null);
+  const [openItem, setOpenItem] = useState(null);
+
+  // Open the property detail modal for a ticket's oh_id. Same flow the
+  // notification bell uses — fetch the row, then hand it to CardDetailModal.
+  async function openProperty(ohId) {
+    if (!ohId) return;
+    try {
+      const item = await api.get(`/api/inventory/${ohId}`);
+      setOpenItem(item);
+    } catch { /* non-blocking */ }
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -113,18 +125,38 @@ export default function Tickets() {
         <>
         <div className="tk-list">
           {items.map((t) => (
-            <button key={t.id} type="button" className="tk-card" onClick={() => setOpen(t)}>
+            <div
+              key={t.id}
+              className="tk-card"
+              role="button"
+              tabIndex={0}
+              onClick={() => setOpen(t)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(t); }
+              }}
+            >
               <div className="tk-card-top">
                 <span className="tk-card-title">{t.title}</span>
                 <span className={`tk-badge ${ticketStatusClass(t)}`}>{ticketStatusLabel(t)}</span>
               </div>
-              <div className="tk-card-prop">{t.oh_id ? `${t.society || '—'} · ${t.oh_id}` : 'Direct ticket'}{t.assigned_rm_name ? ` · RM: ${t.assigned_rm_name}` : ''}</div>
+              {t.oh_id ? (
+                <button
+                  type="button"
+                  className="tk-card-prop tk-card-prop-link"
+                  onClick={(e) => { e.stopPropagation(); openProperty(t.oh_id); }}
+                  title={`Open ${t.oh_id} details`}
+                >
+                  {`${t.society || '—'} · ${t.oh_id}`}{t.assigned_rm_name ? ` · RM: ${t.assigned_rm_name}` : ''}
+                </button>
+              ) : (
+                <div className="tk-card-prop">Direct ticket{t.assigned_rm_name ? ` · RM: ${t.assigned_rm_name}` : ''}</div>
+              )}
               {t.summary && <div className="tk-card-summary">{t.summary}</div>}
               <div className="tk-card-foot">
                 <span>{t.message_count ?? 0} repl{(t.message_count ?? 0) === 1 ? 'y' : 'ies'}</span>
                 <span>{fmtTime(t.last_activity_at)}</span>
               </div>
-            </button>
+            </div>
           ))}
         </div>
         {items.length < total && (
@@ -138,6 +170,14 @@ export default function Tickets() {
       )}
 
       {open && <TicketModal ticket={open} onChanged={onChanged} onClose={() => { setOpen(null); load(); }} />}
+      {openItem && (
+        <CardDetailModal
+          item={openItem}
+          role={user?.role}
+          onUpdated={(u) => setOpenItem((p) => ({ ...p, ...u }))}
+          onClose={() => setOpenItem(null)}
+        />
+      )}
     </div>
   );
 }

@@ -1029,6 +1029,9 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .tk-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tk-card-title { font-weight: 700; font-size: 14.5px; }
 .tk-card-prop { font-size: 12.5px; color: var(--text-faint); }
+.tk-card-prop-link { background: none; border: 0; padding: 0; margin: 0; font: inherit; font-size: 12.5px; color: var(--text-faint); text-align: left; cursor: pointer; align-self: flex-start; }
+.tk-card-prop-link:hover { color: var(--brand); text-decoration: underline; }
+.tk-card-prop-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 3px; }
 .tk-card-summary { font-size: 13px; color: var(--text-soft, #475569); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .tk-card-foot { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-faint); margin-top: 2px; }
 
