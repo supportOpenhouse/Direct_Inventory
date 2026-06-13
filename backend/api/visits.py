@@ -4,6 +4,12 @@ Outbound: when stage flips to visit_scheduled, the frontend calls
   POST /api/visits/schedule { oh_id, schedule_date, schedule_time, field_exec_phone }
 which forwards to FORMS_APP_URL/api/external/schedule with INTERNAL_API_KEY.
 
+Cancel: admin / manager-of-the-assigned-RM / one of the assigned RMs can call
+  POST /api/visits/cancel { oh_id, reason, target_stage, follow_up_at?, stage_reason? }
+which forwards to FORMS_APP_URL/api/external/cancel and then clears the
+forms_visit_id / visit_at / visit_exec columns and moves the lead to the
+chosen target_stage.
+
 Inbound webhook: Forms app calls
   POST /api/visits/forms-webhook  (X-Internal-Key)
 to mark visits as completed (or rescheduled/cancelled) and flip our stage.
@@ -318,6 +324,158 @@ def schedule_visit():
                     after_value="visit_scheduled",
                     metadata={"via": "visit_schedule"},
                 )
+        return jsonify(row)
+    finally:
+        conn.close()
+
+
+# Stages a lead may be moved to when a visit is cancelled. Anything else is
+# rejected at the API boundary — cancelling into visit_completed / offer_given
+# / another visit_scheduled doesn't make sense.
+CANCEL_TARGET_STAGES = {"qualified", "call_not_received", "follow_up", "rejected"}
+
+
+@bp.post("/cancel")
+@require_auth("admin", "manager", "rm")
+def cancel_visit():
+    """Cancel a previously-scheduled visit. Admin / manager-of-the-assigned-RM /
+    one of the assigned RMs may call this. Forwards the cancel to the Forms
+    app, clears visit columns on our row, moves the lead to `target_stage`,
+    and records the supplied `reason` in activity_log."""
+    user = g.user
+    body = request.get_json(silent=True) or {}
+    oh_id        = (body.get("oh_id") or "").strip()
+    reason       = (body.get("reason") or "").strip()
+    target_stage = (body.get("target_stage") or "").strip()
+    follow_up_at = body.get("follow_up_at") or None
+    stage_reason = (body.get("stage_reason") or "").strip() or None
+
+    if not oh_id:
+        return jsonify({"error": "oh_id required"}), 400
+    if not reason:
+        return jsonify({"error": "reason required"}), 400
+    if target_stage not in CANCEL_TARGET_STAGES:
+        return jsonify({
+            "error": f"invalid target_stage: {target_stage!r}",
+            "allowed": sorted(CANCEL_TARGET_STAGES),
+        }), 400
+    if target_stage == "rejected":
+        # Reuse the same reason set the inventory PATCH endpoint accepts.
+        from .inventory._common import VALID_REJECT_REASONS
+        if not stage_reason or stage_reason not in VALID_REJECT_REASONS:
+            return jsonify({"error": "stage_reason required (and must be valid) when target_stage=rejected"}), 400
+    if target_stage in ("call_not_received", "follow_up") and not follow_up_at:
+        return jsonify({"error": f"follow_up_at required when target_stage={target_stage}"}), 400
+    if not config.FORMS_APP_URL or not config.INTERNAL_API_KEY:
+        return jsonify({"error": "forms integration not configured"}), 500
+
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT * FROM inventory WHERE oh_id = %s FOR UPDATE", (oh_id,))
+            inv = cur.fetchone()
+            if not inv:
+                return jsonify({"error": "inventory not found"}), 404
+            if inv.get("stage") != "visit_scheduled":
+                return jsonify({
+                    "error": f"can only cancel from visit_scheduled (currently {inv.get('stage')!r})",
+                }), 409
+            if not inv.get("forms_visit_id") and not inv.get("visit_at"):
+                # Defensive: no Forms record to cancel against — refuse rather than
+                # silently flip our row out of visit_scheduled.
+                return jsonify({"error": "no scheduled visit on file for this oh_id"}), 409
+
+            # Permission check.
+            assigned_rm_ids = inv.get("assigned_rm_ids") or []
+            allowed = False
+            if user["role"] == "admin":
+                allowed = True
+            elif user["role"] == "rm" and user["id"] in assigned_rm_ids:
+                allowed = True
+            elif user["role"] == "manager" and assigned_rm_ids:
+                # Manager may cancel iff one of the assigned RMs reports to them.
+                cur.execute(
+                    "SELECT 1 FROM users WHERE id = ANY(%s) AND manager = %s LIMIT 1",
+                    (assigned_rm_ids, user["id"]),
+                )
+                allowed = cur.fetchone() is not None
+            if not allowed:
+                return jsonify({"error": "not authorized to cancel this visit"}), 403
+
+            # Outbound to Forms app first — if it fails we leave our row alone so
+            # the user can retry. Forms /cancel is idempotent so retries are safe.
+            payload = {
+                "lead_id":     oh_id,
+                "reason":      reason,
+                "actor_email": user["email"],
+                "actor_name":  user.get("name") or user["email"],
+            }
+            try:
+                r = requests.post(
+                    f"{config.FORMS_APP_URL}/api/external/cancel",
+                    json=payload,
+                    headers={"X-Internal-Key": config.INTERNAL_API_KEY},
+                    timeout=10,
+                )
+            except requests.RequestException as e:
+                return jsonify({"error": f"forms app unreachable: {e}"}), 502
+            if not r.ok:
+                try:    forms_body = r.json()
+                except ValueError: forms_body = (r.text or "")[:500]
+                return jsonify({
+                    "error": "forms app rejected cancel",
+                    "forms_status": r.status_code,
+                    "forms_response": forms_body,
+                }), 502
+
+            # Clear visit columns + move the lead. follow_up_at only applies to
+            # the two stages that need it; we set NULL for the rest so a lingering
+            # date from a prior follow_up cycle doesn't bleed through.
+            new_follow_up = follow_up_at if target_stage in ("call_not_received", "follow_up") else None
+            new_stage_reason = stage_reason if target_stage == "rejected" else None
+            cur.execute(
+                """UPDATE inventory
+                      SET stage = %s,
+                          stage_reason = %s,
+                          follow_up_at = %s,
+                          forms_visit_id = NULL,
+                          visit_at = NULL,
+                          visit_exec = NULL
+                    WHERE oh_id = %s
+                    RETURNING *""",
+                (target_stage, new_stage_reason, new_follow_up, oh_id),
+            )
+            row = cur.fetchone()
+
+            log_activity(
+                cur,
+                actor_user_id=user["id"],
+                actor_email=user["email"],
+                entity_type="inventory",
+                entity_id=oh_id,
+                action="visit_cancelled",
+                metadata={
+                    "reason": reason,
+                    "target_stage": target_stage,
+                    "follow_up_at": follow_up_at,
+                    "stage_reason": stage_reason,
+                    "prev_forms_visit_id": inv.get("forms_visit_id"),
+                    "prev_visit_at": inv["visit_at"].isoformat() if inv.get("visit_at") else None,
+                    "prev_visit_exec": inv.get("visit_exec"),
+                },
+            )
+            log_activity(
+                cur,
+                actor_user_id=user["id"],
+                actor_email=user["email"],
+                entity_type="inventory",
+                entity_id=oh_id,
+                action="stage_change",
+                field="stage",
+                before_value="visit_scheduled",
+                after_value=target_stage,
+                metadata={"via": "visit_cancel"},
+            )
         return jsonify(row)
     finally:
         conn.close()

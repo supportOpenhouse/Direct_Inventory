@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import NoteThread from './NoteThread.jsx';
 import StatusEditModal from './StatusEditModal.jsx';
 import EditDetailsModal from './EditDetailsModal.jsx';
+import CancelVisitModal from './CancelVisitModal.jsx';
 import OhPrice from './OhPrice.jsx';
 import TicketModal, { emitTicketsChanged, ticketStatusClass, ticketStatusLabel } from './TicketModal.jsx';
 import { formatDateShort, formatPrice, STAGE_DOT_COLOR, stageLabel, supplyReasonLabel, variation } from '../utils/format.js';
@@ -207,6 +208,12 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
   const canEditDetails = canEditStatus && ['admin', 'manager', 'rm'].includes(role);
   const [showStatus, setShowStatus] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [showCancel, setShowCancel] = useState(false);
+  // Cancel-Visit affordance only renders for live scheduled visits and the
+  // three roles that can act on them. Backend enforces the precise per-user
+  // check (admin / manager-of-assigned-RM / assigned RM) and will return 403
+  // if the click came from someone outside that set.
+  const canCancelVisit = canEdit && item.stage === 'visit_scheduled' && ['admin', 'manager', 'rm'].includes(role);
 
   return (
     <div className="expand-inner">
@@ -268,6 +275,9 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
               {item.stage === 'visit_scheduled' && item.visit_overdue && <span className="stage-overdue">Overdue</span>}
               {item.stage_reason && <span className="muted"> · {supplyReasonLabel(item.stage_reason)}</span>}
             </span>
+            {canCancelVisit && (
+              <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowCancel(true)}>✕ Cancel Visit</button>
+            )}
             {canEdit && (
               <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowStatus(true)}>✎ Edit Status</button>
             )}
@@ -295,6 +305,13 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
       )}
       {showEdit && (
         <EditDetailsModal item={item} onUpdated={(u) => onUpdated?.(u)} onClose={() => setShowEdit(false)} />
+      )}
+      {showCancel && (
+        <CancelVisitModal
+          item={item}
+          onCancelled={(u) => onUpdated?.(u)}
+          onClose={() => setShowCancel(false)}
+        />
       )}
     </div>
   );
