@@ -45,7 +45,16 @@ export default function CancelVisitModal({ item, onCancelled, onClose }) {
       onCancelled?.(r);
       onClose();
     } catch (e) {
-      setError(e.data?.error || e.message || 'Failed to cancel visit');
+      // Surface the Forms-app response when the 502 comes from a Forms reject
+      // (deploy lag, validation, etc.) so we don't have to guess from a generic
+      // "forms app rejected cancel".
+      const top = e.data?.error || e.message || 'Failed to cancel visit';
+      const fs  = e.data?.forms_status;
+      const fr  = e.data?.forms_response;
+      let detail = '';
+      if (fr && typeof fr === 'object') detail = fr.error || JSON.stringify(fr);
+      else if (typeof fr === 'string')  detail = fr;
+      setError(detail ? `${top}${fs ? ` (Forms ${fs})` : ''}: ${detail}` : top);
     } finally { setBusy(false); }
   }
 
