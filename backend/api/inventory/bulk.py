@@ -160,6 +160,23 @@ def bulk_update():
                     forbidden.append(oid); continue
                 allowed_ids.append(oid)
 
+            # When the caller updates assigned_rm_ids and didn't also send an
+            # explicit assigned_mgr_id, re-derive the manager from the new
+            # first RM's `users.manager`. Without this, a reassignment from
+            # Arti -> Aanchal would silently keep Arti's manager attached.
+            if "assigned_rm_ids" in updates and "assigned_mgr_id" not in updates:
+                new_rm_ids = updates["assigned_rm_ids"] or []
+                if new_rm_ids:
+                    cur.execute(
+                        "SELECT manager FROM users WHERE id = %s",
+                        (new_rm_ids[0],),
+                    )
+                    row = cur.fetchone()
+                    updates["assigned_mgr_id"] = row["manager"] if row else None
+                else:
+                    # Empty array (RM cleared) -> mgr also cleared.
+                    updates["assigned_mgr_id"] = None
+
             updated_count = 0
             if allowed_ids:
                 set_parts = []

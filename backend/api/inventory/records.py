@@ -388,6 +388,37 @@ def update_one(oh_id: str):
                     },
                 })
 
+            # When assigned_rm_ids was updated without an explicit
+            # assigned_mgr_id, re-derive the manager from the new first RM's
+            # `users.manager` so a reassignment doesn't leave the prior RM's
+            # manager attached. Mirrors the bulk-update endpoint.
+            if "assigned_rm_ids" in body and "assigned_mgr_id" not in body:
+                new_ids = body.get("assigned_rm_ids") or []
+                if new_ids:
+                    cur.execute("SELECT manager FROM users WHERE id = %s", (new_ids[0],))
+                    row = cur.fetchone()
+                    new_mgr = row["manager"] if row else None
+                else:
+                    new_mgr = None
+                if existing.get("assigned_mgr_id") != new_mgr:
+                    updates.append("assigned_mgr_id = %s")
+                    params.append(new_mgr)
+                    log_entries.append({
+                        "actor_user_id": user["id"],
+                        "actor_email": user["email"],
+                        "entity_type": "inventory",
+                        "entity_id": oh_id,
+                        "action": "update",
+                        "field": "assigned_mgr_id",
+                        "before_value": existing.get("assigned_mgr_id"),
+                        "after_value": new_mgr,
+                        "metadata": {
+                            "actor_role": user["role"],
+                            "cross_assignment": cross_assignment_edit,
+                            "auto_derived_from": "assigned_rm_ids",
+                        },
+                    })
+
             # Flush every audit row in one round-trip — BEFORE the noop return so
             # a same-stage re-touch with no column changes still gets logged.
             log_many(cur, log_entries)
