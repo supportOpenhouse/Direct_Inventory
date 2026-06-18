@@ -16,21 +16,36 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
   }, [onClose]);
 
   const canPost = ['admin', 'manager', 'rm'].includes(role);
+  // _loading = opened with only a seed (society/city/oh_id) while the full
+  // record loads — show skeletons for the fields not yet known.
+  const loading = item._loading;
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head-row">
-          <h3>{item.society || '—'}</h3>
-          <span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span>
+          <h3>{item.society || (loading ? <span className="inv-skel" style={{ display: 'inline-block', width: 160 }} /> : '—')}</h3>
+          {item.city ? <span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span> : null}
           <span className="role-chip">{item.oh_id}</span>
-          <span className="stage-dot stage-dot-lg" style={{ background: STAGE_DOT_COLOR[item.stage] }} />
-          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{stageLabel(item.stage)}</span>
+          {loading ? (
+            <span className="inv-skel" style={{ display: 'inline-block', width: 90 }} />
+          ) : (
+            <>
+              <span className="stage-dot stage-dot-lg" style={{ background: STAGE_DOT_COLOR[item.stage] }} />
+              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{stageLabel(item.stage)}</span>
+            </>
+          )}
           <button className="modal-close" onClick={onClose} aria-label="Close"><IconClose /></button>
         </div>
         <div className="muted" style={{ marginBottom: 14 }}>
-          {[item.locality, item.bedrooms != null ? `${item.bedrooms} BHK` : null, item.area_sqft != null ? `${item.area_sqft} sqft` : null]
-            .filter(Boolean).join(' · ')} · <strong className="val-orange">{formatPrice(item.price)}</strong>
+          {loading ? (
+            <span className="inv-skel" style={{ display: 'inline-block', width: 260 }} />
+          ) : (
+            <>
+              {[item.locality, item.bedrooms != null ? `${item.bedrooms} BHK` : null, item.area_sqft != null ? `${item.area_sqft} sqft` : null]
+                .filter(Boolean).join(' · ')} · <strong className="val-orange">{formatPrice(item.price)}</strong>
+            </>
+          )}
         </div>
         <div className="inv-table-wrap" style={{ overflow: 'visible' }}>
           <ExpandPanel item={item} role={role} onUpdated={onUpdated} canPost={canPost} showAssignedRm={false} />

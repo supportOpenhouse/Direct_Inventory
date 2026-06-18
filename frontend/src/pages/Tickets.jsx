@@ -43,14 +43,18 @@ export default function Tickets() {
   const [open, setOpen] = useState(null);
   const [openItem, setOpenItem] = useState(null);
 
-  // Open the property detail modal for a ticket's oh_id. Same flow the
-  // notification bell uses — fetch the row, then hand it to CardDetailModal.
-  async function openProperty(ohId) {
+  // Open the property detail modal for a ticket's oh_id. Open INSTANTLY with
+  // what the ticket row already knows (society/city), then load the full record
+  // so the modal fills in like a skeleton screen instead of lagging on the fetch.
+  async function openProperty(ohId, seed) {
     if (!ohId) return;
+    setOpenItem({ oh_id: ohId, ...seed, _loading: true });
     try {
       const item = await api.get(`/api/inventory/${ohId}`);
-      setOpenItem(item);
-    } catch { /* non-blocking */ }
+      setOpenItem((prev) => (prev && prev.oh_id === ohId ? { ...item, _loading: false } : prev));
+    } catch {
+      setOpenItem((prev) => (prev && prev.oh_id === ohId ? { ...prev, _loading: false } : prev));
+    }
   }
 
   const load = useCallback(async () => {
@@ -143,7 +147,7 @@ export default function Tickets() {
                 <button
                   type="button"
                   className="tk-card-prop tk-card-prop-link"
-                  onClick={(e) => { e.stopPropagation(); openProperty(t.oh_id); }}
+                  onClick={(e) => { e.stopPropagation(); openProperty(t.oh_id, { society: t.society, city: t.city }); }}
                   title={`Open ${t.oh_id} details`}
                 >
                   {`${t.society || '—'} · ${t.oh_id}`}{t.assigned_rm_name ? ` · RM: ${t.assigned_rm_name}` : ''}

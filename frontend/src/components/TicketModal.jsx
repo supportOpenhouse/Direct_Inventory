@@ -51,10 +51,18 @@ export default function TicketModal({ ticket, onChanged, onClose }) {
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  // List rows carry only message_count, not the messages thread, so the modal
+  // fetches the full ticket on mount. Track that so the thread shows "Loading…"
+  // until it lands, instead of a premature "No replies yet."
+  const [loaded, setLoaded] = useState(Array.isArray(ticket.messages));
 
   useEffect(() => {
     let alive = true;
-    api.get(`/api/tickets/${ticket.id}`).then((r) => { if (alive) setT(r); }).catch(() => {});
+    setLoaded(Array.isArray(ticket.messages));
+    api.get(`/api/tickets/${ticket.id}`)
+      .then((r) => { if (alive) setT(r); })
+      .catch(() => {})
+      .finally(() => { if (alive) setLoaded(true); });
     return () => { alive = false; };
   }, [ticket.id]);
 
@@ -112,7 +120,7 @@ export default function TicketModal({ ticket, onChanged, onClose }) {
             <span className="note-thread-count">{messages.length}</span>
           </div>
           <ul className="note-list">
-            {messages.length === 0 && <li className="note-empty muted">No replies yet.</li>}
+            {messages.length === 0 && <li className="note-empty muted">{loaded ? 'No replies yet.' : 'Loading…'}</li>}
             {messages.map((m) => (
               <li key={m.id} className="note-item">
                 <span className="note-av" style={avatarStyle(m.author_email || m.author_name)}>{initialsOf(m.author_name, m.author_email)}</span>
