@@ -18,6 +18,22 @@ const REQUIRED_INV_FIELDS = [
   ['bedrooms', 'Configuration (BHK)'],
 ];
 
+// Visit time slots: 8:00 AM → 9:00 PM in 30-minute steps. The option value stays
+// "HH:MM" (24-hour), the same format the native time input produced, so the
+// backend payload (schedule_time) is unchanged; the label is 12-hour for display.
+const TIME_SLOTS = (() => {
+  const slots = [];
+  for (let m = 8 * 60; m <= 21 * 60; m += 30) {
+    const h = Math.floor(m / 60);
+    const min = m % 60;
+    const mm = String(min).padStart(2, '0');
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    const ampm = h < 12 ? 'AM' : 'PM';
+    slots.push({ value: `${String(h).padStart(2, '0')}:${mm}`, label: `${h12}:${mm} ${ampm}` });
+  }
+  return slots;
+})();
+
 function fmtDateTime(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -174,7 +190,10 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
         <label>Date <span className="req">*</span></label>
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         <label style={{ marginTop: 10 }}>Time <span className="req">*</span></label>
-        <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+        <select value={time} onChange={(e) => setTime(e.target.value)}>
+          <option value="">Select…</option>
+          {TIME_SLOTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
         <label style={{ marginTop: 10 }}>Asking Price (in lakhs) <span className="req">*</span></label>
         <input type="number" step="0.01" value={demandPrice} onChange={(e) => setDemandPrice(e.target.value)} placeholder="e.g. 150 = ₹1.5 Cr" />
         <label style={{ marginTop: 10 }}>Field Exec <span className="req">*</span></label>
