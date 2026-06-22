@@ -51,15 +51,17 @@ export default function InventoryBoard({
   const [downloading, setDownloading] = useState(false);
 
   const stages = fixedStages || STAGES;
+  // "ALL" covers this board's own stages PLUS any grouped extras (e.g. the Post
+  // Visit supply stages), so the default view and ALL count include them.
+  const allStages = [...new Set([...stages, ...extraStageGroups.flatMap((g) => g.stages)])];
 
   function makeParams() {
     const p = new URLSearchParams();
     if (qApplied) p.set('q', qApplied);
     if (city) p.set('city', city);
-    // ALL (nothing selected) restricts to THIS board's own stages — so grouped
-    // extras like Post Visit (Supply Closure stages) only show when their pill
-    // is explicitly selected, never in the default view or other stage pills.
-    const effectiveStages = stageSel.size > 0 ? Array.from(stageSel) : stages;
+    // ALL (nothing selected) covers this board's own stages PLUS grouped extras
+    // (Post Visit / Supply Closure stages), so the default view shows them too.
+    const effectiveStages = stageSel.size > 0 ? Array.from(stageSel) : allStages;
     if (effectiveStages.length) p.set('stage', effectiveStages.join(','));
     if (sort.field) { p.set('sort', sort.field); p.set('dir', sort.dir); }
     for (const [k, v] of Object.entries(filtersApplied)) p.set(k, String(v));
@@ -204,9 +206,9 @@ export default function InventoryBoard({
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const filterCount = Object.keys(filtersApplied).length;
-  // "ALL" means all of THIS board's own stages — sum their counts. Grouped
-  // extras (e.g. Post Visit) are NOT included, matching the ALL stage filter.
-  const allCount = stages.reduce((a, s) => a + (counts.by_stage?.[s] || 0), 0);
+  // "ALL" sums this board's own stages plus grouped extras (e.g. Post Visit),
+  // matching the ALL stage filter which now includes them.
+  const allCount = allStages.reduce((a, s) => a + (counts.by_stage?.[s] || 0), 0);
 
   // A "grouped" count pill (e.g. Post Visit = all supply stages combined).
   // Toggles additively like the individual stage pills — adds/removes only its
