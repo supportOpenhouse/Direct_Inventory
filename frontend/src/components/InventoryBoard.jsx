@@ -209,12 +209,19 @@ export default function InventoryBoard({
   const allCount = stages.reduce((a, s) => a + (counts.by_stage?.[s] || 0), 0);
 
   // A "grouped" count pill (e.g. Post Visit = all supply stages combined).
+  // Toggles additively like the individual stage pills — adds/removes only its
+  // own stages so selecting it doesn't wipe other selected pills.
   function groupPill(g) {
     const cnt = g.stages.reduce((a, st) => a + (counts.by_stage?.[st] || 0), 0);
-    const active = g.stages.length > 0 && g.stages.every((st) => stageSel.has(st)) && stageSel.size === g.stages.length;
+    const active = g.stages.length > 0 && g.stages.every((st) => stageSel.has(st));
     return (
       <button key={g.key} type="button" className={active ? 'count-pill count-pill-active' : 'count-pill'}
-        onClick={() => setStageSel(active ? new Set() : new Set(g.stages))}>
+        onClick={() => setStageSel((prev) => {
+          const n = new Set(prev);
+          if (active) g.stages.forEach((st) => n.delete(st));
+          else g.stages.forEach((st) => n.add(st));
+          return n;
+        })}>
         <div className="num" style={{ color: g.color }}>{cnt}</div>
         <div className="lbl">{g.label.toUpperCase()}</div>
       </button>
