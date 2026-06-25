@@ -58,9 +58,18 @@ export function AuthProvider({ children }) {
       {children}
       {welcome && (
         <div className="welcome-curtain" aria-hidden="true">
-          <div className="wc-inner">
-            <h1>Welcome <span>back</span></h1>
-            <p>{user?.name ? `Good to see you, ${user.name.split(' ')[0]}` : 'Loading your dashboard…'}</p>
+          <div className="wc-brand">
+            <img src="/openhouse-logo.png" alt="" />
+            <span>Openhouse</span>
+          </div>
+          {/* Right region: the greeting sits behind the white panel; the panel
+              slides off first to reveal it, then the whole curtain slides off. */}
+          <div className="wc-right">
+            <div className="wc-greeting">
+              <span className="wc-hi">Welcome back,</span>
+              <span className="wc-name">{user?.name ? user.name.split(' ')[0] : ''}</span>
+            </div>
+            <div className="wc-white" />
           </div>
         </div>
       )}
