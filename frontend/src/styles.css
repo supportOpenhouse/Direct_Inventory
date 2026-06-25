@@ -306,8 +306,10 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
    its ::after glow is kept so it matches the real hero pixel-for-pixel at t=0. */
 .welcome-curtain .wc-hero { position: absolute; inset: 0; background: transparent; }
 
+/* Centered in the RIGHT region (52.4%–100%) — i.e. behind where the white
+   login column slides in/out, so the greeting reads in the same spot. */
 .welcome-curtain .wc-greeting {
-  position: absolute; inset: 0; z-index: 2;
+  position: absolute; top: 0; bottom: 0; left: 52.4%; right: 0; z-index: 2;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
   text-align: center; color: #fff; padding: 24px; opacity: 0;
 }
@@ -345,7 +347,7 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
   0%, 55%  { transform: translateX(110%); }            /* wait while grad grows + goodbye plays */
   100%     { transform: translateX(0); }               /* land in the login position */
 }
-@media (max-width: 860px) { .welcome-curtain.in .wc-grad { --wc-start: 0%; } } /* hero hidden on mobile */
+@media (max-width: 860px) { .welcome-curtain.in .wc-grad { --wc-start: 0%; } .welcome-curtain .wc-greeting { left: 0; } } /* hero hidden on mobile */
 @media (prefers-reduced-motion: reduce) {
   .welcome-curtain .wc-grad, .welcome-curtain .wc-greeting, .welcome-curtain .wc-white { animation-duration: .5s; }
 }
