@@ -68,22 +68,25 @@ export default function InventoryBoard({
     return p;
   }
 
-  async function refresh(cur = page) {
+  // fresh=true bypasses the client cache — used by the manual Reload button and
+  // the tracker auto-sync, which must hit the network even with no local write.
+  // Mount / back-nav / pagination leave it false so the TTL cache can serve.
+  async function refresh(cur = page, fresh = false) {
     setLoading(true);
     try {
       const params = makeParams();
       params.set('limit', String(PAGE_SIZE));
       params.set('offset', String(cur * PAGE_SIZE));
-      const r = await api.get(`/api/inventory?${params}`);
+      const r = await api.get(`/api/inventory?${params}`, { fresh });
       setItems(r.items); setTotal(r.total);
       hydrateBadges(r.items); // fire-and-forget — rows render now, badges merge in when they arrive
     } finally { setLoading(false); }
   }
-  async function refreshCounts() {
+  async function refreshCounts(fresh = false) {
     try {
       const params = makeParams();
       params.delete('stage'); // counts are per-stage
-      const r = await api.get(`/api/inventory/counts?${params}`);
+      const r = await api.get(`/api/inventory/counts?${params}`, { fresh });
       setCounts(r);
     } catch { /* non-blocking */ }
   }
@@ -120,8 +123,9 @@ export default function InventoryBoard({
   }, [page]);
   // Keep the editable page box in sync with the actual page (Prev/Next/reset).
   useEffect(() => { setPageInput(String(page + 1)); }, [page]);
-  // External reload trigger (e.g. the tracker's auto-sync finished).
-  useEffect(() => { if (reloadSignal) { refresh(page); refreshCounts(); } /* eslint-disable-next-line */ }, [reloadSignal]);
+  // External reload trigger (e.g. the tracker's auto-sync finished) — force a
+  // network hit; the synced rows changed server-side with no local write.
+  useEffect(() => { if (reloadSignal) { refresh(page, true); refreshCounts(true); } /* eslint-disable-next-line */ }, [reloadSignal]);
   // A row was added via the topbar Add Inventory button → refetch in place.
   useEffect(() => {
     const onAdded = () => { refreshCounts(); refresh(page); };
@@ -301,7 +305,7 @@ export default function InventoryBoard({
           <span className="page-of">/ {totalPages}</span>
         </span>
         <button className="btn-ghost" disabled={page + 1 >= totalPages} onClick={() => setPage((p) => p + 1)}>Next →</button>
-        <button className="icon-btn" onClick={async () => { if (onReload) { setLoading(true); try { await onReload(); } catch { /* ignore */ } } refresh(page); refreshCounts(); }} disabled={loading} aria-label="Reload">
+        <button className="icon-btn" onClick={async () => { if (onReload) { setLoading(true); try { await onReload(); } catch { /* ignore */ } } refresh(page, true); refreshCounts(true); }} disabled={loading} aria-label="Reload">
           <span className={`reload-icon ${loading ? 'reload-icon-spinning' : ''}`}><IconReload size={16} /></span>
         </button>
       </div>

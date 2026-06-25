@@ -92,10 +92,18 @@ async function download(path) {
 // hand out structuredClone copies so components can't mutate shared data.
 
 // Path-prefix → TTL in seconds. First match wins (most specific first).
+// Caching is safe even for live data: any write (post/put/patch/delete) wipes
+// the whole cache in mutate(), so a cached page only ever survives until the
+// next mutation or its TTL — whichever comes first. The inventory-list and
+// home-summary rules below are what make navigating BACK to a board instant
+// (the table is served from cache instead of refetched).
 const TTL_RULES = [
   ['/api/users/master-areas', 600],
   ['/api/inventory/societies', 600],
+  ['/api/inventory/counts', 120],   // stage-pill counts — cached with the list
   ['/api/inventory/notifications', 30],
+  ['/api/inventory?', 120],         // the board/table list — survives back-nav
+  ['/api/home/summary', 60],        // Home cards — revisiting Home is instant
   ['/api/tickets/pending-count', 10],
   ['/api/tickets?oh_id=', 120],
   ['/api/tickets?', 60],
@@ -116,9 +124,13 @@ const cache = new Map();    // path -> { data, expires }
 const inflight = new Map(); // path -> promise
 let epoch = 0;              // bumped on writes so stale in-flight GETs never cache
 
-function cachedGet(path) {
-  const hit = cache.get(path);
-  if (hit && hit.expires > Date.now()) return Promise.resolve(structuredClone(hit.data));
+function cachedGet(path, fresh = false) {
+  // fresh=true skips the cache READ (explicit Reload / auto-sync want a network
+  // hit), but still joins an in-flight fetch and still refreshes the cache.
+  if (!fresh) {
+    const hit = cache.get(path);
+    if (hit && hit.expires > Date.now()) return Promise.resolve(structuredClone(hit.data));
+  }
   let p = inflight.get(path);
   if (!p) {
     const started = epoch;
@@ -162,7 +174,7 @@ function invalidate(prefix) {
 }
 
 export const api = {
-  get: (p) => cachedGet(p),
+  get: (p, opts) => cachedGet(p, opts?.fresh),
   // opts.silent = true skips the global "Saving…" overlay (for background
   // writes that shouldn't block the user, e.g. fire-and-forget syncs).
   post: (p, b, opts) => mutate('POST', p, b, opts),
