@@ -264,7 +264,7 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 /* ── login ───────────────────────────────────────────────────────────── */
 .login-page { min-height: 100vh; display: grid; grid-template-columns: 1.1fr 1fr; background: var(--bg); }
 .login-hero { position: relative; background: linear-gradient(150deg, #1d130f 0%, #2a1610 55%, #3a1b10 100%); color: #fff; padding: 56px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
-.login-hero::after { content: ''; position: absolute; right: -120px; bottom: -120px; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(circle, rgba(250,84,28,0.5), transparent 65%); }
+.login-hero::after { content: ''; position: absolute; left: -120px; bottom: -120px; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(circle, rgba(250,84,28,0.5), transparent 65%); }
 .login-hero .lh-brand { display: flex; align-items: center; gap: 12px; }
 .login-hero .lh-brand img { width: 40px; border-radius: 9px; background: #fff; padding: 4px; }
 .login-hero .lh-brand span { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; }
@@ -298,17 +298,15 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
   transform: translateX(0);
   animation: wc-page 1.6s cubic-bezier(.76,0,.24,1) forwards; /* stage 2 */
 }
-.welcome-curtain::after {
-  content: ''; position: absolute; right: -140px; bottom: -140px;
+.welcome-curtain::after {          /* orange glow mirrored to the LEFT */
+  content: ''; position: absolute; left: -140px; bottom: -140px;
   width: 520px; height: 520px; border-radius: 50%; pointer-events: none;
   background: radial-gradient(circle, rgba(250,84,28,0.5), transparent 65%);
 }
-.welcome-curtain .wc-brand {
-  position: absolute; top: 56px; left: 56px; z-index: 3;
-  display: flex; align-items: center; gap: 12px; color: #fff;
-}
-.welcome-curtain .wc-brand img { width: 40px; border-radius: 9px; background: #fff; padding: 4px; }
-.welcome-curtain .wc-brand span { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; }
+/* Left text block: same content/layout as .login-hero, but transparent so the
+   curtain's single full-width gradient shows through with no seam. */
+.welcome-curtain .wc-hero { position: absolute; top: 0; left: 0; bottom: 0; width: 52.4%; background: transparent; z-index: 1; }
+.welcome-curtain .wc-hero::after { display: none; }   /* the curtain owns the glow */
 
 /* Right region matches the login's white panel (grid 1.1fr / 1fr -> ~47.6%). */
 .welcome-curtain .wc-right { position: absolute; top: 0; right: 0; bottom: 0; width: 47.6%; display: grid; place-items: center; overflow: hidden; }
@@ -317,6 +315,7 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .welcome-curtain .wc-greeting .wc-name { font-family: 'Fraunces', serif; font-weight: 700; font-size: clamp(40px, 6vw, 84px); line-height: 1; }
 .welcome-curtain .wc-white {
   position: absolute; inset: 0; z-index: 2; background: var(--bg);
+  box-shadow: -24px 0 60px rgba(0,0,0,0.18);          /* floats as it leaves */
   animation: wc-white-off 1.6s cubic-bezier(.76,0,.24,1) forwards; /* stage 1 */
 }
 

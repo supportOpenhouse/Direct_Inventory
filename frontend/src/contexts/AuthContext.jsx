@@ -58,12 +58,20 @@ export function AuthProvider({ children }) {
       {children}
       {welcome && (
         <div className="welcome-curtain" aria-hidden="true">
-          <div className="wc-brand">
-            <img src="/openhouse-logo.png" alt="" />
-            <span>Openhouse</span>
+          {/* Full hero, kept intact (same content as the login screen). */}
+          <div className="login-hero wc-hero">
+            <div className="lh-brand">
+              <img src="/openhouse-logo.png" alt="Openhouse" />
+              <span>Openhouse</span>
+            </div>
+            <div>
+              <h2>Direct Inventory Portal</h2>
+              <p className="lh-sub">by Openhouse</p>
+            </div>
+            <div className="lh-sub">Direct Inventory · Internal portal</div>
           </div>
           {/* Right region: the greeting sits behind the white panel; the panel
-              slides off first to reveal it, then the whole curtain slides off. */}
+              floats off first to reveal it, then the whole curtain slides off. */}
           <div className="wc-right">
             <div className="wc-greeting">
               <span className="wc-hi">Welcome back,</span>
