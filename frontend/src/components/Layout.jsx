@@ -88,7 +88,9 @@ export default function Layout() {
   const seg = loc.pathname.split('/')[1] || '';
   const title = TITLES[seg] || 'Direct Inventory';
 
-  function handleLogout() { logout(); nav('/login'); }
+  // logout() plays the "Goodbye" curtain, then clears auth — RequireAuth
+  // redirects to /login behind the orange, so no immediate nav() here.
+  function handleLogout() { logout(); }
   function toggleCollapse() {
     setCollapsed((c) => { const n = !c; localStorage.setItem('di_sidebar_collapsed', n ? '1' : '0'); return n; });
   }

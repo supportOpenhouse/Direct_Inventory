@@ -6,15 +6,23 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [welcome, setWelcome] = useState(false);
+  const [transition, setTransition] = useState(null); // null | 'in' (sign-in) | 'out' (sign-out)
+  const [tname, setTname] = useState('');             // name shown in the curtain greeting
 
-  // Set the user AND play the "Welcome back" wipe. Used only on explicit
-  // sign-in (not silent token re-auth). The 1700ms must outlast the CSS
-  // animation duration below in styles.css (.welcome-curtain).
+  // Play the full-screen "grow" curtain. 1900ms must outlast the CSS animation
+  // (~1.7s) in styles.css (.welcome-curtain).
+  function runCurtain(kind, name) {
+    setTname(name || '');
+    setTransition(kind);
+    setTimeout(() => setTransition(null), 1900);
+  }
+
+  // Sign in: start the curtain first, then flip the user ~once it has covered
+  // the screen, so the gradient grows out of the real hero (no pop) and the
+  // login -> dashboard route swap stays hidden behind the orange.
   function signIn(u) {
-    setUser(u);
-    setWelcome(true);
-    setTimeout(() => setWelcome(false), 1700);
+    runCurtain('in', u?.name);
+    setTimeout(() => setUser(u), 650);
   }
 
   useEffect(() => {
@@ -47,37 +55,40 @@ export function AuthProvider({ children }) {
   }
 
   function logout() {
-    localStorage.removeItem('di_token');
-    localStorage.removeItem('di_mock_email');
-    setAuthToken(null);
-    setUser(null);
+    runCurtain('out', user?.name);
+    // Cover the dashboard first, then clear auth (which redirects to /login
+    // behind the orange) so "Goodbye" plays over the dashboard, not the login.
+    setTimeout(() => {
+      localStorage.removeItem('di_token');
+      localStorage.removeItem('di_mock_email');
+      setAuthToken(null);
+      setUser(null);
+    }, 650);
   }
 
   return (
     <AuthContext.Provider value={{ user, loading, loginWithGoogle, loginAsDev, logout }}>
       {children}
-      {welcome && (
-        <div className="welcome-curtain" aria-hidden="true">
-          {/* Full hero, kept intact (same content as the login screen). */}
-          <div className="login-hero wc-hero">
-            <div className="lh-brand">
-              <img src="/openhouse-logo.png" alt="Openhouse" />
-              <span>Openhouse</span>
+      {transition && (
+        <div className={`welcome-curtain ${transition}`} aria-hidden="true">
+          {/* The orange gradient that grows to fill the screen. */}
+          <div className="wc-grad">
+            {/* Full hero, kept intact (same content/layout as the login screen). */}
+            <div className="login-hero wc-hero">
+              <div className="lh-brand">
+                <img src="/openhouse-logo.png" alt="Openhouse" />
+                <span>Openhouse</span>
+              </div>
+              <div>
+                <h2>Direct Inventory Portal</h2>
+                <p className="lh-sub">by Openhouse</p>
+              </div>
+              <div className="lh-sub">Direct Inventory · Internal portal</div>
             </div>
-            <div>
-              <h2>Direct Inventory Portal</h2>
-              <p className="lh-sub">by Openhouse</p>
-            </div>
-            <div className="lh-sub">Direct Inventory · Internal portal</div>
-          </div>
-          {/* Right region: the greeting sits behind the white panel; the panel
-              floats off first to reveal it, then the whole curtain slides off. */}
-          <div className="wc-right">
             <div className="wc-greeting">
-              <span className="wc-hi">Welcome back,</span>
-              <span className="wc-name">{user?.name ? user.name.split(' ')[0] : ''}</span>
+              <span className="wc-hi">{transition === 'out' ? 'Goodbye :(' : 'Welcome back,'}</span>
+              <span className="wc-name">{tname ? tname.split(' ')[0] : ''}</span>
             </div>
-            <div className="wc-white" />
           </div>
         </div>
       )}

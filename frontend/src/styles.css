@@ -287,49 +287,47 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .login-mock-note { font-size: 12px; color: var(--text-muted); margin-top: 18px; line-height: 1.5; }
 @media (max-width: 860px) { .login-page { grid-template-columns: 1fr; } .login-hero { display: none; } }
 
-/* Two-stage "Welcome back" sweep, reads as one rightward motion:
-   1) the white login panel slides off right, revealing "Welcome back, {user}"
-      on the full-screen orange gradient behind it;
-   2) the whole orange curtain then slides off right, revealing the dashboard.
-   Reuses the login-hero gradient + orange glow, so it's the same color scheme. */
-.welcome-curtain {
-  position: fixed; inset: 0; z-index: 9999; overflow: hidden;
+/* Sign-in / sign-out "grow" curtain. The orange gradient grows OUT of the real
+   login hero (sign-in) or in from the left edge (sign-out) until it fills the
+   screen, shows the greeting, then slides off to reveal what's behind. Because
+   the gradient is literally the hero's gradient growing — same width, same glow
+   at the start — there's no swap and no pop. */
+.welcome-curtain { position: fixed; inset: 0; z-index: 9999; overflow: hidden; pointer-events: none; }
+.welcome-curtain .wc-grad {
+  position: absolute; top: 0; left: 0; bottom: 0; overflow: hidden; z-index: 1;
   background: linear-gradient(150deg, #1d130f 0%, #2a1610 55%, #3a1b10 100%);
-  transform: translateX(0);
-  animation: wc-page 1.6s cubic-bezier(.76,0,.24,1) forwards; /* stage 2 */
+  animation: wc-grow 1.7s cubic-bezier(.76,0,.24,1) forwards;
 }
-.welcome-curtain::after {          /* orange glow mirrored to the LEFT */
-  content: ''; position: absolute; left: -140px; bottom: -140px;
-  width: 520px; height: 520px; border-radius: 50%; pointer-events: none;
-  background: radial-gradient(circle, rgba(250,84,28,0.5), transparent 65%);
-}
-/* Left text block: same content/layout as .login-hero, but transparent so the
-   curtain's single full-width gradient shows through with no seam. */
-.welcome-curtain .wc-hero { position: absolute; top: 0; left: 0; bottom: 0; width: 52.4%; background: transparent; z-index: 1; }
-.welcome-curtain .wc-hero::after { display: none; }   /* the curtain owns the glow */
+.welcome-curtain.in  .wc-grad { --wc-start: 52.4%; }  /* starts exactly over the real hero */
+.welcome-curtain.out .wc-grad { --wc-start: 0%; }     /* grows in from the left edge */
 
-/* Right region matches the login's white panel (grid 1.1fr / 1fr -> ~47.6%). */
-.welcome-curtain .wc-right { position: absolute; top: 0; right: 0; bottom: 0; width: 47.6%; display: grid; place-items: center; overflow: hidden; }
-.welcome-curtain .wc-greeting { color: #fff; text-align: center; display: flex; flex-direction: column; gap: 8px; padding: 24px; }
+/* Hero text: reuse .login-hero layout, transparent so the grad shows through;
+   its ::after glow is kept so it matches the real hero pixel-for-pixel at t=0. */
+.welcome-curtain .wc-hero { position: absolute; inset: 0; background: transparent; }
+
+.welcome-curtain .wc-greeting {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  text-align: center; color: #fff; padding: 24px; opacity: 0;
+  animation: wc-greet 1.7s ease forwards;
+}
 .welcome-curtain .wc-greeting .wc-hi { color: rgba(255,255,255,0.7); font-size: 18px; }
 .welcome-curtain .wc-greeting .wc-name { font-family: 'Fraunces', serif; font-weight: 700; font-size: clamp(40px, 6vw, 84px); line-height: 1; }
-.welcome-curtain .wc-white {
-  position: absolute; inset: 0; z-index: 2; background: var(--bg);
-  box-shadow: -24px 0 60px rgba(0,0,0,0.18);          /* floats as it leaves */
-  animation: wc-white-off 1.6s cubic-bezier(.76,0,.24,1) forwards; /* stage 1 */
-}
 
-@keyframes wc-white-off {          /* white panel leaves first */
-  0%, 4%    { transform: translateX(0); }
-  42%, 100% { transform: translateX(110%); }
+@keyframes wc-grow {
+  0%   { width: var(--wc-start, 52.4%); transform: translateX(0); }
+  35%  { width: 100%; transform: translateX(0); }      /* grown to full screen */
+  62%  { width: 100%; transform: translateX(0); }      /* hold while the greeting reads */
+  100% { width: 100%; transform: translateX(105%); }   /* slide off right -> reveal */
 }
-@keyframes wc-page {               /* then the whole orange page leaves */
-  0%, 55%   { transform: translateX(0); }
-  100%      { transform: translateX(105%); }
+@keyframes wc-greet {
+  0%, 28%  { opacity: 0; transform: translateY(12px); }
+  44%, 62% { opacity: 1; transform: translateY(0); }
+  100%     { opacity: 1; transform: translateY(0); }   /* rides off with the grad */
 }
-@media (max-width: 860px) { .welcome-curtain .wc-right { width: 100%; } }
+@media (max-width: 860px) { .welcome-curtain.in .wc-grad { --wc-start: 0%; } } /* hero hidden on mobile */
 @media (prefers-reduced-motion: reduce) {
-  .welcome-curtain, .welcome-curtain .wc-white { animation-duration: .5s; }
+  .welcome-curtain .wc-grad, .welcome-curtain .wc-greeting { animation-duration: .5s; }
 }
 
 /* ── page header ─────────────────────────────────────────────────────── */
