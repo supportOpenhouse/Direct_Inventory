@@ -296,10 +296,11 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .welcome-curtain .wc-grad {
   position: absolute; top: 0; left: 0; bottom: 0; overflow: hidden; z-index: 1;
   background: linear-gradient(150deg, #1d130f 0%, #2a1610 55%, #3a1b10 100%);
-  animation: wc-grow 1.7s cubic-bezier(.76,0,.24,1) forwards;
 }
-.welcome-curtain.in  .wc-grad { --wc-start: 52.4%; }  /* starts exactly over the real hero */
-.welcome-curtain.out .wc-grad { --wc-start: 0%; }     /* grows in from the left edge */
+/* sign-in: grow out of the hero, then slide off right -> reveal dashboard */
+.welcome-curtain.in  .wc-grad { --wc-start: 52.4%; animation: wc-grow-in 1.7s cubic-bezier(.76,0,.24,1) forwards; }
+/* sign-out: grow in from the left to full, then stay (becomes the login hero) */
+.welcome-curtain.out .wc-grad { animation: wc-grow-out 1.7s cubic-bezier(.76,0,.24,1) forwards; }
 
 /* Hero text: reuse .login-hero layout, transparent so the grad shows through;
    its ::after glow is kept so it matches the real hero pixel-for-pixel at t=0. */
@@ -309,25 +310,44 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
   position: absolute; inset: 0; z-index: 2;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
   text-align: center; color: #fff; padding: 24px; opacity: 0;
-  animation: wc-greet 1.7s ease forwards;
 }
+.welcome-curtain.in  .wc-greeting { animation: wc-greet-in  1.7s ease forwards; }
+.welcome-curtain.out .wc-greeting { animation: wc-greet-out 1.7s ease forwards; }
 .welcome-curtain .wc-greeting .wc-hi { color: rgba(255,255,255,0.7); font-size: 18px; }
 .welcome-curtain .wc-greeting .wc-name { font-family: 'Fraunces', serif; font-weight: 700; font-size: clamp(40px, 6vw, 84px); line-height: 1; }
 
-@keyframes wc-grow {
+/* White login column. Parked off-screen by default (unused on sign-in); on
+   sign-out it slides in from the right once "Goodbye" has faded. */
+.welcome-curtain .wc-white { position: absolute; top: 0; right: 0; bottom: 0; width: 47.6%; z-index: 3; background: var(--bg); transform: translateX(110%); }
+.welcome-curtain.out .wc-white { box-shadow: -24px 0 60px rgba(0,0,0,0.18); animation: wc-white-in 1.7s cubic-bezier(.76,0,.24,1) forwards; }
+
+@keyframes wc-grow-in {
   0%   { width: var(--wc-start, 52.4%); transform: translateX(0); }
   35%  { width: 100%; transform: translateX(0); }      /* grown to full screen */
   62%  { width: 100%; transform: translateX(0); }      /* hold while the greeting reads */
   100% { width: 100%; transform: translateX(105%); }   /* slide off right -> reveal */
 }
-@keyframes wc-greet {
+@keyframes wc-grow-out {
+  0%        { width: 0%; }
+  35%, 100% { width: 100%; }                            /* fill, then stay as the hero */
+}
+@keyframes wc-greet-in {
   0%, 28%  { opacity: 0; transform: translateY(12px); }
   44%, 62% { opacity: 1; transform: translateY(0); }
   100%     { opacity: 1; transform: translateY(0); }   /* rides off with the grad */
 }
+@keyframes wc-greet-out {          /* fade in, hold, then fade out before the white arrives */
+  0%, 18%   { opacity: 0; transform: translateY(12px); }
+  32%, 48%  { opacity: 1; transform: translateY(0); }
+  60%, 100% { opacity: 0; transform: translateY(-8px); }
+}
+@keyframes wc-white-in {
+  0%, 55%  { transform: translateX(110%); }            /* wait while grad grows + goodbye plays */
+  100%     { transform: translateX(0); }               /* land in the login position */
+}
 @media (max-width: 860px) { .welcome-curtain.in .wc-grad { --wc-start: 0%; } } /* hero hidden on mobile */
 @media (prefers-reduced-motion: reduce) {
-  .welcome-curtain .wc-grad, .welcome-curtain .wc-greeting { animation-duration: .5s; }
+  .welcome-curtain .wc-grad, .welcome-curtain .wc-greeting, .welcome-curtain .wc-white { animation-duration: .5s; }
 }
 
 /* ── page header ─────────────────────────────────────────────────────── */

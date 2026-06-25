@@ -90,6 +90,9 @@ export function AuthProvider({ children }) {
               <span className="wc-name">{tname ? tname.split(' ')[0] : ''}</span>
             </div>
           </div>
+          {/* Sign-out only: slides in from the right after "Goodbye" fades,
+              rebuilding the login layout (orange hero left + white form right). */}
+          <div className="wc-white" />
         </div>
       )}
     </AuthContext.Provider>
