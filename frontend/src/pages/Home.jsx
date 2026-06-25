@@ -244,23 +244,22 @@ export default function Home() {
   const [stagesLoading, setStagesLoading] = useState(true);
   const [visitsLoading, setVisitsLoading] = useState(true);
 
-  // Progressive summary: three phased calls, cheapest first, each merged into
-  // the same `summary` shape the cards already read. A failed phase just leaves
-  // its keys absent (cards fall back to 0, same as the old single-call error).
+  // Progressive summary, each merged into the same `summary` shape the cards
+  // read. Phase 1 (above-the-fold tasks + tickets) now runs in PARALLEL with the
+  // heavier stage→visit chain instead of blocking it — quick is still cheapest
+  // so it paints first. stages→visits stay ordered because both write the
+  // `visit` key and phase 3's refined overdue split must win over phase 2's
+  // placeholder. A failed phase just leaves its keys absent (cards fall back to
+  // 0, same as the old single-call error).
   useEffect(() => {
     let alive = true;
     const merge = (patch) => { if (alive) setSummary((s) => ({ ...(s || {}), ...patch })); };
+    api.get('/api/home/summary/quick').then(merge).catch(() => {})
+      .finally(() => { if (alive) setQuickLoading(false); });
     (async () => {
-      // Phase 1 — today's tasks + unresolved tickets render immediately.
-      await api.get('/api/home/summary/quick').then(merge).catch(() => {});
-      if (!alive) return;
-      setQuickLoading(false);
-      // Phase 2 — stage aggregation fills the six summary cards (visit overdue
-      // stays a placeholder until phase 3).
       await api.get('/api/home/summary/stages').then(merge).catch(() => {});
       if (!alive) return;
       setStagesLoading(false);
-      // Phase 3 — properties-DB overdue lookup patches the Visit card.
       await api.get('/api/home/summary/visits').then(merge).catch(() => {});
       if (alive) setVisitsLoading(false);
     })();

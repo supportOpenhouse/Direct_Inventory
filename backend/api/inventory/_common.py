@@ -22,6 +22,7 @@ Stages (Leads board order):
 from __future__ import annotations
 
 import logging
+import time
 
 from flask import Blueprint
 
@@ -41,6 +42,17 @@ VISIT_DATE_COL = "visit_scheduled_date"
 _ISO_DATE_RE = r"^\d{4}-\d{2}-\d{2}"
 
 
+# Short TTL cache for the property-DB overdue lookup. Overdue status flips at
+# most once a day (a visit tips overdue when its scheduled date < today IST), so
+# a few minutes of staleness on the Home/visit cards and visit_overdue badges is
+# fine, and it spares ~20 concurrent dashboard loads from each re-hitting the
+# property DB. Keyed by the exact id-set asked for (summary asks for all
+# scheduled rows; /badges asks per visible page). Property-DB failures aren't
+# cached, so they retry next call.
+_OVERDUE_TTL = 300
+_overdue_cache: dict = {}  # frozenset(ids) -> (expires_monotonic, set)
+
+
 def overdue_visit_ids(oh_ids):
     """Subset of `oh_ids` whose scheduled visit date in the property DB is a
     valid ISO date earlier than today (IST) — i.e. the visit is overdue.
@@ -48,11 +60,16 @@ def overdue_visit_ids(oh_ids):
     ISO date text sorts chronologically, so we compare lexically (no ::date cast
     that could choke on the column's '' default or malformed rows). Guarded:
     returns an empty set on any property-DB failure (e.g. column not added yet)
-    so callers degrade gracefully.
+    so callers degrade gracefully. Result is cached for _OVERDUE_TTL seconds.
     """
     ids = [i for i in oh_ids if i]
     if not ids:
         return set()
+    key = frozenset(ids)
+    now = time.monotonic()
+    cached = _overdue_cache.get(key)
+    if cached and cached[0] > now:
+        return cached[1]
     try:
         pconn = get_props_conn()
         try:
@@ -64,12 +81,19 @@ def overdue_visit_ids(oh_ids):
                     f"  AND TRIM({VISIT_DATE_COL}) < to_char((NOW() AT TIME ZONE 'Asia/Kolkata')::date, 'YYYY-MM-DD')",
                     (ids, _ISO_DATE_RE),
                 )
-                return {r["cp"] for r in pcur.fetchall()}
+                result = {r["cp"] for r in pcur.fetchall()}
         finally:
             pconn.close()
     except Exception:
         log.warning("overdue_visit_ids: property-DB read failed", exc_info=True)
         return set()
+    # Drop expired entries before inserting so the cache can't grow unbounded
+    # across differing id-sets / scopes.
+    if len(_overdue_cache) > 64:
+        for k in [k for k, v in _overdue_cache.items() if v[0] <= now]:
+            _overdue_cache.pop(k, None)
+    _overdue_cache[key] = (now + _OVERDUE_TTL, result)
+    return result
 
 VALID_STAGES = {
     # Lead flow, in order:

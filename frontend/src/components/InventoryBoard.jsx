@@ -100,18 +100,15 @@ export default function InventoryBoard({
     } catch { /* non-blocking — rows just show without the overdue badge */ }
   }
 
-  // Mount + any filter/search/city/sort change: reset to page 0 and run exactly
-  // ONE counts request then ONE rows request. Counts go first so the stage
-  // pills update the moment they arrive; the rows page follows.
+  // Mount + any filter/search/city/sort change: reset to page 0 and fire the
+  // counts and rows requests together (in parallel) — pills and the table fill
+  // independently, so rows no longer wait behind the counts query.
   const skipPageFetch = useRef(true); // true on mount — the effect below owns the first rows fetch
   useEffect(() => {
     if (page !== 0) { skipPageFetch.current = true; setPage(0); }
-    let stale = false;
-    (async () => {
-      await refreshCounts();
-      if (!stale) await refresh(0);
-    })();
-    return () => { stale = true; };
+    // Counts and rows are independent — fire them in parallel so the table no
+    // longer waits behind the stage-pill counts before any rows can render.
+    Promise.all([refreshCounts(), refresh(0)]);
     /* eslint-disable-next-line */
   }, [city, qApplied, stageSel, filtersApplied, sort.field, sort.dir]);
   // Page-only change (Prev/Next/jump) → fetch just that rows page. Skipped when

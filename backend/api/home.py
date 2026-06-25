@@ -188,7 +188,7 @@ def _stage_cards_payload(row, by_reason: dict, visit_to_be_completed, visit_over
     }
 
 
-def _visit_buckets(user) -> tuple[int, int]:
+def _visit_buckets(user, cur=None) -> tuple[int, int]:
     """(to_be_completed, overdue) for rows currently in stage='visit_scheduled',
     bucketed by the property-DB scheduled visit date (see overdue_visit_ids).
 
@@ -196,18 +196,24 @@ def _visit_buckets(user) -> tuple[int, int]:
     scheduled (today/future, or no date row yet) counts as "to be completed".
     The property read is guarded inside overdue_visit_ids, so a failure just
     yields overdue=0 rather than breaking the summary.
+
+    Pass an already-open app-DB cursor (`cur`) to run the visit_scheduled lookup
+    on it — the summary endpoints already hold one, so this avoids opening a
+    second connection (a full pool checkout + liveness ping) per request.
     """
     scope, scope_params = _scope_clause(user)
-    conn = get_conn()
-    try:
-        with conn, conn.cursor() as cur:
-            cur.execute(
-                f"SELECT oh_id FROM inventory WHERE stage = 'visit_scheduled' {scope}",
-                scope_params,
-            )
-            oh_ids = [r["oh_id"] for r in cur.fetchall()]
-    finally:
-        conn.close()
+    sql = f"SELECT oh_id FROM inventory WHERE stage = 'visit_scheduled' {scope}"
+    if cur is not None:
+        cur.execute(sql, scope_params)
+        oh_ids = [r["oh_id"] for r in cur.fetchall()]
+    else:
+        conn = get_conn()
+        try:
+            with conn, conn.cursor() as own:
+                own.execute(sql, scope_params)
+                oh_ids = [r["oh_id"] for r in own.fetchall()]
+        finally:
+            conn.close()
 
     if not oh_ids:
         return (0, 0)
@@ -245,8 +251,9 @@ def summary():
 
             by_reason = _rejected_by_reason(cur, where, scope_params)
             unresolved_tickets = _tickets_pending_failsoft(cur, g.user)
-
-        visit_to_be_completed, visit_overdue = _visit_buckets(g.user)
+            # Reuse the open cursor for the visit_scheduled lookup — no second
+            # connection. (The property-DB overdue read inside is separate.)
+            visit_to_be_completed, visit_overdue = _visit_buckets(g.user, cur)
 
         return jsonify({
             **_stage_cards_payload(row, by_reason, visit_to_be_completed, visit_overdue),
@@ -350,10 +357,11 @@ def summary_visits():
                 [SUPPLY_STAGES, *scope_params],
             )
             completed = cur.fetchone()["n"]
+            # Reuse the open cursor — no second connection for the bucket lookup.
+            to_be_completed, overdue = _visit_buckets(g.user, cur)
     finally:
         conn.close()
 
-    to_be_completed, overdue = _visit_buckets(g.user)
     return jsonify({"visit": {
         "completed": completed,
         "to_be_completed": to_be_completed,

@@ -71,7 +71,20 @@ def list_inventory():
         # date clashes. An explicit column-header sort is a pure column sort
         # with updated_at DESC only as the final tiebreaker.
         sort_field = (args.get("sort") or "smart").strip()
+        worked_join = ""
         if sort_field == "smart":
+            # Materialize the "has this row been worked" flag with ONE indexed
+            # aggregate scan + hash join, instead of a correlated EXISTS run for
+            # every row of the (pre-LIMIT) sorted set — which on the admin "all"
+            # view meant a probe per inventory row. Uses
+            # idx_activity_log_entity_action.
+            worked_join = (
+                "LEFT JOIN ("
+                "  SELECT entity_id FROM activity_log "
+                "  WHERE entity_type = 'inventory' AND action <> 'create' "
+                "  GROUP BY entity_id"
+                ") w ON w.entity_id = j.oh_id"
+            )
             today_ist = "(NOW() AT TIME ZONE 'Asia/Kolkata')::DATE"
             order_clause = (
                 f"CASE WHEN follow_up_at IS NULL THEN 3 "
@@ -90,13 +103,8 @@ def list_inventory():
                 f"CASE WHEN follow_up_at IS NOT NULL AND follow_up_at::DATE > {today_ist} "
                 f"     THEN follow_up_at END ASC NULLS LAST, "
                 # Unworked beats worked: any activity_log row other than the
-                # auto 'create' counts as work. Uses idx_activity_log_entity.
-                f"CASE WHEN EXISTS ("
-                f"    SELECT 1 FROM activity_log al "
-                f"    WHERE al.entity_type = 'inventory' "
-                f"      AND al.entity_id = oh_id "
-                f"      AND al.action <> 'create'"
-                f") THEN 1 ELSE 0 END ASC, "
+                # auto 'create' counts as work — precomputed via worked_join.
+                f"CASE WHEN w.entity_id IS NOT NULL THEN 1 ELSE 0 END ASC, "
                 f"updated_at DESC"
             )
         else:
@@ -133,6 +141,7 @@ def list_inventory():
 
         list_sql = f"""
             SELECT {_LIST_COLS}{qt_select} FROM ({INVENTORY_WITH_PRICING_SQL} {inner_where}) j
+            {worked_join}
             {outer_where}
             ORDER BY {order_clause}
             LIMIT %s OFFSET %s
@@ -149,9 +158,14 @@ def list_inventory():
             rows = cur.fetchall()
             cur.execute(count_sql, count_params)
             total = cur.fetchone()["n"]
-        # Annotate each row with cp_match ('perfect' | 'partial' | None).
-        # Failure here is non-fatal — rows already have cp_match=None.
-        annotate_cp_match(rows)
+        # Rows already carry their PERSISTED cp_match column (filled by the
+        # background cp-match scan). Live-classifying the unscanned ones (just
+        # inserted / invalidated by a PATCH) costs a cross-DB CP read, so it's
+        # opt-in and OFF by default — the hot list path never pays it. Unscanned
+        # rows keep cp_match=None until the next scan settles them, same as the
+        # annotate_visit_overdue flag below.
+        if (args.get("annotate_cp_match") or "").strip().lower() in ("1", "true", "yes"):
+            annotate_cp_match(rows)
         # Opt-in: flag visit_scheduled rows whose scheduled visit date is past
         # (from the property DB). Only runs when requested, to keep the hot list
         # path free of the cross-DB read elsewhere.
