@@ -69,12 +69,20 @@ def set_assigned_rms(oh_id: str):
             else:
                 new_mgr = None
 
+            # A reassign = the lead HAD an RM and is moving to a different one
+            # (first-time assignment of an unassigned lead doesn't count). Flag it
+            # + bump priority so the new RM sees it; the star color comes from the
+            # actor's role (resolved at read time via reassigned_by_id).
+            is_reassign = bool(before_ids) and bool(rm_ids) and set(before_ids) != set(rm_ids)
             cur.execute(
                 "UPDATE inventory SET "
                 "  assigned_rm_ids = %s, "
-                "  assigned_mgr_id = COALESCE(%s, assigned_mgr_id) "
+                "  assigned_mgr_id = COALESCE(%s, assigned_mgr_id), "
+                "  reassigned = CASE WHEN %s THEN TRUE ELSE reassigned END, "
+                "  reassigned_by_id = CASE WHEN %s THEN %s ELSE reassigned_by_id END, "
+                "  priority = CASE WHEN %s THEN TRUE ELSE priority END "
                 "WHERE oh_id = %s",
-                (rm_ids, new_mgr, oh_id),
+                (rm_ids, new_mgr, is_reassign, is_reassign, g.user["id"], is_reassign, oh_id),
             )
             log_activity(
                 cur,
@@ -190,6 +198,23 @@ def bulk_update():
                     params,
                 )
                 updated_count = cur.rowcount
+
+                # Flag rows MOVED to a different RM (had an RM, set changed) so the
+                # new RM sees them as priority. First-time assignment of an
+                # unassigned lead doesn't count. Star color = actor's role.
+                if "assigned_rm_ids" in updates:
+                    new_set = set(updates["assigned_rm_ids"] or [])
+                    reassigned_ids = [
+                        oid for oid in allowed_ids
+                        if new_set and (existing[oid].get("assigned_rm_ids") or [])
+                        and set(existing[oid]["assigned_rm_ids"]) != new_set
+                    ]
+                    if reassigned_ids:
+                        cur.execute(
+                            "UPDATE inventory SET reassigned = TRUE, "
+                            "reassigned_by_id = %s, priority = TRUE WHERE oh_id = ANY(%s)",
+                            (user["id"], reassigned_ids),
+                        )
 
                 # One activity_log row per (entity, field changed), written in a
                 # single batched INSERT — a per-row loop of INSERTs blows the

@@ -574,6 +574,8 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .cp-perfect { color: var(--green); }
 .cp-partial { color: var(--red); }
 .prio-off { color: var(--text-faint); }
+.reassign-admin { color: #fd4ad8; }   /* reassigned by admin */
+.reassign-manager { color: #02f5d0; } /* reassigned by manager */
 .inv-td-star, .inv-th-star { width: 34px; text-align: center; }
 .inv-td-sel, .inv-th-sel { width: 34px; text-align: center; }
 

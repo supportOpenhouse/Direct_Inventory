@@ -498,7 +498,8 @@ INVENTORY_WITH_PRICING_SQL = f"""
                 FROM users u
                 WHERE u.id = ANY(i.assigned_rm_ids)),
                '[]'::json
-           ) AS assigned_rms
+           ) AS assigned_rms,
+           (SELECT u2.role FROM users u2 WHERE u2.id = i.reassigned_by_id) AS reassigned_by_role
     FROM inventory i
     LEFT JOIN LATERAL (
         -- Strict match: society + exact BHK + area within ±{OH_AREA_TOLERANCE} sqft.
@@ -537,6 +538,7 @@ ONE_WITH_RMS_SQL = (
     "      ORDER BY u.id"
     "   ) FROM users u WHERE u.id = ANY(i.assigned_rm_ids)),"
     "  '[]'::json"
-    ") AS assigned_rms "
+    ") AS assigned_rms, "
+    "(SELECT u2.role FROM users u2 WHERE u2.id = i.reassigned_by_id) AS reassigned_by_role "
     "FROM inventory i WHERE i.oh_id = %s"
 )

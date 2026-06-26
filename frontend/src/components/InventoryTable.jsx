@@ -3,7 +3,7 @@ import { api } from '../api/client.js';
 import ExpandPanel from './ExpandPanel.jsx';
 import OhPrice from './OhPrice.jsx';
 import {
-  displayCity, formatDateRel, formatDateShort, formatPrice, isCreatedToday, reasonLabelAny, rowFlag, starColor,
+  displayCity, formatDateRel, formatDateShort, formatPrice, isCreatedToday, reasonLabelAny, rowFlag, starColor, starClass,
   STAGE_DOT_COLOR, stageLabel, variation,
 } from '../utils/format.js';
 
@@ -66,8 +66,16 @@ export default function InventoryTable({
   async function togglePriority(e, item) {
     e.stopPropagation();
     if (!canSetPriority) return;
-    const wantYellow = starColor(item) !== 'yellow';
-    const body = wantYellow ? { star_color: 'yellow', priority: true } : { star_color: null, priority: false };
+    // Clicking the star on a reassigned lead dismisses the flag (the new RM
+    // acknowledges it) — pink/blue overrides the manual star, so the normal
+    // toggle can't apply here.
+    let body;
+    if (item.reassigned) {
+      body = { reassigned: false, priority: false };
+    } else {
+      const wantYellow = starColor(item) !== 'yellow';
+      body = wantYellow ? { star_color: 'yellow', priority: true } : { star_color: null, priority: false };
+    }
     onUpdated({ ...item, ...body });
     try {
       const r = await api.patch(`/api/inventory/${item.oh_id}`, body);
@@ -142,7 +150,7 @@ export default function InventoryTable({
                     {(color || canSetPriority) && (
                       <button
                         type="button"
-                        className={`prio-star ${color === 'yellow' ? 'prio-on' : color === 'green' ? 'cp-perfect' : color === 'red' ? 'cp-partial' : 'prio-off'}`}
+                        className={`prio-star ${starClass(color)}`}
                         onClick={(e) => togglePriority(e, item)}
                         disabled={!canSetPriority}
                         title="Priority"

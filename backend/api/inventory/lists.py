@@ -34,10 +34,11 @@ _LIST_COLS = ", ".join(f"j.{c}" for c in (
     "seller_phone", "posting_date", "listing_link", "stage", "stage_reason",
     "notes", "assigned_rm_id", "assigned_rm_ids", "assigned_mgr_id",
     "forms_visit_id", "visit_at", "visit_exec", "follow_up_at", "priority",
-    "cp_match", "star_color", "created_at", "updated_at", "last_synced_at",
+    "cp_match", "star_color", "reassigned", "reassigned_by_id",
+    "created_at", "updated_at", "last_synced_at",
     # derived by INVENTORY_WITH_PRICING_SQL
     "oh_price", "oh_price_area", "oh_price_bhk", "oh_price_match",
-    "oh_price_reason", "oh_near_diff", "assigned_rms",
+    "oh_price_reason", "oh_near_diff", "assigned_rms", "reassigned_by_role",
 )) + (
     ", CASE WHEN jsonb_typeof(j.note_thread) = 'array' "
     "THEN jsonb_array_length(j.note_thread) ELSE 0 END AS note_count"
@@ -87,6 +88,8 @@ def list_inventory():
             )
             today_ist = "(NOW() AT TIME ZONE 'Asia/Kolkata')::DATE"
             order_clause = (
+                # Reassigned leads float to the very top of the board.
+                f"CASE WHEN reassigned THEN 0 ELSE 1 END ASC, "
                 f"CASE WHEN follow_up_at IS NULL THEN 3 "
                 f"     WHEN follow_up_at::DATE = {today_ist} THEN 0 "
                 f"     WHEN follow_up_at::DATE < {today_ist} THEN 1 "

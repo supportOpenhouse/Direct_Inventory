@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import ExpandPanel from '../components/ExpandPanel.jsx';
 import FilterPanel from '../components/FilterPanel.jsx';
 import {
-  CITIES, displayCity, isCreatedToday, rejectReasonsForStage, starColor,
+  CITIES, displayCity, isCreatedToday, rejectReasonsForStage, starColor, starClass,
 } from '../utils/format.js';
 import { IconExternal, IconFilter, IconSearch } from '../components/icons.jsx';
 
@@ -34,8 +34,10 @@ function StarCell({ item, canSet, onUpdated }) {
   async function toggle(e) {
     e.stopPropagation();
     if (!canSet) return;
-    const wantYellow = color !== 'yellow';
-    const body = wantYellow ? { star_color: 'yellow', priority: true } : { star_color: null, priority: false };
+    // Reassigned lead → clicking dismisses the flag; otherwise toggle priority.
+    const body = item.reassigned
+      ? { reassigned: false, priority: false }
+      : (color !== 'yellow' ? { star_color: 'yellow', priority: true } : { star_color: null, priority: false });
     onUpdated({ ...item, ...body });
     try { const r = await api.patch(`/api/inventory/${item.oh_id}`, body); if (r?.item) onUpdated(r.item); }
     catch { onUpdated(item); }
@@ -43,7 +45,7 @@ function StarCell({ item, canSet, onUpdated }) {
   return (
     <td className="inv-td-star">
       <button type="button" disabled={!canSet}
-        className={`prio-star ${color === 'yellow' ? 'prio-on' : color === 'green' ? 'cp-perfect' : color === 'red' ? 'cp-partial' : 'prio-off'}`}
+        className={`prio-star ${starClass(color)}`}
         onClick={toggle} title="Priority">★</button>
     </td>
   );

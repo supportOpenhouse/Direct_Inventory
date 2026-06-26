@@ -278,6 +278,13 @@ export function isManualSource(src) {
 //   star_color === null   -> no override, apply defaults
 export function starColor(item) {
   if (!item) return null;
+  // A lead reassigned to a DIFFERENT RM overrides every other star. Color encodes
+  // who reassigned it: admin → pink, manager → blue. Other roles (rm) fall through
+  // to the normal rules until a color is defined for them.
+  if (item.reassigned) {
+    if (item.reassigned_by_role === 'admin') return 'pink';
+    if (item.reassigned_by_role === 'manager') return 'blue';
+  }
   const sc = item.star_color;
   if (sc === 'red' || sc === 'green' || sc === 'yellow') return sc;
   if (sc === 'none') return null;
@@ -285,6 +292,15 @@ export function starColor(item) {
   if (item.cp_match === 'perfect') return 'green';
   if (item.cp_match === 'partial') return 'red';
   return null;
+}
+
+// Map a starColor() result to the ★ button's CSS class. Shared by the row
+// renderers (InventoryTable / Leads / QualifiedLeads).
+export function starClass(color) {
+  return {
+    yellow: 'prio-on', green: 'cp-perfect', red: 'cp-partial',
+    pink: 'reassign-admin', blue: 'reassign-manager',
+  }[color] || 'prio-off';
 }
 
 // Variation = (asking - oh_price) / oh_price * 100, signed.

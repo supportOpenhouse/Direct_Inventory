@@ -297,6 +297,8 @@ def update_one(oh_id: str):
             allowed = EDITABLE_RAW_FIELDS | {
                 "stage", "stage_reason", "assigned_rm_ids", "assigned_mgr_id",
                 "follow_up_at", "priority", "star_color", "cp_match",
+                # Cleared from the UI (star click) to dismiss the reassigned flag.
+                "reassigned",
             }
             # Accept the legacy single-id key as a one-element array.
             if "assigned_rm_id" in body and "assigned_rm_ids" not in body:
@@ -343,6 +345,8 @@ def update_one(oh_id: str):
                 if k == "priority" and user["role"] not in PRIORITY_ROLES:
                     return jsonify({"error": "only admin/manager can change priority"}), 403
                 if k == "priority":
+                    v = bool(v)
+                if k == "reassigned":
                     v = bool(v)
                 if k == "star_color":
                     if user["role"] not in PRIORITY_ROLES:
@@ -419,6 +423,21 @@ def update_one(oh_id: str):
                         },
                     })
 
+            # Manual reassign (RM → a different RM) → flag + priority bump so the
+            # new RM sees it. Skipped when this PATCH is the dismiss (sends
+            # reassigned) to avoid a duplicate column in the SET.
+            if "assigned_rm_ids" in body and "reassigned" not in body:
+                old_rm = set(existing.get("assigned_rm_ids") or [])
+                new_rm = set(body.get("assigned_rm_ids") or [])
+                if old_rm and new_rm and old_rm != new_rm:
+                    updates.append("reassigned = TRUE")
+                    updates.append("reassigned_by_id = %s"); params.append(user["id"])
+                    if "priority" not in body:
+                        updates.append("priority = TRUE")
+            # Dismiss (reassigned=false) → also null who reassigned it.
+            if "reassigned" in body and not body.get("reassigned"):
+                updates.append("reassigned_by_id = NULL")
+
             # Fold the auto-derived manager change into the assigned_rm_ids entry
             # so a reassignment is one audit row per uid, not two.
             log_entries = bind_assigned_mgr(log_entries)
@@ -436,7 +455,9 @@ def update_one(oh_id: str):
 
             params.append(oh_id)
             cur.execute(
-                f"UPDATE inventory SET {', '.join(updates)} WHERE oh_id = %s RETURNING *",
+                f"UPDATE inventory SET {', '.join(updates)} WHERE oh_id = %s "
+                "RETURNING *, (SELECT u.role FROM users u WHERE u.id = inventory.reassigned_by_id) "
+                "AS reassigned_by_role",
                 params,
             )
             row = cur.fetchone()
