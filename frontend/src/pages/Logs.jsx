@@ -31,8 +31,16 @@ function Details({ row }) {
     );
   }
   if (field && (before_value != null || after_value != null) && action !== 'note_added') {
+    // A reassignment folds the auto-derived manager change into the
+    // assigned_rm_ids entry (metadata.mgr_before/after) — show it as a sub-line
+    // so it's visible without a separate assigned_mgr_id row.
+    const hasMgr = field === 'assigned_rm_ids' && metadata && ('mgr_after' in metadata || 'mgr_before' in metadata);
     return (
-      <div><div className="det-change"><span className="det-before">{before_value ?? '—'}</span><span className="det-arrow"> → </span><span className="det-after">{after_value ?? '—'}</span></div><div className="det-sub">Field: <code>{field}</code></div></div>
+      <div>
+        <div className="det-change"><span className="det-before">{before_value ?? '—'}</span><span className="det-arrow"> → </span><span className="det-after">{after_value ?? '—'}</span></div>
+        <div className="det-sub">Field: <code>{field}</code></div>
+        {hasMgr && <div className="det-sub">Manager: {metadata.mgr_before ?? '—'} → {metadata.mgr_after ?? '—'}</div>}
+      </div>
     );
   }
   if (action === 'note_added') return <div><div className="det-change"><strong>Note added</strong>{metadata?.author_name && <span className="det-sub"> by {metadata.author_name}</span>}</div>{after_value && <div className="det-after det-note-body">{after_value}</div>}</div>;

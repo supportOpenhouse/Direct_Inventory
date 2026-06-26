@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from flask import g, jsonify, request
 
 from ...db import get_conn
-from ...services.activity import log as log_activity, log_many
+from ...services.activity import log as log_activity, log_many, bind_assigned_mgr
 from ...services.assignment import resolve_assignment
 from ...services.cp_match import MATCH_INPUT_FIELDS
 from ...services.oh_id import next_oh_id
@@ -419,6 +419,9 @@ def update_one(oh_id: str):
                         },
                     })
 
+            # Fold the auto-derived manager change into the assigned_rm_ids entry
+            # so a reassignment is one audit row per uid, not two.
+            log_entries = bind_assigned_mgr(log_entries)
             # Flush every audit row in one round-trip — BEFORE the noop return so
             # a same-stage re-touch with no column changes still gets logged.
             log_many(cur, log_entries)

@@ -6,7 +6,7 @@ import json
 from flask import g, jsonify, request
 
 from ...db import get_conn
-from ...services.activity import log as log_activity, log_many
+from ...services.activity import log as log_activity, log_many, bind_assigned_mgr
 from ..auth import require_auth
 from ._common import (
     BULK_ALLOWED_FIELDS,
@@ -215,6 +215,9 @@ def bulk_update():
                             "field": k, "before_value": before.get(k), "after_value": v,
                             "metadata": meta,
                         })
+                # Fold each row's auto-derived manager change into its
+                # assigned_rm_ids entry — one audit row per uid, not two.
+                log_rows = bind_assigned_mgr(log_rows)
                 log_many(cur, log_rows)
 
         return jsonify({
