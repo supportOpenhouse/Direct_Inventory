@@ -8,7 +8,7 @@ import { IconClose } from './icons.jsx';
  * bell. Editing is delegated to the inline ExpandPanel sections; this is mainly
  * a focused view of one lead with its notes thread.
  */
-export default function CardDetailModal({ item, role, onUpdated, onClose }) {
+export default function CardDetailModal({ item, role, onUpdated, onClose, showAssignedRm = false }) {
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose(); }
     document.addEventListener('keydown', onKey);
@@ -48,7 +48,7 @@ export default function CardDetailModal({ item, role, onUpdated, onClose }) {
           )}
         </div>
         <div className="inv-table-wrap" style={{ overflow: 'visible' }}>
-          <ExpandPanel item={item} role={role} onUpdated={onUpdated} canPost={canPost} showAssignedRm={false} />
+          <ExpandPanel item={item} role={role} onUpdated={onUpdated} canPost={canPost} showAssignedRm={showAssignedRm} />
         </div>
       </div>
     </div>

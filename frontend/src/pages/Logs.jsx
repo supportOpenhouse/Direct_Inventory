@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
+import { useAuth } from '../contexts/AuthContext.jsx';
+import CardDetailModal from '../components/CardDetailModal.jsx';
 
 function formatTs(iso) {
   if (!iso) return '';
@@ -57,12 +59,20 @@ function SortableTh({ field, label, sort, onSort }) {
 }
 
 export default function Logs() {
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [opts, setOpts] = useState({ actions: [], entity_types: [], actors: [] });
   const [f, setF] = useState({ q: '', action: '', entity_type: '', actor_email: '', from: '', to: '' });
   const [sort, setSort] = useState({ field: 'created_at', dir: 'desc' });
   const [loading, setLoading] = useState(true);
+  const [detail, setDetail] = useState(null); // inventory record shown in the popup
+
+  // UID column → open the property detail popup. Fetch the full record first so
+  // the modal header (society/stage/price) is populated, like the bell does.
+  function openUid(uid) {
+    api.get(`/api/inventory/${encodeURIComponent(uid)}`).then(setDetail).catch(() => {});
+  }
 
   async function loadFilters() { try { setOpts(await api.get('/api/activity/filters')); } catch { /* non-blocking */ } }
   async function refresh() {
@@ -107,7 +117,11 @@ export default function Logs() {
                 : items.map((a) => (
                   <tr key={a.id}>
                     <td className="al-ts">{formatTs(a.created_at)}</td>
-                    <td className="al-uid">{a.entity_id || '—'}</td>
+                    <td className="al-uid">
+                      {a.entity_id && a.entity_id.startsWith('OHL')
+                        ? <button type="button" className="al-uid-link" onClick={() => openUid(a.entity_id)}>{a.entity_id}</button>
+                        : (a.entity_id || '—')}
+                    </td>
                     <td><div className="al-actor-name">{a.actor_name || '—'}</div><div className="al-actor-email">{a.actor_email}</div></td>
                     <td className="al-action"><code>{a.action || '—'}</code></td>
                     <td><span className={categoryClass(a.entity_type)}>{a.entity_type || '—'}</span></td>
@@ -117,6 +131,16 @@ export default function Logs() {
           </tbody>
         </table>
       </div>
+
+      {detail && (
+        <CardDetailModal
+          item={detail}
+          role={user?.role}
+          showAssignedRm
+          onUpdated={(u) => setDetail((p) => ({ ...p, ...u }))}
+          onClose={() => setDetail(null)}
+        />
+      )}
     </div>
   );
 }
