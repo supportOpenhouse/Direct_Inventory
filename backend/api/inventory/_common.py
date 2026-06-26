@@ -421,11 +421,17 @@ def _build_filters(user: dict, args, alias: str = ""):
     # wins, then priority, then cp_match.
     star = args.get("star")
     if star:
-        valid_stars = {"partial", "perfect", "important", "blank"}
+        valid_stars = {"partial", "perfect", "important", "blank",
+                       "reassigned_admin", "reassigned_manager"}
         stars = [s for s in (x.strip().lower() for x in star.split(",")) if s in valid_stars]
         if stars:
+            # Mirrors the frontend starColor() precedence: a reassigned lead's
+            # pink/blue (by reassigning user's role) overrides every other star.
+            _role = f"(SELECT u.role FROM users u WHERE u.id = {p}reassigned_by_id)"
             base_filters.append(
                 f"AND (CASE "
+                f"WHEN {p}reassigned AND {_role} = 'admin'   THEN 'reassigned_admin' "
+                f"WHEN {p}reassigned AND {_role} = 'manager' THEN 'reassigned_manager' "
                 f"WHEN {p}star_color = 'yellow' THEN 'important' "
                 f"WHEN {p}star_color = 'green'  THEN 'perfect' "
                 f"WHEN {p}star_color = 'red'    THEN 'partial' "
