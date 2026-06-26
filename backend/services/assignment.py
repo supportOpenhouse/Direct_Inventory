@@ -36,11 +36,21 @@ log = logging.getLogger(__name__)
 # Placeholder RM that unmatched leads fall back to (created by migration 026).
 # Looked up by this stable email; if the row is absent (migration not yet run)
 # the fallback is skipped and leads stay unassigned as before.
-UNALLOCATED_EMAIL = "unallocated@openhouse.in"
+UNALLOCATED_EMAIL = "test@openhouse.in"
 
 
 def _unallocated_id(cur) -> int | None:
-    cur.execute("SELECT id FROM users WHERE LOWER(email) = %s", (UNALLOCATED_EMAIL,))
+    # Match by NAME or the canonical email so the lookup survives email drift.
+    # Prod's placeholder is named 'Unallocated' but its email drifted away from
+    # UNALLOCATED_EMAIL (e.g. to test@openhouse.in). The old email-only lookup
+    # then returned None, so the fallbacks below silently no-op'd and unmatched
+    # leads kept landing with NO POC. Mirrors the cleanup scripts' resolution.
+    cur.execute(
+        "SELECT id FROM users "
+        "WHERE LOWER(TRIM(name)) = 'unallocated' OR LOWER(email) = %s "
+        "ORDER BY id LIMIT 1",
+        (UNALLOCATED_EMAIL,),
+    )
     row = cur.fetchone()
     return row["id"] if row else None
 
