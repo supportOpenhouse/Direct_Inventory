@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import CardDetailModal from '../components/CardDetailModal.jsx';
+import { stageLabel } from '../utils/format.js';
 
 function formatTs(iso) {
   if (!iso) return '';
@@ -48,6 +49,27 @@ function Details({ row }) {
   if (action === 'note_added') return <div><div className="det-change"><strong>Note added</strong>{metadata?.author_name && <span className="det-sub"> by {metadata.author_name}</span>}</div>{after_value && <div className="det-after det-note-body">{after_value}</div>}</div>;
   if (action === 'create') return <span className="det-after">Created</span>;
   if (action === 'login') return <span className="muted">Logged in</span>;
+
+  // Event actions that aren't field-changes — readable summaries from metadata.
+  if (action === 'visit_scheduled') {
+    const when = [metadata?.schedule_date, metadata?.schedule_time].filter(Boolean).join(' ');
+    const sub = [metadata?.field_exec_name && `Exec: ${metadata.field_exec_name}`, metadata?.assigned_by_name && `By: ${metadata.assigned_by_name}`].filter(Boolean).join(' · ');
+    return <div><div className="det-change"><strong>📅 Visit scheduled</strong>{when ? ` · ${when}` : ''}</div>{sub && <div className="det-sub">{sub}</div>}</div>;
+  }
+  if (action === 'visit_cancelled') {
+    return <div><div className="det-change"><strong>✕ Visit cancelled</strong>{metadata?.target_stage ? ` → ${stageLabel(metadata.target_stage)}` : ''}</div>{metadata?.reason && <div className="det-sub">{metadata.reason}</div>}</div>;
+  }
+  if (action === 'ticket_created') return <div className="det-change"><strong>🎫 Ticket created</strong></div>;
+  if (action === 'ticket_reply') return <div className="det-change"><strong>🎫 Ticket reply</strong></div>;
+  if (action === 'ticket_closed') return <div className="det-change"><strong>🎫 Ticket closed</strong></div>;
+  if (action === 'assign_missing') return <div><div className="det-change"><strong>Auto-assign run</strong></div><div className="det-sub">{metadata?.updated ?? 0} assigned · {metadata?.remaining ?? 0} remaining</div></div>;
+  if (action === 'sync_run') return <div><div className="det-change"><strong>Sheet sync</strong></div><div className="det-sub">{metadata?.inserted ?? 0} new · {metadata?.updated ?? 0} updated · {metadata?.skipped ?? 0} skipped</div></div>;
+  if (action === 'pricing_sync_run') return <div><div className="det-change"><strong>Pricing sync</strong>{metadata?.source_sheet ? ` · ${metadata.source_sheet}` : ''}</div><div className="det-sub">{metadata?.inserted ?? 0} new · {metadata?.fetched ?? 0} fetched</div></div>;
+  if (action === 'auto_provision') return <div><div className="det-change"><strong>👤 Account auto-provisioned</strong></div>{metadata?.name && <div className="det-sub">{metadata.name}</div>}</div>;
+  if (action === 'bulk_stage_cleanup') {
+    return <div><div className="det-change"><strong>Bulk stage cleanup</strong>{metadata?.from_stage && metadata?.to_stage ? ` · ${stageLabel(metadata.from_stage)} → ${stageLabel(metadata.to_stage)}` : ''}</div><div className="det-sub">{metadata?.updated ?? 0} updated{metadata?.csv ? ` · ${metadata.csv}` : ''}</div></div>;
+  }
+
   if (metadata && typeof metadata === 'object') return <code className="det-meta">{JSON.stringify(metadata)}</code>;
   return <span className="muted">—</span>;
 }
@@ -68,10 +90,15 @@ export default function Logs() {
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState(null); // inventory record shown in the popup
 
-  // UID column → open the property detail popup. Fetch the full record first so
-  // the modal header (society/stage/price) is populated, like the bell does.
+  // UID column → open the property detail popup IMMEDIATELY with a skeleton
+  // seed, then fill in the record. On a cache hit the fetch resolves instantly
+  // (no visible loading); the oh_id guard stops a stale fetch from overwriting
+  // if the user opened a different row meanwhile.
   function openUid(uid) {
-    api.get(`/api/inventory/${encodeURIComponent(uid)}`).then(setDetail).catch(() => {});
+    setDetail({ oh_id: uid, _loading: true });
+    api.get(`/api/inventory/${encodeURIComponent(uid)}`)
+      .then((r) => setDetail((prev) => (prev && prev.oh_id === uid ? r : prev)))
+      .catch(() => setDetail((prev) => (prev && prev.oh_id === uid ? { ...prev, _loading: false } : prev)));
   }
 
   async function loadFilters() { try { setOpts(await api.get('/api/activity/filters')); } catch { /* non-blocking */ } }

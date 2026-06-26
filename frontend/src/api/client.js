@@ -97,25 +97,29 @@ async function download(path) {
 // next mutation or its TTL — whichever comes first. The inventory-list and
 // home-summary rules below are what make navigating BACK to a board instant
 // (the table is served from cache instead of refetched).
+// Every API caches for 10 min; the Home summary for 5 min. Any write still
+// wipes the whole cache (mutate), so your own edits are never stale.
 const TTL_RULES = [
+  ['/api/home/summary', 300],       // Home cards — 5 min
   ['/api/users/master-areas', 600],
   ['/api/inventory/societies', 600],
-  ['/api/inventory/counts', 120],   // stage-pill counts — cached with the list
-  ['/api/inventory/notifications', 30],
-  ['/api/inventory?', 120],         // the board/table list — survives back-nav
-  ['/api/home/summary', 60],        // Home cards — revisiting Home is instant
-  ['/api/tickets/pending-count', 10],
-  ['/api/tickets?oh_id=', 120],
-  ['/api/tickets?', 60],
-  ['/api/geo/', 1800],
-  ['/api/users', 60],
+  ['/api/inventory/counts', 600],
+  ['/api/inventory/notifications', 600],
+  ['/api/inventory?', 600],
+  ['/api/tickets/pending-count', 10],   // live ticket badge — keep short
+  ['/api/tickets?oh_id=', 600],
+  ['/api/tickets?', 600],
+  ['/api/geo/', 600],
+  ['/api/users', 600],
 ];
 // Single-record detail (/api/inventory/<oh_id>) — re-expanding a row shouldn't
 // refetch. Static sub-routes are excluded; /<oh_id>/visible-rms has an extra
 // segment so it never matches.
 const INV_DETAIL_RE = /^\/api\/inventory\/(?!counts$|ids$|badges|notifications$|societies|export)[^/?]+$/;
 function ttlFor(path) {
-  if (INV_DETAIL_RE.test(path)) return 120 * 1000;
+  // Single-record detail (opened from the bell / Logs UID) — cache 10 min so
+  // re-opening an already-viewed oh_id never refetches. Any write clears it.
+  if (INV_DETAIL_RE.test(path)) return 600 * 1000;
   const rule = TTL_RULES.find(([prefix]) => path.startsWith(prefix));
   return rule ? rule[1] * 1000 : 0;
 }
