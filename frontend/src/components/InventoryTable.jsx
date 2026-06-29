@@ -1,9 +1,9 @@
 import { Fragment, useState } from 'react';
-import { api } from '../api/client.js';
 import ExpandPanel from './ExpandPanel.jsx';
 import OhPrice from './OhPrice.jsx';
+import StarCell from './StarCell.jsx';
 import {
-  displayCity, formatDateRel, formatDateShort, formatPrice, isCreatedToday, reasonLabelAny, rowFlag, starColor, starClass,
+  displayCity, formatDateRel, formatDateShort, formatPrice, isCreatedToday, reasonLabelAny, rowFlag, starColor,
   STAGE_DOT_COLOR, stageLabel, variation,
 } from '../utils/format.js';
 
@@ -62,26 +62,6 @@ export default function InventoryTable({
   const visibleSelectedCount = visibleIds.filter((id) => selected?.has?.(id)).length;
   const allVisibleSelected = visibleIds.length > 0 && visibleSelectedCount === visibleIds.length;
   const someVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected;
-
-  async function togglePriority(e, item) {
-    e.stopPropagation();
-    if (!canSetPriority) return;
-    // Clicking the star on a reassigned lead dismisses the flag (the new RM
-    // acknowledges it) — pink/blue overrides the manual star, so the normal
-    // toggle can't apply here.
-    let body;
-    if (item.reassigned) {
-      body = { reassigned: false, priority: false };
-    } else {
-      const wantYellow = starColor(item) !== 'yellow';
-      body = wantYellow ? { star_color: 'yellow', priority: true } : { star_color: null, priority: false };
-    }
-    onUpdated({ ...item, ...body });
-    try {
-      const r = await api.patch(`/api/inventory/${item.oh_id}`, body);
-      if (r?.item) onUpdated(r.item);
-    } catch { onUpdated(item); }
-  }
 
   return (
     <div className="inv-table-wrap">
@@ -146,17 +126,7 @@ export default function InventoryTable({
                       <input type="checkbox" readOnly checked={!!isSel} />
                     </td>
                   )}
-                  <td className="inv-td-star">
-                    {(color || canSetPriority) && (
-                      <button
-                        type="button"
-                        className={`prio-star ${starClass(color)}`}
-                        onClick={(e) => togglePriority(e, item)}
-                        disabled={!canSetPriority}
-                        title="Priority"
-                      >★</button>
-                    )}
-                  </td>
+                  <StarCell item={item} canSet={canSetPriority} onUpdated={onUpdated} />
                   {isAdmin && <td className="inv-td-id">{item.oh_id}</td>}
                   <td><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></td>
                   <td className={`inv-td-society ${flag ? `inv-society-${flag}` : ''}`}>

@@ -299,9 +299,17 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
                 elif verdict == "partial": partial += 1
                 else: no_match += 1
 
+            # Also persist the star color (green/red) the scan owns. Guarded so a
+            # manual/reassign color (yellow/pink/blue) is never clobbered: only
+            # touch rows whose star_color is NULL or already a CP color. A 'none'
+            # verdict clears a stale green/red.
             execute_values(
                 cur,
-                "UPDATE inventory AS i SET cp_match = v.verdict "
+                "UPDATE inventory AS i SET cp_match = v.verdict, "
+                "  star_color = CASE "
+                "    WHEN i.star_color IS NULL OR i.star_color IN ('green','red') "
+                "      THEN CASE v.verdict WHEN 'perfect' THEN 'green' WHEN 'partial' THEN 'red' ELSE NULL END "
+                "    ELSE i.star_color END "
                 "FROM (VALUES %s) AS v(id, verdict) "
                 "WHERE i.id = v.id",
                 verdicts, page_size=CHUNK_SIZE,

@@ -74,15 +74,17 @@ def set_assigned_rms(oh_id: str):
             # + bump priority so the new RM sees it; the star color comes from the
             # actor's role (resolved at read time via reassigned_by_id).
             is_reassign = bool(before_ids) and bool(rm_ids) and set(before_ids) != set(rm_ids)
+            # Admin-only endpoint → pink when it's a reassign.
             cur.execute(
                 "UPDATE inventory SET "
                 "  assigned_rm_ids = %s, "
                 "  assigned_mgr_id = COALESCE(%s, assigned_mgr_id), "
                 "  reassigned = CASE WHEN %s THEN TRUE ELSE reassigned END, "
                 "  reassigned_by_id = CASE WHEN %s THEN %s ELSE reassigned_by_id END, "
-                "  priority = CASE WHEN %s THEN TRUE ELSE priority END "
+                "  priority = CASE WHEN %s THEN TRUE ELSE priority END, "
+                "  star_color = CASE WHEN %s THEN 'pink' ELSE star_color END "
                 "WHERE oh_id = %s",
-                (rm_ids, new_mgr, is_reassign, is_reassign, g.user["id"], is_reassign, oh_id),
+                (rm_ids, new_mgr, is_reassign, is_reassign, g.user["id"], is_reassign, is_reassign, oh_id),
             )
             log_activity(
                 cur,
@@ -210,10 +212,14 @@ def bulk_update():
                         and set(existing[oid]["assigned_rm_ids"]) != new_set
                     ]
                     if reassigned_ids:
+                        # Store the star color by actor role (admin → pink,
+                        # manager → blue); rm reassign leaves star_color as-is.
+                        reassign_color = {"admin": "pink", "manager": "blue"}.get(user["role"])
                         cur.execute(
-                            "UPDATE inventory SET reassigned = TRUE, "
-                            "reassigned_by_id = %s, priority = TRUE WHERE oh_id = ANY(%s)",
-                            (user["id"], reassigned_ids),
+                            "UPDATE inventory SET reassigned = TRUE, reassigned_by_id = %s, "
+                            "priority = TRUE, star_color = COALESCE(%s, star_color) "
+                            "WHERE oh_id = ANY(%s)",
+                            (user["id"], reassign_color, reassigned_ids),
                         )
 
                 # One activity_log row per (entity, field changed), written in a

@@ -576,6 +576,15 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .prio-off { color: var(--text-faint); }
 .reassign-admin { color: #fd4ad8; }   /* reassigned by admin */
 .reassign-manager { color: #02f5d0; } /* reassigned by manager */
+/* Floating star-colour picker, anchored to the right of the star. */
+.star-picker {
+  position: absolute; top: 50%; left: 100%; transform: translateY(-50%); margin-left: 6px;
+  display: flex; gap: 2px; padding: 4px 6px; z-index: 60; white-space: nowrap;
+  background: var(--surface, #fff); border: 1px solid var(--border, #e2e8f0);
+  border-radius: 9px; box-shadow: 0 6px 18px rgba(0, 0, 0, .16);
+}
+.star-swatch { background: transparent; border: 0; font-size: 17px; line-height: 1; padding: 1px 3px; cursor: pointer; transition: transform .1s; }
+.star-swatch:hover { transform: scale(1.25); }
 .inv-td-star, .inv-th-star { width: 34px; text-align: center; }
 .inv-td-sel, .inv-th-sel { width: 34px; text-align: center; }
 

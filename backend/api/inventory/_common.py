@@ -425,20 +425,15 @@ def _build_filters(user: dict, args, alias: str = ""):
                        "reassigned_admin", "reassigned_manager"}
         stars = [s for s in (x.strip().lower() for x in star.split(",")) if s in valid_stars]
         if stars:
-            # Mirrors the frontend starColor() precedence: a reassigned lead's
-            # pink/blue (by reassigning user's role) overrides every other star.
-            _role = f"(SELECT u.role FROM users u WHERE u.id = {p}reassigned_by_id)"
+            # star_color is the single source of truth now — map it straight to
+            # the filter categories (NULL/'none' → blank).
             base_filters.append(
-                f"AND (CASE "
-                f"WHEN {p}reassigned AND {_role} = 'admin'   THEN 'reassigned_admin' "
-                f"WHEN {p}reassigned AND {_role} = 'manager' THEN 'reassigned_manager' "
-                f"WHEN {p}star_color = 'yellow' THEN 'important' "
-                f"WHEN {p}star_color = 'green'  THEN 'perfect' "
-                f"WHEN {p}star_color = 'red'    THEN 'partial' "
-                f"WHEN {p}star_color = 'none'   THEN 'blank' "
-                f"WHEN {p}priority THEN 'important' "
-                f"WHEN {p}cp_match = 'perfect'  THEN 'perfect' "
-                f"WHEN {p}cp_match = 'partial'  THEN 'partial' "
+                f"AND (CASE {p}star_color "
+                f"WHEN 'red'    THEN 'partial' "
+                f"WHEN 'green'  THEN 'perfect' "
+                f"WHEN 'yellow' THEN 'important' "
+                f"WHEN 'pink'   THEN 'reassigned_admin' "
+                f"WHEN 'blue'   THEN 'reassigned_manager' "
                 f"ELSE 'blank' END) = ANY(%s)"
             )
             base_params.append(stars)

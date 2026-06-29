@@ -4,7 +4,8 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import ExpandPanel from '../components/ExpandPanel.jsx';
 import FilterPanel from '../components/FilterPanel.jsx';
 import OhPrice from '../components/OhPrice.jsx';
-import { CITIES, displayCity, formatPrice, starColor, starClass, variation } from '../utils/format.js';
+import StarCell from '../components/StarCell.jsx';
+import { CITIES, displayCity, formatPrice, variation } from '../utils/format.js';
 import { IconFilter, IconSearch } from '../components/icons.jsx';
 
 const PAGE_SIZE = 50;
@@ -29,28 +30,6 @@ function assignedRmsTitle(rms) {
   return rms.map((r) => r.name || r.email || `#${r.id}`).join(', ');
 }
 
-function StarCell({ item, canSet, onUpdated }) {
-  const color = starColor(item);
-  if (!color && !canSet) return <td className="inv-td-star" />;
-  async function toggle(e) {
-    e.stopPropagation();
-    if (!canSet) return;
-    // Reassigned lead → clicking dismisses the flag; otherwise toggle priority.
-    const body = item.reassigned
-      ? { reassigned: false, priority: false }
-      : (color !== 'yellow' ? { star_color: 'yellow', priority: true } : { star_color: null, priority: false });
-    onUpdated({ ...item, ...body });
-    try { const r = await api.patch(`/api/inventory/${item.oh_id}`, body); if (r?.item) onUpdated(r.item); }
-    catch { onUpdated(item); }
-  }
-  return (
-    <td className="inv-td-star">
-      <button type="button" disabled={!canSet}
-        className={`prio-star ${starClass(color)}`}
-        onClick={toggle} title="Priority">★</button>
-    </td>
-  );
-}
 
 // Qualified Leads — same flow as the old qualified table: a detail view of
 // qualified leads with the expand panel (status edit + notes) for next steps.

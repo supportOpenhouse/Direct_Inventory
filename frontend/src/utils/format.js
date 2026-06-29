@@ -278,20 +278,12 @@ export function isManualSource(src) {
 //   star_color === null   -> no override, apply defaults
 export function starColor(item) {
   if (!item) return null;
-  // A lead reassigned to a DIFFERENT RM overrides every other star. Color encodes
-  // who reassigned it: admin → pink, manager → blue. Other roles (rm) fall through
-  // to the normal rules until a color is defined for them.
-  if (item.reassigned) {
-    if (item.reassigned_by_role === 'admin') return 'pink';
-    if (item.reassigned_by_role === 'manager') return 'blue';
-  }
+  // The star is the STORED star_color, read verbatim — no calculation. Every
+  // event that should color a row (manual pick, reassign, CP-match scan) writes
+  // star_color server-side. 'none'/unset → no star.
   const sc = item.star_color;
-  if (sc === 'red' || sc === 'green' || sc === 'yellow') return sc;
-  if (sc === 'none') return null;
-  if (item.priority) return 'yellow';
-  if (item.cp_match === 'perfect') return 'green';
-  if (item.cp_match === 'partial') return 'red';
-  return null;
+  if (!sc || sc === 'none') return null;
+  return sc; // 'yellow' | 'green' | 'red' | 'pink' | 'blue'
 }
 
 // Map a starColor() result to the ★ button's CSS class. Shared by the row

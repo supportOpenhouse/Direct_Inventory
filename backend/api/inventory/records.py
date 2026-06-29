@@ -353,7 +353,7 @@ def update_one(oh_id: str):
                         return jsonify({"error": "only admin/manager can change star_color"}), 403
                     if v in ("", None):
                         v = None
-                    elif v not in ("red", "green", "yellow", "none"):
+                    elif v not in ("red", "green", "yellow", "pink", "blue", "none"):
                         return jsonify({"error": f"invalid star_color: {v}"}), 400
                 if k == "cp_match":
                     # Manual override that mirrors the auto-scan verdict. Same role
@@ -434,6 +434,11 @@ def update_one(oh_id: str):
                     updates.append("reassigned_by_id = %s"); params.append(user["id"])
                     if "priority" not in body:
                         updates.append("priority = TRUE")
+                    # Store the star color by actor role (admin → pink, manager →
+                    # blue) unless this PATCH also set star_color explicitly.
+                    reassign_color = {"admin": "pink", "manager": "blue"}.get(user["role"])
+                    if reassign_color and "star_color" not in body:
+                        updates.append("star_color = %s"); params.append(reassign_color)
             # Dismiss (reassigned=false) → also null who reassigned it.
             if "reassigned" in body and not body.get("reassigned"):
                 updates.append("reassigned_by_id = NULL")

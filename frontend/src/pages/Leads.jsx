@@ -3,8 +3,9 @@ import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import ExpandPanel from '../components/ExpandPanel.jsx';
 import FilterPanel from '../components/FilterPanel.jsx';
+import StarCell from '../components/StarCell.jsx';
 import {
-  CITIES, displayCity, isCreatedToday, rejectReasonsForStage, starColor, starClass,
+  CITIES, displayCity, isCreatedToday, rejectReasonsForStage,
 } from '../utils/format.js';
 import { IconExternal, IconFilter, IconSearch } from '../components/icons.jsx';
 
@@ -25,30 +26,6 @@ function appendPage(prev, items) {
 // for its 20px render (3× DPR headroom), so shipping the image is cheap.
 function NewBadge() {
   return <img className="new-badge-img" src="/new.png" alt="NEW" />;
-}
-
-// ── star cell (priority toggle) ──────────────────────────────────────────
-function StarCell({ item, canSet, onUpdated }) {
-  const color = starColor(item);
-  if (!color && !canSet) return <td className="inv-td-star" />;
-  async function toggle(e) {
-    e.stopPropagation();
-    if (!canSet) return;
-    // Reassigned lead → clicking dismisses the flag; otherwise toggle priority.
-    const body = item.reassigned
-      ? { reassigned: false, priority: false }
-      : (color !== 'yellow' ? { star_color: 'yellow', priority: true } : { star_color: null, priority: false });
-    onUpdated({ ...item, ...body });
-    try { const r = await api.patch(`/api/inventory/${item.oh_id}`, body); if (r?.item) onUpdated(r.item); }
-    catch { onUpdated(item); }
-  }
-  return (
-    <td className="inv-td-star">
-      <button type="button" disabled={!canSet}
-        className={`prio-star ${starClass(color)}`}
-        onClick={toggle} title="Priority">★</button>
-    </td>
-  );
 }
 
 // ── generic action table — used for both the Lead and Active Lead panes ────
