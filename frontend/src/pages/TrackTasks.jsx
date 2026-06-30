@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
 import { STAGES, SUPPLY_STAGES, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
 import AssignNewLeadsButton from '../components/AssignNewLeadsButton.jsx';
@@ -42,18 +42,33 @@ export default function TrackTasks() {
   const [rmCounts, setRmCounts] = useState([]);
   const [loadingCounts, setLoadingCounts] = useState(true);
 
+  const loadTasks = useCallback(() => api.get('/api/home/task-tracking')
+    .then((r) => setUsers(r.users || []))
+    .catch(() => setUsers([]))
+    .finally(() => setLoading(false)), []);
+  const loadCounts = useCallback(() => api.get('/api/home/rm-stage-counts')
+    .then((r) => setRmCounts(r.users || []))
+    .catch(() => setRmCounts([]))
+    .finally(() => setLoadingCounts(false)), []);
+
   useEffect(() => {
     let alive = true;
-    api.get('/api/home/task-tracking')
-      .then((r) => { if (alive) setUsers(r.users || []); })
-      .catch(() => { if (alive) setUsers([]); })
-      .finally(() => { if (alive) setLoading(false); });
-    api.get('/api/home/rm-stage-counts')
-      .then((r) => { if (alive) setRmCounts(r.users || []); })
-      .catch(() => { if (alive) setRmCounts([]); })
-      .finally(() => { if (alive) setLoadingCounts(false); });
+    loadTasks();
+    loadCounts();
+    // Auto-assign unassigned leads when this tab opens. Only fires when there's
+    // actual work, and the 15-min server cooldown still gates it (a 429 just
+    // means it ran recently → silently ignored, no spam). Refresh the tables
+    // only if a run actually assigned rows.
+    (async () => {
+      try {
+        const c = await api.get('/api/inventory/counts?rm_id=none');
+        if (!alive || !(c?.total > 0)) return;
+        const r = await api.post('/api/inventory/assign-missing', { mode: 'missing' });
+        if (alive && r?.updated > 0) { loadTasks(); loadCounts(); }
+      } catch { /* cooldown 429 / transient — silent */ }
+    })();
     return () => { alive = false; };
-  }, []);
+  }, [loadTasks, loadCounts]);
 
   // Columns = the stages that actually appear, in canonical board → supply order.
   const stageCols = useMemo(() => {
