@@ -163,8 +163,44 @@ def assign_missing():
         return jsonify({"error": "only admin can run mode=all"}), 403
     conn = get_conn()
     try:
+        # Cooldown for the manual missing-backfill (Track Tasks button): the heavy
+        # scan can't be triggered more than once per 15 min — the cron already
+        # runs it on that cadence. Fail-soft if job_runs isn't migrated yet.
+        _COOLDOWN_S = 15 * 60
+        if mode == "missing":
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT EXTRACT(EPOCH FROM (NOW() - last_run_at)) AS age "
+                        "FROM job_runs WHERE job = 'assign_missing_manual'"
+                    )
+                    last = cur.fetchone()
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                last = None
+            if last and last.get("age") is not None and last["age"] < _COOLDOWN_S:
+                wait_min = int((_COOLDOWN_S - last["age"]) // 60) + 1
+                return jsonify({
+                    "error": f"Auto-assign ran recently — try again in ~{wait_min} min.",
+                    "cooldown": True,
+                }), 429
+
         result = assign_missing_batch(conn, mode=mode)
         result["mode"] = mode
+
+        if mode == "missing":
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO job_runs (job, last_run_at) "
+                        "VALUES ('assign_missing_manual', NOW()) "
+                        "ON CONFLICT (job) DO UPDATE SET last_run_at = NOW()"
+                    )
+                conn.commit()
+            except Exception:
+                conn.rollback()
+
         if result.get("updated"):
             with conn, conn.cursor() as cur:
                 log_activity(

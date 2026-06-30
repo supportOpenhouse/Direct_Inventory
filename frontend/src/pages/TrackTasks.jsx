@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
 import { STAGES, SUPPLY_STAGES, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
+import AssignNewLeadsButton from '../components/AssignNewLeadsButton.jsx';
 
 // Two-line column headers to keep columns narrow. 2-word labels split one word
 // per line; these 3-word labels split at a custom point.
@@ -79,8 +80,12 @@ export default function TrackTasks() {
   return (
     <div>
       <div className="page-head">
-        <h2>Track Tasks</h2>
-        <div className="ph-sub">Today's task progress for users with new leads assigned today.</div>
+        <div>
+          <h2>Track Tasks</h2>
+          <div className="ph-sub">Today's task progress for users with new leads assigned today.</div>
+        </div>
+        <span className="toolbar-spacer" />
+        <AssignNewLeadsButton />
       </div>
 
       <div className="inv-table-wrap">
