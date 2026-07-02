@@ -331,8 +331,10 @@ def schedule_visit():
 
 # Stages a lead may be moved to when a visit is cancelled. Anything else is
 # rejected at the API boundary — cancelling into visit_completed / offer_given
-# / another visit_scheduled doesn't make sense.
-CANCEL_TARGET_STAGES = {"qualified", "call_not_received", "follow_up", "rejected"}
+# / another visit_scheduled doesn't make sense. `rejected_post_visit` is the
+# supply-tracker terminal a cancelled visit lands in (stage_reason=visit_cancelled),
+# matching what the supply-sync would derive from cp_inventory_status.
+CANCEL_TARGET_STAGES = {"qualified", "call_not_received", "follow_up", "rejected", "rejected_post_visit"}
 
 
 @bp.post("/cancel")
@@ -432,7 +434,7 @@ def cancel_visit():
             # the two stages that need it; we set NULL for the rest so a lingering
             # date from a prior follow_up cycle doesn't bleed through.
             new_follow_up = follow_up_at if target_stage in ("call_not_received", "follow_up") else None
-            new_stage_reason = stage_reason if target_stage == "rejected" else None
+            new_stage_reason = stage_reason if target_stage in ("rejected", "rejected_post_visit") else None
             cur.execute(
                 """UPDATE inventory
                       SET stage = %s,

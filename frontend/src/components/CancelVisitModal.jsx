@@ -1,20 +1,17 @@
 import { useState } from 'react';
 import { api } from '../api/client.js';
-import { REJECT_REASONS } from '../utils/format.js';
 import { IconClose } from './icons.jsx';
 
 /**
- * Cancel a scheduled visit. The lead ALWAYS moves to Rejected (with a reason).
- * The old qualified / call-not-received / follow-up targets were removed: those
- * are active-pipeline stages, and the supply-sync would revert them back to
- * visit_scheduled from a lingering cp_inventory_status visit date. Rejected is
- * the clean terminal outcome. Forwards to /api/visits/cancel — talks to the
- * Forms app, clears our visit columns, sets stage=rejected + stage_reason.
- * A non-empty cancel reason is mandatory (it lands in activity_log).
+ * Cancel a scheduled visit. The lead moves straight to the supply-tracker
+ * terminal `rejected_post_visit` with reason `visit_cancelled` — matching what
+ * the supply-sync derives from cp_inventory_status, so setting it here just
+ * gives immediate feedback and the sync reinforces the same value. Forwards to
+ * /api/visits/cancel — talks to the Forms app, clears our visit columns, sets
+ * stage. A non-empty cancel note is mandatory (it lands in activity_log).
  */
 export default function CancelVisitModal({ item, onCancelled, onClose }) {
   const [reason, setReason] = useState('');
-  const [stageReason, setStageReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
@@ -22,14 +19,13 @@ export default function CancelVisitModal({ item, onCancelled, onClose }) {
     setError(null);
     const trimmed = reason.trim();
     if (!trimmed) { setError('Please tell us why this visit is being cancelled.'); return; }
-    if (!stageReason) { setError('Pick a reject reason.'); return; }
     try {
       setBusy(true);
       const r = await api.post('/api/visits/cancel', {
         oh_id:        item.oh_id,
         reason:       trimmed,
-        target_stage: 'rejected',
-        stage_reason: stageReason,
+        target_stage: 'rejected_post_visit',
+        stage_reason: 'visit_cancelled',
       });
       onCancelled?.(r);
       onClose();
@@ -66,12 +62,9 @@ export default function CancelVisitModal({ item, onCancelled, onClose }) {
           disabled={busy}
         />
 
-        <p className="modal-sub" style={{ marginTop: 14 }}>Cancelling a visit moves the lead to <strong>Rejected</strong>.</p>
-        <label>Reject reason <span className="req">*</span></label>
-        <select value={stageReason} onChange={(e) => setStageReason(e.target.value)} disabled={busy}>
-          <option value="">— choose —</option>
-          {REJECT_REASONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-        </select>
+        <p className="modal-sub" style={{ marginTop: 14 }}>
+          The lead will move to <strong>Rejected Post Visit</strong> · <em>Visit Cancelled</em>.
+        </p>
 
         {error && <div className="modal-error">{error}</div>}
         <div className="modal-actions">
