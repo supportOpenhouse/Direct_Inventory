@@ -1,47 +1,36 @@
 import { useState } from 'react';
 import { api } from '../api/client.js';
-import { REJECT_REASONS, stageLabel, todayISO } from '../utils/format.js';
+import { REJECT_REASONS } from '../utils/format.js';
 import { IconClose } from './icons.jsx';
 
-const TARGET_STAGES = [
-  { value: 'qualified',         label: 'Qualified (back to top)' },
-  { value: 'call_not_received', label: 'Call Not Received' },
-  { value: 'follow_up',         label: 'Follow Up' },
-  { value: 'rejected',          label: 'Rejected' },
-];
-
 /**
- * Cancel a scheduled visit. Forwards to /api/visits/cancel which talks to the
- * Forms app, clears visit columns on our row, and moves the lead to the picked
- * target stage. A non-empty reason is mandatory — it lands in activity_log.
+ * Cancel a scheduled visit. The lead ALWAYS moves to Rejected (with a reason).
+ * The old qualified / call-not-received / follow-up targets were removed: those
+ * are active-pipeline stages, and the supply-sync would revert them back to
+ * visit_scheduled from a lingering cp_inventory_status visit date. Rejected is
+ * the clean terminal outcome. Forwards to /api/visits/cancel — talks to the
+ * Forms app, clears our visit columns, sets stage=rejected + stage_reason.
+ * A non-empty cancel reason is mandatory (it lands in activity_log).
  */
 export default function CancelVisitModal({ item, onCancelled, onClose }) {
   const [reason, setReason] = useState('');
-  const [targetStage, setTargetStage] = useState('qualified');
-  const [followUp, setFollowUp] = useState('');
   const [stageReason, setStageReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-
-  const needsDate   = targetStage === 'call_not_received' || targetStage === 'follow_up';
-  const needsReject = targetStage === 'rejected';
 
   async function submit() {
     setError(null);
     const trimmed = reason.trim();
     if (!trimmed) { setError('Please tell us why this visit is being cancelled.'); return; }
-    if (needsDate && !followUp) { setError(`Pick a ${stageLabel(targetStage)} date.`); return; }
-    if (needsReject && !stageReason) { setError('Pick a reject reason.'); return; }
-    const body = {
-      oh_id:        item.oh_id,
-      reason:       trimmed,
-      target_stage: targetStage,
-    };
-    if (needsDate)   body.follow_up_at = followUp;
-    if (needsReject) body.stage_reason = stageReason;
+    if (!stageReason) { setError('Pick a reject reason.'); return; }
     try {
       setBusy(true);
-      const r = await api.post('/api/visits/cancel', body);
+      const r = await api.post('/api/visits/cancel', {
+        oh_id:        item.oh_id,
+        reason:       trimmed,
+        target_stage: 'rejected',
+        stage_reason: stageReason,
+      });
       onCancelled?.(r);
       onClose();
     } catch (e) {
@@ -77,26 +66,12 @@ export default function CancelVisitModal({ item, onCancelled, onClose }) {
           disabled={busy}
         />
 
-        <label style={{ marginTop: 14 }}>Move lead to</label>
-        <select value={targetStage} onChange={(e) => setTargetStage(e.target.value)} disabled={busy}>
-          {TARGET_STAGES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+        <p className="modal-sub" style={{ marginTop: 14 }}>Cancelling a visit moves the lead to <strong>Rejected</strong>.</p>
+        <label>Reject reason <span className="req">*</span></label>
+        <select value={stageReason} onChange={(e) => setStageReason(e.target.value)} disabled={busy}>
+          <option value="">— choose —</option>
+          {REJECT_REASONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
         </select>
-
-        {needsDate && (
-          <div style={{ marginTop: 14 }}>
-            <label>{stageLabel(targetStage)} date <span className="req">*</span></label>
-            <input type="date" value={followUp} min={todayISO()} onChange={(e) => setFollowUp(e.target.value)} disabled={busy} />
-          </div>
-        )}
-        {needsReject && (
-          <div style={{ marginTop: 14 }}>
-            <label>Reject reason <span className="req">*</span></label>
-            <select value={stageReason} onChange={(e) => setStageReason(e.target.value)} disabled={busy}>
-              <option value="">— choose —</option>
-              {REJECT_REASONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-            </select>
-          </div>
-        )}
 
         {error && <div className="modal-error">{error}</div>}
         <div className="modal-actions">
