@@ -52,3 +52,21 @@ services:
         sync: false
       - key: PROPERTIES_DB_URL
         sync: false
+
+  # Supply Closure Tracker sync: mirror cp_inventory_status → inventory.stage.
+  # One-way pull; keeps supply stages current without opening the tab. Every 5 min.
+  - type: cron
+    name: direct-inventory-supply-sync
+    env: python
+    region: singapore
+    rootDir: backend
+    schedule: "*/5 * * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m scripts.run_supply_sync
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: DATABASE_URL
+        sync: false
+      - key: PROPERTIES_DB_URL
+        sync: false

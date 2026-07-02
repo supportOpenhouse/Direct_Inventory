@@ -2,98 +2,34 @@
 from __future__ import annotations
 
 import logging
-import re
 
 from flask import g, jsonify, request
-from psycopg2.extras import execute_values
 
-from ...db import get_conn, get_props_conn
+from ...db import get_conn
 from ...services.activity import log as log_activity
 from ...services.assignment import assign_missing_batch
 from ...services.cp_match import backfill_one_chunk
+from ...services.supply_sync import run_supply_sync
 from ..auth import require_auth
 from ._common import bp
 
 log = logging.getLogger(__name__)
 
 
-def _slug(s) -> str:
-    """Normalise a free-text label to a snake_case key.
-    'Token to AMA' -> 'token_to_ama'; 'Dead - Sold' -> 'dead_sold'.
-    """
-    return re.sub(r"[^a-z0-9]+", "_", (str(s or "")).strip().lower()).strip("_")
-
-
 @bp.post("/supply-sync")
 @require_auth()
 def supply_sync():
     """Sync the Supply Closure Tracker from PROPERTIES_DB.cp_inventory_status.
-
-    For rows where valid_direct_id is true, copy direct_stage → inventory.stage
-    and supply_status → inventory.stage_reason (both slugified), matching
-    inventory.oh_id = cp_inventory_status.cp_id.
+    Core logic lives in services.supply_sync (shared with the Render cron).
 
     Response: { source_rows, matched, updated }
     """
-    pconn = get_props_conn()
     try:
-        with pconn, pconn.cursor() as pcur:
-            pcur.execute(
-                "SELECT cp_id, direct_stage, supply_status, visit_scheduled_date "
-                "FROM cp_inventory_status "
-                "WHERE valid_direct_id IS TRUE AND cp_id IS NOT NULL AND cp_id <> ''"
-            )
-            rows = pcur.fetchall()
+        result = run_supply_sync(actor_user_id=g.user["id"], actor_email=g.user["email"])
+        return jsonify(result)
     except Exception as e:
-        log.exception("supply-sync: reading cp_inventory_status failed")
-        return jsonify({"error": f"properties DB read failed: {type(e).__name__}: {e}"}), 502
-    finally:
-        pconn.close()
-
-    pairs = []
-    for r in rows:
-        oh = str(r.get("cp_id")).strip()
-        stage = _slug(r.get("direct_stage"))
-        reason = _slug(r.get("supply_status")) or None
-        # No post-visit progress yet but a visit IS booked in the tracker →
-        # reflect that as the 'visit_scheduled' stage on the lead.
-        if not stage and (str(r.get("visit_scheduled_date") or "").strip()):
-            stage = "visit_scheduled"
-            reason = None
-        if oh and stage:
-            pairs.append((oh, stage, reason))
-    if not pairs:
-        return jsonify({"source_rows": len(rows), "matched": 0, "updated": 0})
-
-    conn = get_conn()
-    try:
-        with conn, conn.cursor() as cur:
-            cur.execute(
-                "CREATE TEMP TABLE _supply (oh_id TEXT PRIMARY KEY, stage TEXT, stage_reason TEXT) "
-                "ON COMMIT DROP"
-            )
-            execute_values(
-                cur,
-                "INSERT INTO _supply (oh_id, stage, stage_reason) VALUES %s "
-                "ON CONFLICT (oh_id) DO UPDATE SET stage = EXCLUDED.stage, stage_reason = EXCLUDED.stage_reason",
-                pairs,
-            )
-            cur.execute(
-                "UPDATE inventory i SET stage = s.stage, stage_reason = s.stage_reason, updated_at = NOW() "
-                "FROM _supply s WHERE i.oh_id = s.oh_id"
-            )
-            updated = cur.rowcount
-            log_activity(
-                cur, actor_user_id=g.user["id"], actor_email=g.user["email"],
-                entity_type="supply_sync", entity_id=None, action="run",
-                metadata={"source_rows": len(rows), "matched": len(pairs), "updated": updated},
-            )
-        return jsonify({"source_rows": len(rows), "matched": len(pairs), "updated": updated})
-    except Exception as e:
-        log.exception("supply-sync: updating inventory failed")
-        return jsonify({"error": f"{type(e).__name__}: {e}"}), 500
-    finally:
-        conn.close()
+        log.exception("supply-sync failed")
+        return jsonify({"error": f"{type(e).__name__}: {e}"}), 502
 
 
 @bp.post("/cp-match-scan")
