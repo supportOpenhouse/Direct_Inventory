@@ -17,6 +17,15 @@ function Field({ label, children }) {
   );
 }
 
+// assigned_rm_ids log values are stored as "[Name]" / "[Name, Name]" / "[]".
+// Strip the brackets for display; empty → "Unassigned".
+function cleanRm(v) {
+  if (v == null) return '—';
+  const s = String(v).trim();
+  if (s === '[]' || s === '') return 'Unassigned';
+  return s.replace(/^\[|\]$/g, '');
+}
+
 // Assigned-RM row in Seller Details. Visible to admin + manager; admin can
 // change it inline via PUT <oh_id>/assigned-rms (same endpoint Edit Details
 // uses). Changing collapses to a single primary RM, mirroring Edit Details.
@@ -184,7 +193,7 @@ function TicketsSection({ item, role }) {
  * `sections` lets a host trim what's shown (Leads keeps it lean).
  */
 export default function ExpandPanel({ item, role, onUpdated, canPost = true, sections, canEditStatus = true, showAssignedRm = true }) {
-  const show = sections || ['property', 'pricing', 'seller', 'notes', 'tickets'];
+  const show = sections || ['property', 'pricing', 'seller', 'rm_history', 'notes', 'tickets'];
   // List rows are slim (no note_thread); fetch the full record on mount and
   // render detail sections from it. The slim parent row doubles as the
   // placeholder while it loads.
@@ -200,6 +209,11 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
   // Parent row wins for shared fields — it carries optimistic edits made after
   // the fetch; detail only contributes the heavy fields (note_thread, activity).
   const full = detail ? { ...detail, ...item } : item;
+  // RM reassignment trail for this lead, from its activity log (oldest → newest).
+  const rmHistory = (detail?.activity || [])
+    .filter((a) => a.field === 'assigned_rm_ids')
+    .slice()
+    .reverse();
   const v = variation(full.price, full.oh_price);
   const listing = full.listing_link && !/^internal:\/\//.test(full.listing_link) ? full.listing_link : null;
   const canEdit = canEditStatus && (['admin', 'manager', 'rm'].includes(role) || canPost);
@@ -267,6 +281,28 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
               : '—'}
           </Field>
           {showAssignedRm && <AssignedRmField item={full} role={role} onUpdated={onUpdated} />}
+        </div>
+      )}
+
+      {show.includes('rm_history') && (
+        <div className="expand-sec expand-sec-narrow">
+          <h4>🔄 RM History</h4>
+          {detail === null ? (
+            <div className="muted" style={{ fontSize: 13 }}>Loading…</div>
+          ) : rmHistory.length === 0 ? (
+            <div className="muted" style={{ fontSize: 13 }}>No reassignments.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {rmHistory.map((h) => (
+                <div key={h.id} style={{ fontSize: 13, lineHeight: 1.35 }}>
+                  <div>{cleanRm(h.before_value)} → <strong>{cleanRm(h.after_value)}</strong></div>
+                  <div className="muted" style={{ fontSize: 11 }}>
+                    {(h.actor_email || '').split('@')[0] || '—'} · {formatDateShort(h.created_at)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
