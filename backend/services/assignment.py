@@ -281,31 +281,34 @@ def assign_missing_batch(
                 for s_lc in unknown:
                     soc_to_micros.setdefault(s_lc, set())
 
-            # 3. For each property, find EVERY matching RM and collect ids.
+            # 3. For each property, pick the SINGLE best-match RM by tier —
+            # society, else micro-market, else city (mirrors resolve_assignment).
+            # rm_scope is ordered by id, so the lowest-id RM wins within a tier.
+            # A lead never gets more than one RM.
             updates: list[tuple] = []
             for r in rows:
                 p_soc_lc = (r["society"] or "").strip().lower()
                 p_city = r.get("city")
                 p_micros = soc_to_micros.get(p_soc_lc, set())
 
-                matched_ids: list[int] = []
-                matched_mgr: int | None = None
+                soc_rm = micro_rm = city_rm = None
                 for rm in rm_scope:
-                    hit = (
-                        (p_soc_lc and p_soc_lc in rm["soc_lc"])
-                        or (p_micros and bool(rm["micro"] & p_micros))
-                        or (p_city  and p_city in rm["cities"])
-                    )
-                    if hit:
-                        matched_ids.append(rm["id"])
-                        if matched_mgr is None:
-                            matched_mgr = rm["manager"]
+                    if soc_rm is None and p_soc_lc and p_soc_lc in rm["soc_lc"]:
+                        soc_rm = rm
+                    if micro_rm is None and p_micros and bool(rm["micro"] & p_micros):
+                        micro_rm = rm
+                    if city_rm is None and p_city and p_city in rm["cities"]:
+                        city_rm = rm
+                chosen = soc_rm or micro_rm or city_rm
 
-                # No real RM matched → fall back to the 'Unallocated' placeholder
-                # so the lead still gets a POC instead of staying unassigned.
-                if not matched_ids and unallocated_id is not None:
-                    matched_ids = [unallocated_id]
-                    matched_mgr = None
+                if chosen is not None:
+                    matched_ids, matched_mgr = [chosen["id"]], chosen["manager"]
+                elif unallocated_id is not None:
+                    # No real RM matched → fall back to the 'Unallocated' placeholder
+                    # so the lead still gets a POC instead of staying unassigned.
+                    matched_ids, matched_mgr = [unallocated_id], None
+                else:
+                    matched_ids = None
 
                 if matched_ids:
                     updates.append((r["id"], matched_ids, matched_mgr))

@@ -29,12 +29,17 @@ export default function Users() {
   const [error, setError] = useState(null);
   const [editUser, setEditUser] = useState(null);
   const [sort, setSort] = useState({ field: null, dir: 'asc' });
+  const [clashes, setClashes] = useState([]);
+  const [clashLoading, setClashLoading] = useState(true);
+  const [recomputing, setRecomputing] = useState(false);
 
   function setRole(role) { setDraft((p) => ({ ...p, role, cities: role === 'admin' ? [...CITIES] : p.cities })); }
 
   async function refresh() { setLoading(true); try { setUsers((await api.get('/api/users')).items); } finally { setLoading(false); } }
   async function loadAreas() { try { setAreas(await api.get('/api/users/master-areas')); } catch { /* non-blocking */ } }
-  useEffect(() => { refresh(); loadAreas(); }, []);
+  async function loadClashes() { setClashLoading(true); try { setClashes((await api.get('/api/users/clashed-societies')).items || []); } catch { setClashes([]); } finally { setClashLoading(false); } }
+  async function recompute() { setRecomputing(true); try { await api.post('/api/users/recompute-societies', {}); await loadClashes(); } catch (e) { alert(e.data?.error || e.message); } finally { setRecomputing(false); } }
+  useEffect(() => { refresh(); loadAreas(); loadClashes(); }, []);
 
   const managers = useMemo(() => users.filter((u) => u.role === 'manager').map((u) => ({ id: u.id, name: u.name, email: u.email })), [users]);
   const sortedUsers = useMemo(() => {
@@ -105,7 +110,33 @@ export default function Users() {
         </table>
       </div>
 
-      {editUser && <UserEditModal user={editUser} managers={managers} areas={areas} onClose={() => setEditUser(null)} onSaved={() => { setEditUser(null); refresh(); }} />}
+      <div className="card-block">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <h3 style={{ margin: 0 }}>Clashed Societies</h3>
+          <span className="page-hint" style={{ margin: 0 }}>Societies in more than one RM&apos;s scope — the overlaps that cause multi-RM leads.</span>
+          <span style={{ flex: 1 }} />
+          <button className="btn-ghost" onClick={recompute} disabled={recomputing}>{recomputing ? 'Recomputing…' : 'Recompute scopes'}</button>
+        </div>
+        {clashLoading ? (
+          <p className="muted">Loading…</p>
+        ) : clashes.length === 0 ? (
+          <p className="muted">No clashes — every society is covered by at most one RM. 🎉</p>
+        ) : (
+          <table className="data-table">
+            <thead><tr><th>Society</th><th>Shared by (RMs)</th></tr></thead>
+            <tbody>
+              {clashes.map((c) => (
+                <tr key={c.society}>
+                  <td><strong>{c.society}</strong> <span className="muted">×{c.n}</span></td>
+                  <td>{(c.rms || []).map((r) => r.name).join(', ')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {editUser && <UserEditModal user={editUser} managers={managers} areas={areas} onClose={() => setEditUser(null)} onSaved={() => { setEditUser(null); refresh(); loadClashes(); }} />}
     </div>
   );
 }

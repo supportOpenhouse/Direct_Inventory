@@ -306,6 +306,10 @@ def update_one(oh_id: str):
                 body = dict(body)
                 body["assigned_rm_ids"] = [int(v)] if v else []
                 body.pop("assigned_rm_id", None)
+            # A lead can hold at most one RM — cap any assigned_rm_ids to one.
+            if isinstance(body.get("assigned_rm_ids"), list) and len(body["assigned_rm_ids"]) > 1:
+                body = dict(body)
+                body["assigned_rm_ids"] = body["assigned_rm_ids"][:1]
             for k, v in body.items():
                 if k not in allowed:
                     continue

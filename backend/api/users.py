@@ -1,11 +1,16 @@
 """User management. Admin-only writes; managers/admins can list."""
 from __future__ import annotations
 
+import logging
+
 from flask import Blueprint, g, jsonify, request
 
 from ..db import get_conn, get_props_conn
 from ..services.activity import log as log_activity
+from ..services.society_scope import recompute_assigned_societies
 from .auth import require_auth
+
+log = logging.getLogger(__name__)
 
 bp = Blueprint("users", __name__, url_prefix="/api/users")
 
@@ -211,6 +216,49 @@ def update_user(user_id: int):
             cur.execute(f"UPDATE users SET {cols} WHERE id = %s RETURNING *",
                         (*updates.values(), user_id))
             row = cur.fetchone()
+        # Scope changed → refresh this user's cached society coverage.
+        if any(k in updates for k in ("cities", "society", "micro_market")):
+            try:
+                recompute_assigned_societies(conn, [user_id])
+            except Exception:
+                log.exception("recompute assigned_societies failed for user %s", user_id)
         return jsonify(row)
+    finally:
+        conn.close()
+
+
+@bp.post("/recompute-societies")
+@require_auth("admin")
+def recompute_societies():
+    """Rebuild assigned_societies for every user (initial backfill / after a
+    master_societies change). Returns { updated }."""
+    conn = get_conn()
+    try:
+        n = recompute_assigned_societies(conn)
+        return jsonify({"updated": n})
+    finally:
+        conn.close()
+
+
+@bp.get("/clashed-societies")
+@require_auth("admin", "manager")
+def clashed_societies():
+    """Societies covered by MORE THAN ONE active RM — the scope overlaps that
+    cause a lead to be matched to multiple RMs. Reads users.assigned_societies."""
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT s.society, COUNT(*) AS n, "
+                "  json_agg(json_build_object("
+                "     'id', u.id, 'name', COALESCE(NULLIF(TRIM(u.name), ''), u.email)) "
+                "   ORDER BY u.name NULLS LAST, u.email) AS rms "
+                "FROM users u, unnest(u.assigned_societies) AS s(society) "
+                "WHERE u.role = 'rm' AND u.is_active = TRUE "
+                "GROUP BY s.society HAVING COUNT(*) > 1 "
+                "ORDER BY COUNT(*) DESC, s.society"
+            )
+            rows = cur.fetchall()
+        return jsonify({"items": rows})
     finally:
         conn.close()

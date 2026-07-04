@@ -37,9 +37,9 @@ def set_assigned_rms(oh_id: str):
         rm_ids = [int(x) for x in raw]
     except (TypeError, ValueError):
         return jsonify({"error": "rm_ids must be integers"}), 400
-    # Dedup while preserving order.
+    # Dedup, then cap to a SINGLE RM — leads can't hold multiple RMs.
     seen = set()
-    rm_ids = [x for x in rm_ids if not (x in seen or seen.add(x))]
+    rm_ids = [x for x in rm_ids if not (x in seen or seen.add(x))][:1]
 
     conn = get_conn()
     try:
@@ -132,6 +132,10 @@ def bulk_update():
     bad = [k for k in updates if k not in BULK_ALLOWED_FIELDS]
     if bad:
         return jsonify({"error": f"fields not allowed in bulk update: {bad}"}), 400
+
+    # A lead can hold at most one RM — cap the array.
+    if "assigned_rm_ids" in updates:
+        updates["assigned_rm_ids"] = (updates["assigned_rm_ids"] or [])[:1]
 
     if "priority" in updates:
         if user["role"] not in PRIORITY_ROLES:
