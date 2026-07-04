@@ -39,7 +39,9 @@ export default function Users() {
   async function loadAreas() { try { setAreas(await api.get('/api/users/master-areas')); } catch { /* non-blocking */ } }
   async function loadClashes() { setClashLoading(true); try { setClashes((await api.get('/api/users/clashed-societies')).items || []); } catch { setClashes([]); } finally { setClashLoading(false); } }
   async function recompute() { setRecomputing(true); try { await api.post('/api/users/recompute-societies', {}); await loadClashes(); } catch (e) { alert(e.data?.error || e.message); } finally { setRecomputing(false); } }
-  useEffect(() => { refresh(); loadAreas(); loadClashes(); }, []);
+  // Users list first (fast); defer the heavier Clashed Societies fetch until
+  // after it lands so it never delays the users table.
+  useEffect(() => { refresh().then(loadClashes); loadAreas(); }, []);
 
   const managers = useMemo(() => users.filter((u) => u.role === 'manager').map((u) => ({ id: u.id, name: u.name, email: u.email })), [users]);
   const sortedUsers = useMemo(() => {
@@ -113,6 +115,7 @@ export default function Users() {
       <div className="card-block">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <h3 style={{ margin: 0 }}>Clashed Societies</h3>
+          {!clashLoading && <span className="role-chip">{clashes.length} societ{clashes.length === 1 ? 'y' : 'ies'}</span>}
           <span className="page-hint" style={{ margin: 0 }}>Societies in more than one RM&apos;s scope — the overlaps that cause multi-RM leads.</span>
           <span style={{ flex: 1 }} />
           <button className="btn-ghost" onClick={recompute} disabled={recomputing}>{recomputing ? 'Recomputing…' : 'Recompute scopes'}</button>
@@ -136,7 +139,7 @@ export default function Users() {
         )}
       </div>
 
-      {editUser && <UserEditModal user={editUser} managers={managers} areas={areas} onClose={() => setEditUser(null)} onSaved={() => { setEditUser(null); refresh(); loadClashes(); }} />}
+      {editUser && <UserEditModal user={editUser} managers={managers} areas={areas} onClose={() => setEditUser(null)} onSaved={() => { setEditUser(null); refresh().then(loadClashes); }} />}
     </div>
   );
 }
