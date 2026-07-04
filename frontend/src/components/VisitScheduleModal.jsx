@@ -56,6 +56,16 @@ function errorMessage(data, fallback) {
   return top || fallback;
 }
 
+// Convert a Forms suggested-time label ("1:00 PM") to the 24-hour value the Time
+// dropdown uses ("13:00"). Returns null if it can't be parsed.
+function to24h(label) {
+  const m = /^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/.exec(String(label).trim());
+  if (!m) return null;
+  let h = parseInt(m[1], 10) % 12;
+  if (/p/i.test(m[3])) h += 12;
+  return `${String(h).padStart(2, '0')}:${m[2]}`;
+}
+
 /**
  * Visit-schedule flow (ported). Date + time + field exec (+ assigned-by for
  * admin). Before sending, checks for existing OpenHouse units in the society
@@ -78,6 +88,9 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
   const [error, setError] = useState(null);
   const [pendingUnits, setPendingUnits] = useState(null);
   const [existing, setExisting] = useState(null);
+  // Clickable alternatives Forms returns when the field exec is busy at the
+  // picked time. [{ label: '1:00 PM', value: '13:00' }, ...]
+  const [suggestedTimes, setSuggestedTimes] = useState([]);
 
   // Required fields that are currently blank — form inputs + inventory fields.
   function missingFields() {
@@ -123,12 +136,25 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
       onScheduled(r);
     } catch (e) {
       if (e.status === 409 && e.data?.existing_visit) { setExisting(e.data.existing_visit); return; }
+      // Forms slot conflict → offer its suggested_times as clickable buttons.
+      const fr = e.data?.forms_response;
+      const suggestions = Array.isArray(fr?.suggested_times)
+        ? fr.suggested_times.map((t) => ({ label: t, value: to24h(t) })).filter((t) => t.value)
+        : [];
+      if (suggestions.length) {
+        setPendingUnits(null); // drop back to the form so the buttons + time field show
+        setSuggestedTimes(suggestions);
+        setError(fr.message || fr.error || 'That time is taken — pick a suggested time.');
+        return;
+      }
+      setSuggestedTimes([]);
       setError(errorMessage(e.data, e.message || 'Could not schedule the visit'));
     } finally { setSubmitting(false); }
   }
 
   async function submit() {
     setError(null);
+    setSuggestedTimes([]);
     const miss = missingFields();
     if (miss.length) { setError(`Missing required field${miss.length > 1 ? 's' : ''}: ${miss.join(', ')}`); return; }
     const society = (item.society || '').trim();
@@ -190,10 +216,21 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
         <label>Date <span className="req">*</span></label>
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         <label style={{ marginTop: 10 }}>Time <span className="req">*</span></label>
-        <select value={time} onChange={(e) => setTime(e.target.value)}>
+        <select value={time} onChange={(e) => { setTime(e.target.value); setSuggestedTimes([]); }}>
           <option value="">Select…</option>
           {TIME_SLOTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
+        {suggestedTimes.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginTop: 6 }}>
+            <span className="muted" style={{ fontSize: 12 }}>Exec busy — try:</span>
+            {suggestedTimes.map((t) => (
+              <button key={t.value} type="button" className="btn-soft"
+                onClick={() => { setTime(t.value); setSuggestedTimes([]); setError(null); }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
         <label style={{ marginTop: 10 }}>Asking Price (in lakhs) <span className="req">*</span></label>
         <input type="number" step="0.01" value={demandPrice} onChange={(e) => setDemandPrice(e.target.value)} placeholder="e.g. 150 = ₹1.5 Cr" />
         <label style={{ marginTop: 10 }}>Field Exec <span className="req">*</span></label>
