@@ -6,7 +6,7 @@ import EditDetailsModal from './EditDetailsModal.jsx';
 import CancelVisitModal from './CancelVisitModal.jsx';
 import OhPrice from './OhPrice.jsx';
 import TicketModal, { emitTicketsChanged, ticketStatusClass, ticketStatusLabel } from './TicketModal.jsx';
-import { formatDateShort, formatPrice, STAGE_DOT_COLOR, stageLabel, supplyReasonLabel, variation } from '../utils/format.js';
+import { formatDateShort, formatPrice, STAGE_DOT_COLOR, stageLabel, supplyReasonLabel, SUPPLY_STAGES, variation } from '../utils/format.js';
 
 function Field({ label, children }) {
   return (
@@ -214,6 +214,10 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
   // check (admin / manager-of-assigned-RM / assigned RM) and will return 403
   // if the click came from someone outside that set.
   const canCancelVisit = canEdit && item.stage === 'visit_scheduled' && ['admin', 'manager', 'rm'].includes(role);
+  // No stage/status editing from visit_scheduled onward: in visit_scheduled the
+  // only action is Cancel Visit, and post-visit (supply-tracker) stages are
+  // driven by the CP sync — manual stage edits there would just be overwritten.
+  const canEditStage = canEdit && item.stage !== 'visit_scheduled' && !SUPPLY_STAGES.includes(item.stage);
 
   return (
     <div className="expand-inner">
@@ -278,7 +282,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
             {canCancelVisit && (
               <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowCancel(true)}>✕ Cancel Visit</button>
             )}
-            {canEdit && (
+            {canEditStage && (
               <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowStatus(true)}>✎ Edit Status</button>
             )}
           </div>
