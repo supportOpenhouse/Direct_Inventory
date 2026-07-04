@@ -193,7 +193,7 @@ function TicketsSection({ item, role }) {
  * `sections` lets a host trim what's shown (Leads keeps it lean).
  */
 export default function ExpandPanel({ item, role, onUpdated, canPost = true, sections, canEditStatus = true, showAssignedRm = true }) {
-  const show = sections || ['property', 'pricing', 'seller', 'rm_history', 'notes', 'tickets'];
+  const show = sections || ['property', 'pricing', 'seller', 'notes', 'rm_history', 'tickets'];
   // List rows are slim (no note_thread); fetch the full record on mount and
   // render detail sections from it. The slim parent row doubles as the
   // placeholder while it loads.
@@ -284,28 +284,6 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
         </div>
       )}
 
-      {show.includes('rm_history') && (
-        <div className="expand-sec expand-sec-narrow">
-          <h4>🔄 RM History</h4>
-          {detail === null ? (
-            <div className="muted" style={{ fontSize: 13 }}>Loading…</div>
-          ) : rmHistory.length === 0 ? (
-            <div className="muted" style={{ fontSize: 13 }}>No reassignments.</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {rmHistory.map((h) => (
-                <div key={h.id} style={{ fontSize: 13, lineHeight: 1.35 }}>
-                  <div>{cleanRm(h.before_value)} → <strong>{cleanRm(h.after_value)}</strong></div>
-                  <div className="muted" style={{ fontSize: 11 }}>
-                    {(h.actor_email || '').split('@')[0] || '—'} · {formatDateShort(h.created_at)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {show.includes('notes') && (
         <div className="expand-sec">
           <div className="expand-status-row">
@@ -334,6 +312,28 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
                 onUpdated?.({ ...item, note_count: next.length });
               }}
             />
+          )}
+        </div>
+      )}
+
+      {show.includes('rm_history') && (
+        <div className="expand-sec expand-sec-narrow">
+          <h4>🔄 RM History</h4>
+          {detail === null ? (
+            <div className="muted" style={{ fontSize: 13 }}>Loading…</div>
+          ) : rmHistory.length === 0 ? (
+            <div className="muted" style={{ fontSize: 13 }}>No reassignments.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {rmHistory.map((h) => (
+                <div key={h.id} style={{ fontSize: 13, lineHeight: 1.35 }}>
+                  <div>{cleanRm(h.before_value)} → <strong>{cleanRm(h.after_value)}</strong></div>
+                  <div className="muted" style={{ fontSize: 11 }}>
+                    {(h.actor_email || '').split('@')[0] || '—'} · {formatDateShort(h.created_at)}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
