@@ -84,7 +84,7 @@ export default function AddInventoryModal({ onClose, onAdded, defaultStage = 'le
           <div><label>Area (sqft)</label><input type="number" value={f.area_sqft} onChange={(e) => set('area_sqft', e.target.value)} /></div>
           <div><label>Floor</label>
             <select value={f.floor} onChange={(e) => set('floor', e.target.value)}>
-              <option value="">Select…</option><option value="Ground">Ground</option><option value="Top">Top</option>
+              <option value="">Select…</option><option value="Top">Top</option><option value="Ground">Ground</option>
               {Array.from({ length: 50 }, (_, i) => i + 1).map((n) => <option key={n} value={String(n)}>{n}</option>)}
             </select>
           </div>

@@ -3,8 +3,8 @@ import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { IconClose } from './icons.jsx';
 
-// Floors offered in the picker (mirrors AddInventoryModal): Ground, Top, 1–50.
-const BASE_FLOORS = ['Ground', 'Top', ...Array.from({ length: 50 }, (_, i) => String(i + 1))];
+// Floors offered in the picker (mirrors AddInventoryModal): Top, Ground, 1–50.
+const BASE_FLOORS = ['Top', 'Ground', ...Array.from({ length: 50 }, (_, i) => String(i + 1))];
 
 /**
  * Edit the raw property + seller fields of one inventory row. Reached from the
