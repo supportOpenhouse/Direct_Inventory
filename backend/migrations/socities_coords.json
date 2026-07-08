@@ -5715,5 +5715,40 @@
     "society_name": "Sangwan Heights",
     "latitude": 28.68754,
     "longitude": 77.428115
+  },
+  {
+    "society_name": "Aditya Gracious Floors",
+    "latitude": 28.632515,
+    "longitude": 77.494110
+  },
+  {
+    "society_name": "Ansal Tanushree Apartments",
+    "latitude": 28.665115,
+    "longitude": 77.458215
+  },
+  {
+    "society_name": "Arocon Rainbow",
+    "latitude": 28.612840,
+    "longitude": 77.436540
+  },
+  {
+    "society_name": "MR Heritage",
+    "latitude": 28.650115,
+    "longitude": 77.430540
+  },
+  {
+    "society_name": "Maia Marvel",
+    "latitude": 28.621515,
+    "longitude": 77.441840
+  },
+  {
+    "society_name": "Quantum Homes",
+    "latitude": 28.619840,
+    "longitude": 77.439115
+  },
+  {
+    "society_name": "Shri Ram Heights",
+    "latitude": 28.692540,
+    "longitude": 77.420115
   }
 ]
