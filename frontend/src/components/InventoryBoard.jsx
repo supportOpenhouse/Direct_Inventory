@@ -247,11 +247,6 @@ export default function InventoryBoard({
           {CITIES.map((c) => <button key={c} className={city === c ? 'tab tab-active' : 'tab'} onClick={() => setCity(c)}>{c}</button>)}
         </div>
         {showAdd && <button className="btn-primary" onClick={() => setShowAddModal(true)}><IconPlus size={16} /> Add Inventory</button>}
-        {showExport && (
-          <button className="btn-ghost" onClick={downloadCsv} disabled={downloading || total === 0}>
-            {downloading ? 'Preparing…' : `Download CSV${total ? ` (${total})` : ''}`}
-          </button>
-        )}
         {!hideSelectButton && (
           <button className={selectMode ? 'btn-primary' : 'btn-ghost'} onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}>
             {selectMode ? 'Exit Select' : 'Select'}
@@ -299,6 +294,11 @@ export default function InventoryBoard({
         {selectMode && (
           <button className="btn-ghost" onClick={selectAllMatching} disabled={selectingAll || total === 0}>
             {selectingAll ? 'Selecting…' : `Select All${total ? ` (${total})` : ''}`}
+          </button>
+        )}
+        {showExport && (
+          <button className="btn-ghost" onClick={downloadCsv} disabled={downloading || total === 0}>
+            {downloading ? 'Preparing…' : `Download CSV${total ? ` (${total})` : ''}`}
           </button>
         )}
         <button className="btn-ghost" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>← Prev</button>

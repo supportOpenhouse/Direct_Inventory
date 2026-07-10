@@ -261,7 +261,11 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .main { flex: 1; overflow: auto; padding: 24px; }
 /* Directional page transition — slides the routed page in from the side that
    matches the sidebar hierarchy (down the list = from right, up = from left). */
-.page-anim { animation-duration: .26s; animation-timing-function: cubic-bezier(.4,0,.2,1); animation-fill-mode: both; will-change: transform, opacity; }
+/* No fill-mode / will-change: those persist a transform on the wrapper, which
+   would make position:fixed modals resolve against this box instead of the
+   viewport. The animation's end state already matches the element's rest state,
+   so nothing to persist — transform returns to `none` the moment it finishes. */
+.page-anim { animation-duration: .26s; animation-timing-function: cubic-bezier(.4,0,.2,1); }
 .page-fwd  { animation-name: pageInRight; }
 .page-back { animation-name: pageInLeft; }
 .page-none { animation-name: pageFade; }
