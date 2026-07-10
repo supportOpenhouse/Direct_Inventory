@@ -3,7 +3,7 @@ import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import TicketModal, { ticketStatusClass, ticketStatusLabel } from '../components/TicketModal.jsx';
 import CardDetailModal from '../components/CardDetailModal.jsx';
-import { IconTicket } from '../components/icons.jsx';
+import { IconTicket, IconSearch } from '../components/icons.jsx';
 
 const TABS = [
   { key: 'action', label: 'Needs my action' },
@@ -15,10 +15,11 @@ const PAGE_SIZE = 50;
 
 // Deterministic URL per tab/page so prefetches and tab clicks hit the same
 // client-cache key.
-function tabQuery(key, offset = 0) {
+function tabQuery(key, offset = 0, q = '') {
   const p = new URLSearchParams();
   if (key === 'action') p.set('scope', 'action');
   else p.set('status', key);
+  if (q) p.set('q', q);
   p.set('limit', String(PAGE_SIZE));
   if (offset) p.set('offset', String(offset));
   return `/api/tickets?${p}`;
@@ -36,6 +37,8 @@ function fmtTime(iso) {
 export default function Tickets() {
   const { user } = useAuth();
   const [tab, setTab] = useState('action');
+  const [qInput, setQInput] = useState('');
+  const [qApplied, setQApplied] = useState('');
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -60,7 +63,7 @@ export default function Tickets() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await api.get(tabQuery(tab));
+      const r = await api.get(tabQuery(tab, 0, qApplied));
       setItems(r.items || []);
       setTotal(r.total || 0);
     } finally { setLoading(false); }
@@ -68,16 +71,18 @@ export default function Tickets() {
     // visible list always wins the bandwidth) — switching tabs then serves
     // from the client cache instead of refetching on click.
     TABS.filter((t) => t.key !== tab).reduce(
-      (chain, t) => chain.then(() => api.get(tabQuery(t.key))).catch(() => {}),
+      (chain, t) => chain.then(() => api.get(tabQuery(t.key, 0, qApplied))).catch(() => {}),
       Promise.resolve()
     );
-  }, [tab]);
+  }, [tab, qApplied]);
+
+  function onSearch(e) { e.preventDefault(); setQApplied(qInput.trim()); }
 
   // "Load more" → append the next page (the list endpoint pages at 50).
   async function loadMore() {
     setLoadingMore(true);
     try {
-      const r = await api.get(tabQuery(tab, items.length));
+      const r = await api.get(tabQuery(tab, items.length, qApplied));
       // Dedupe by id — replies/closes shift server offsets between pages.
       setItems((prev) => {
         const seen = new Set(prev.map((t) => t.id));
@@ -114,7 +119,11 @@ export default function Tickets() {
             <button key={t.key} className={tab === t.key ? 'tab tab-active' : 'tab'} onClick={() => setTab(t.key)}>{t.label}</button>
           ))}
         </div>
-        <div className="toolbar-spacer" />
+        <form className="search-form" onSubmit={onSearch}>
+          <input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Search tickets — OH-ID, title, summary" />
+          <button type="submit" className="btn-primary"><IconSearch size={16} /> Search</button>
+          {qApplied && <button type="button" className="btn-ghost" onClick={() => { setQInput(''); setQApplied(''); }}>Clear</button>}
+        </form>
         <span className="muted" style={{ fontSize: 13 }}>{total} ticket{total === 1 ? '' : 's'}</span>
       </div>
 

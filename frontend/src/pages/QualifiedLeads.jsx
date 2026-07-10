@@ -130,7 +130,6 @@ export default function QualifiedLeads() {
         </form>
         <button className="btn-ghost" onClick={() => setShowFilters(true)}><IconFilter size={16} /> Filters{filterCount ? ` (${filterCount})` : ''}</button>
         {filterCount > 0 && <button className="btn-link" onClick={() => { setFiltersApplied({}); setFilterFormState({}); }}>Reset</button>}
-        <div className="toolbar-spacer" />
         <span className="muted" style={{ fontSize: 13 }}>{total} qualified</span>
       </div>
 

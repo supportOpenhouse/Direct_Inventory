@@ -276,7 +276,6 @@ export default function Leads() {
         </form>
         <button className="btn-ghost" onClick={() => setShowFilters(true)}><IconFilter size={16} /> Filters{filterCount ? ` (${filterCount})` : ''}</button>
         {filterCount > 0 && <button className="btn-link" onClick={() => { setFiltersApplied({}); setFilterFormState({}); }}>Reset</button>}
-        <div className="toolbar-spacer" />
         <div className="view-toggle">
           <button className={paneView === 'lead' ? 'on' : ''} onClick={() => setPaneView('lead')}>Lead</button>
           <button className={paneView === 'both' ? 'on' : ''} onClick={() => setPaneView('both')}>Both</button>

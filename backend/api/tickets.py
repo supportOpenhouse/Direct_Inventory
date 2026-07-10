@@ -130,6 +130,12 @@ def list_tickets():
         clause, aparams = _action_clause(g.user)
         where.append(clause)
         params.extend(aparams)
+    q = (request.args.get("q") or "").strip()
+    if q:
+        # Only tickets columns, so the join-less COUNT query below stays valid.
+        where.append("(t.oh_id ILIKE %s OR t.title ILIKE %s OR t.summary ILIKE %s)")
+        like = f"%{q}%"
+        params.extend([like, like, like])
 
     limit = max(1, min(request.args.get("limit", default=50, type=int) or 50, 500))
     offset = max(0, request.args.get("offset", default=0, type=int) or 0)
