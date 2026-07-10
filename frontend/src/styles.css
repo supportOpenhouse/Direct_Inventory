@@ -405,7 +405,8 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
   font-size: 12.5px; font-weight: 700; letter-spacing: .05em; box-shadow: var(--shadow-md); }
 
 /* ── home: view toggle + quadrants ───────────────────────────────────── */
-.home-viewbar { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-bottom: 14px; }
+.home-viewbar { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+.home-selectbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
 .view-toggle { display: inline-flex; background: var(--surface-3); border: 1px solid var(--border); border-radius: var(--r-pill); padding: 3px; gap: 2px; }
 .view-toggle button { border: 0; background: transparent; color: var(--text-2); font-weight: 600; font-size: 13px; padding: 7px 16px; border-radius: var(--r-pill); transition: all .14s; }
 .view-toggle button.on { background: var(--surface); color: var(--brand-strong); box-shadow: var(--shadow-sm); }

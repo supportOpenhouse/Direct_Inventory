@@ -267,25 +267,17 @@ export default function Home() {
     return () => { alive = false; };
   }, []);
 
-  // Toggle stays pinned top-right in both views; the Select button (table view
-  // only) sits just to its left.
-  const viewbar = (
-    <div className="home-viewbar">
-      {view === 'table' && (
-        <button className={tableSelect ? 'btn-primary' : 'btn-ghost'} onClick={() => setTableSelect((v) => !v)}>
-          {tableSelect ? 'Exit Select' : 'Select'}
-        </button>
-      )}
-      <div className="view-toggle">
-        <button className={view === 'board' ? 'on' : ''} onClick={() => { setView('board'); setTableSelect(false); }}>Board</button>
-        <button className={view === 'table' ? 'on' : ''} onClick={() => setView('table')}>Table</button>
-      </div>
+  const toggle = (
+    <div className="view-toggle">
+      <button className={view === 'board' ? 'on' : ''} onClick={() => { setView('board'); setTableSelect(false); }}>Board</button>
+      <button className={view === 'table' ? 'on' : ''} onClick={() => setView('table')}>Table</button>
     </div>
   );
 
   return (
     <div>
-      {viewbar}
+      {/* Toggle pinned top-right, unchanged in both views. */}
+      <div className="home-viewbar">{toggle}</div>
       {view === 'board' ? (
         <>
           <TodaysTask task={summary?.todays_task} loading={quickLoading} role={user?.role} tickets={summary?.unresolved_tickets} />
@@ -293,9 +285,17 @@ export default function Home() {
           <BoardView s={summary} loading={stagesLoading} visitsLoading={visitsLoading} />
         </>
       ) : (
-        <InventoryBoard showReasonCol showExport hideSelectButton
-          controlledSelectMode={tableSelect} onSelectModeChange={setTableSelect}
-          extraStageGroups={[{ key: 'post_visit', label: 'Post Visit', stages: SUPPLY_STAGES, color: '#6366f1', before: 'rejected' }]} />
+        <>
+          {/* Select sits just beneath the toggle. */}
+          <div className="home-selectbar">
+            <button className={tableSelect ? 'btn-primary' : 'btn-ghost'} onClick={() => setTableSelect((v) => !v)}>
+              {tableSelect ? 'Exit Select' : 'Select'}
+            </button>
+          </div>
+          <InventoryBoard showReasonCol showExport hideSelectButton
+            controlledSelectMode={tableSelect} onSelectModeChange={setTableSelect}
+            extraStageGroups={[{ key: 'post_visit', label: 'Post Visit', stages: SUPPLY_STAGES, color: '#6366f1', before: 'rejected' }]} />
+        </>
       )}
     </div>
   );
