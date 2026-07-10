@@ -53,40 +53,43 @@
   --r-sm: 8px; --r: 12px; --r-lg: 16px; --r-pill: 999px; --r-input: 11px;
   --sidebar-w: 248px;
   --topbar-h: 64px;
+
+  /* Tint built-in HTML controls (checkbox, radio, range, progress) with the
+     active brand — orange in light, hot pink in dark. */
+  accent-color: var(--brand);
 }
 
 [data-theme='dark'] {
-  /* Brighter, more luminous orange so the brand pops on the dark surfaces. */
-  --brand: #ff6a3a;
-  --brand-strong: #ff8758;
-  --brand-soft: #3a1c10;
-  --brand-softer: #25140d;
-  --brand-ring: rgba(255, 106, 58, 0.32);
+  /* Hot pink accent — luminous on the black base. */
+  --brand: #fe1492;
+  --brand-strong: #ff4dab;
+  --brand-soft: #33101f;
+  --brand-softer: #240a16;
+  --brand-ring: rgba(254, 20, 146, 0.32);
 
-  /* Lighter, airier dark theme — lifted surfaces, brighter text + borders so
-     content reads as light-on-dark rather than murky. */
-  --bg: #17130f;
-  --bg-accent: #1e1813;
-  --surface: #251f1a;
-  --surface-2: #2d2620;
-  --surface-3: #372f28;
-  --sidebar-bg: #100c09;
-  --sidebar-fg: #d7cfc7;
-  --sidebar-fg-dim: #948a80;
+  /* Midnight Ink (#121212) base with neutral lifted surfaces + white text. */
+  --bg: #121212;
+  --bg-accent: #191919;
+  --surface: #1e1e1e;
+  --surface-2: #262626;
+  --surface-3: #303030;
+  --sidebar-bg: #0d0d0d;
+  --sidebar-fg: #d4d4d4;
+  --sidebar-fg-dim: #8a8a8a;
   --sidebar-fg-strong: #ffffff;
   --sidebar-hover: rgba(255, 255, 255, 0.06);
-  --sidebar-active-bg: rgba(250, 84, 28, 0.22);
+  --sidebar-active-bg: rgba(254, 20, 146, 0.20);
   --sidebar-active-fg: #ffffff;
   --sidebar-border: rgba(255, 255, 255, 0.07);
 
-  --text: #f8f5f2;
-  --text-2: #ddd5cd;
-  --text-muted: #aaa099;
-  --text-faint: #7c7269;
+  --text: #ffffff;
+  --text-2: #d6d6d6;
+  --text-muted: #a0a0a0;
+  --text-faint: #6f6f6f;
 
-  --border: #41382f;
-  --border-2: #342c25;
-  --hairline: #2c251f;
+  --border: #2e2e2e;
+  --border-2: #242424;
+  --hairline: #1e1e1e;
 
   --green: #34d399; --green-bg: #11271c; --green-fg: #46d68a;
   --amber: #fbbf24; --amber-bg: #2a1f0c; --amber-fg: #f5c054;
