@@ -246,15 +246,7 @@ export default function InventoryBoard({
           <button className={!city ? 'tab tab-active' : 'tab'} onClick={() => setCity('')}>All</button>
           {CITIES.map((c) => <button key={c} className={city === c ? 'tab tab-active' : 'tab'} onClick={() => setCity(c)}>{c}</button>)}
         </div>
-        <form className="search-form" onSubmit={onSearch}>
-          <input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Search any field — e.g. 1003 D2 Sahaj" />
-          <button type="submit" className="btn-primary"><IconSearch size={16} /> Search</button>
-          {qApplied && <button type="button" className="btn-ghost" onClick={() => { setQInput(''); setQApplied(''); }}>Clear</button>}
-        </form>
-        <button className="btn-ghost" onClick={() => setShowFilters(true)}><IconFilter size={16} /> Filters{filterCount ? ` (${filterCount})` : ''}</button>
-        {filterCount > 0 && <button className="btn-link" onClick={() => { setFiltersApplied({}); setFilterFormState({}); }}>Reset</button>}
         {showAdd && <button className="btn-primary" onClick={() => setShowAddModal(true)}><IconPlus size={16} /> Add Inventory</button>}
-        <div className="toolbar-spacer" />
         {showExport && (
           <button className="btn-ghost" onClick={downloadCsv} disabled={downloading || total === 0}>
             {downloading ? 'Preparing…' : `Download CSV${total ? ` (${total})` : ''}`}
@@ -266,6 +258,14 @@ export default function InventoryBoard({
           </button>
         )}
         {toolbarExtra}
+        {/* Search + Filters pinned right; the input elongates to fill the gap. */}
+        <form className="search-form" onSubmit={onSearch}>
+          <input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Search any field — e.g. 1003 D2 Sahaj" />
+          <button type="submit" className="btn-primary"><IconSearch size={16} /> Search</button>
+          {qApplied && <button type="button" className="btn-ghost" onClick={() => { setQInput(''); setQApplied(''); }}>Clear</button>}
+        </form>
+        <button className="btn-ghost" onClick={() => setShowFilters(true)}><IconFilter size={16} /> Filters{filterCount ? ` (${filterCount})` : ''}</button>
+        {filterCount > 0 && <button className="btn-link" onClick={() => { setFiltersApplied({}); setFilterFormState({}); }}>Reset</button>}
       </div>
 
       {/* Floats to the top-right of the page (see .bulk-bar) while selecting. */}

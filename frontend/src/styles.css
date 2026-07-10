@@ -453,7 +453,9 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .city-tabs { display: inline-flex; gap: 4px; background: var(--surface-3); border: 1px solid var(--border); border-radius: var(--r-pill); padding: 3px; }
 .city-tabs .tab { border: 0; background: transparent; color: var(--text-2); font-weight: 600; font-size: 13px; padding: 7px 14px; border-radius: var(--r-pill); }
 .city-tabs .tab-active { background: var(--surface); color: var(--brand-strong); box-shadow: var(--shadow-sm); }
-.search-form { display: flex; gap: 8px; flex: 1; min-width: 260px; max-width: 520px; }
+/* flex:1, no max cap → the search input elongates to fill the toolbar and
+   shrinks/grows as the sidebar (or window) resizes. */
+.search-form { display: flex; gap: 8px; flex: 1; min-width: 240px; }
 .search-form input { flex: 1; min-width: 0; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: var(--r-pill); padding: 9px 16px; outline: none; transition: border-color .14s, box-shadow .14s; }
 .search-form .btn-primary, .search-form .btn-ghost { border-radius: var(--r-pill); flex-shrink: 0; white-space: nowrap; }
 .al-filter-input { border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: var(--r-pill); padding: 9px 15px; outline: none; transition: border-color .14s, box-shadow .14s; }
@@ -694,6 +696,9 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .modal-close:hover { color: var(--text); }
 .modal-error { background: var(--red-bg); color: var(--red-fg); padding: 9px 12px; border-radius: var(--r-sm); font-size: 13px; margin-top: 12px; }
 .modal-head-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+/* Filter modal header: Reset + applied-count sit grouped next to the X. */
+.filter-modal .modal-head-row .mhr-spacer { flex: 1; }
+.filter-modal .modal-head-row .modal-close { margin-left: 0; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 /* Add-user card: email/name/phone on one row; role/cities/button on the next
    (button pinned to the far right, aligned to the bottom of the row). */

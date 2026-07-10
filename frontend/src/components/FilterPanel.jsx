@@ -78,6 +78,25 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
   const societyOptions = useMemo(() => [...new Set(societies.map((s) => s.society).filter(Boolean))].sort(), [societies]);
   const localityOptions = useMemo(() => [...new Set(societies.map((s) => (s.locality || '').trim()).filter(Boolean))].sort(), [societies]);
 
+  // How many filter groups are currently set — shown as a badge in the header.
+  const activeCount = useMemo(() => {
+    let n = 0;
+    if (f.society.length) n += 1;
+    if (f.locality.length) n += 1;
+    if (f.bhk.length) n += 1;
+    if (f.star.length) n += 1;
+    if (showReason && f.reason.length) n += 1;
+    if (f.price_min !== '' || f.price_max !== '') n += 1;
+    if (f.variation_min !== '' || f.variation_max !== '') n += 1;
+    if (f.source) n += 1;
+    if (f.oh_price) n += 1;
+    if (f.no_phone || f.has_phone) n += 1;
+    if (canFilterRm && (f.rm_id || f.rm_ids.length)) n += 1;
+    if (f.posting_from || f.posting_to || f.posting_empty) n += 1;
+    if (f.follow_up_from || f.follow_up_to || f.follow_up_empty) n += 1;
+    return n;
+  }, [f, showReason, canFilterRm]);
+
   function set(k, v) { setF((p) => ({ ...p, [k]: v })); }
   function toggleBhk(n) { setF((p) => ({ ...p, bhk: p.bhk.includes(n) ? p.bhk.filter((x) => x !== n) : [...p.bhk, n] })); }
   function toggleStar(key) { setF((p) => ({ ...p, star: p.star.includes(key) ? p.star.filter((x) => x !== key) : [...p.star, key] })); }
@@ -140,6 +159,13 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
       <div className="modal filter-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head-row">
           <h3>Filters</h3>
+          <span className="mhr-spacer" />
+          {activeCount > 0 && (
+            <>
+              <button className="btn-link" onClick={reset}>Reset</button>
+              <span className="role-chip">{activeCount} filter{activeCount === 1 ? '' : 's'}</span>
+            </>
+          )}
           <button className="modal-close" onClick={onClose} aria-label="Close"><IconClose /></button>
         </div>
 

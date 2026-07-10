@@ -195,15 +195,20 @@ export default function Layout() {
           <button className="icon-btn topbar-menu" onClick={() => setMobileOpen(true)} aria-label="Menu"><IconMenu /></button>
           <h1>{title}</h1>
           <div className="topbar-spacer" />
-          {(seg === '' || seg === 'leads') && <CpScanButton />}
+          {seg === 'leads' && <CpScanButton />}
           {(seg === 'qualified-leads' || seg === 'follow-ups') && <AddInventoryButton defaultStage="follow_up" />}
           {seg === 'tickets' && (isAdmin || isManager) && <CreateTicketButton />}
           {seg === 'users' && isAdmin && <ReassignLeadsButton />}
           <NotificationBell role={user?.role} />
-          <button className="icon-btn" onClick={toggle} aria-label="Toggle theme" title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}>
-            {theme === 'dark' ? <IconSun /> : <IconMoon />}
-          </button>
-          <button className="icon-btn" onClick={handleLogout} aria-label="Logout" title="Logout"><IconLogout /></button>
+          {/* Theme toggle + logout live only on the profile page. */}
+          {seg === 'profile' && (
+            <>
+              <button className="icon-btn" onClick={toggle} aria-label="Toggle theme" title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}>
+                {theme === 'dark' ? <IconSun /> : <IconMoon />}
+              </button>
+              <button className="icon-btn" onClick={handleLogout} aria-label="Logout" title="Logout"><IconLogout /></button>
+            </>
+          )}
         </header>
         <main className="main"><AnimatedOutlet /></main>
       </div>

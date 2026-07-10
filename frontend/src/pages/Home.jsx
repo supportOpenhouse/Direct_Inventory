@@ -4,6 +4,8 @@ import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { rejectReasonLabel, stageLabel, STAGE_DOT_COLOR, SUPPLY_STAGES } from '../utils/format.js';
 import InventoryBoard from '../components/InventoryBoard.jsx';
+import CpScanButton from '../components/CpScanButton.jsx';
+import AddInventoryButton from '../components/AddInventoryButton.jsx';
 import { IconLeads, IconFollowUp, IconPipeline, IconRejected, IconQualified, IconVisit, IconLock, IconTicket } from '../components/icons.jsx';
 
 const REJECTED_TOP = 3;
@@ -267,13 +269,18 @@ export default function Home() {
     return () => { alive = false; };
   }, []);
 
-  // Toggle pinned top-right (unchanged); Select sits to its left in table view.
+  // Toggle pinned top-right (unchanged). Table view adds, to its left:
+  // Re-scan CP, Select, then Add Inventory (right before the toggle).
   const viewbar = (
     <div className="home-viewbar">
       {view === 'table' && (
-        <button className={tableSelect ? 'btn-primary' : 'btn-ghost'} onClick={() => setTableSelect((v) => !v)}>
-          {tableSelect ? 'Exit Select' : 'Select'}
-        </button>
+        <>
+          <CpScanButton />
+          <button className={tableSelect ? 'btn-primary' : 'btn-ghost'} onClick={() => setTableSelect((v) => !v)}>
+            {tableSelect ? 'Exit Select' : 'Select'}
+          </button>
+          <AddInventoryButton />
+        </>
       )}
       <div className="view-toggle">
         <button className={view === 'board' ? 'on' : ''} onClick={() => { setView('board'); setTableSelect(false); }}>Board</button>
@@ -292,7 +299,7 @@ export default function Home() {
           <BoardView s={summary} loading={stagesLoading} visitsLoading={visitsLoading} />
         </>
       ) : (
-        <InventoryBoard showReasonCol showExport hideSelectButton
+        <InventoryBoard showReasonCol showExport hideSelectButton showAdd={false}
           controlledSelectMode={tableSelect} onSelectModeChange={setTableSelect}
           extraStageGroups={[{ key: 'post_visit', label: 'Post Visit', stages: SUPPLY_STAGES, color: '#6366f1', before: 'rejected' }]} />
       )}
