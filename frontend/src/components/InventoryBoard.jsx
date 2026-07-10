@@ -23,6 +23,9 @@ export default function InventoryBoard({
   allowStatusEdit = true, reasonFilter = false, hideFollowUpFilter = false, reasonOptions = undefined,
   reloadSignal = 0, onReload = null, extraStageGroups = [], annotateVisitOverdue = false,
   showReasonCol = false, showExport = false,
+  // Optional external control of select mode (Home renders the Select button up
+  // in its view-toggle bar). When uncontrolled, the toolbar shows its own button.
+  controlledSelectMode = undefined, onSelectModeChange = undefined, hideSelectButton = false,
 }) {
   const { user } = useAuth();
   const [qInput, setQInput] = useState('');
@@ -45,8 +48,13 @@ export default function InventoryBoard({
   const [loading, setLoading] = useState(true);
   const [counts, setCounts] = useState({ total: 0, by_stage: {} });
 
-  const [selectMode, setSelectMode] = useState(false);
+  const [selectModeState, setSelectModeState] = useState(false);
+  const selectMode = controlledSelectMode !== undefined ? controlledSelectMode : selectModeState;
+  const setSelectMode = onSelectModeChange || setSelectModeState;
   const [selected, setSelected] = useState(() => new Set());
+  // Leaving select mode (from either the toolbar button or Home's control)
+  // always drops the current selection.
+  useEffect(() => { if (!selectMode) setSelected(new Set()); }, [selectMode]);
   const [selectingAll, setSelectingAll] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
@@ -252,9 +260,11 @@ export default function InventoryBoard({
             {downloading ? 'Preparing…' : `Download CSV${total ? ` (${total})` : ''}`}
           </button>
         )}
-        <button className={selectMode ? 'btn-primary' : 'btn-ghost'} onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}>
-          {selectMode ? 'Exit Select' : 'Select'}
-        </button>
+        {!hideSelectButton && (
+          <button className={selectMode ? 'btn-primary' : 'btn-ghost'} onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}>
+            {selectMode ? 'Exit Select' : 'Select'}
+          </button>
+        )}
         {toolbarExtra}
       </div>
 

@@ -239,6 +239,7 @@ function BoardView({ s, loading, visitsLoading }) {
 export default function Home() {
   const { user } = useAuth();
   const [view, setView] = useState('board'); // board | table
+  const [tableSelect, setTableSelect] = useState(false); // Table view's select mode
   const [summary, setSummary] = useState(null);
   const [quickLoading, setQuickLoading] = useState(true);
   const [stagesLoading, setStagesLoading] = useState(true);
@@ -266,26 +267,34 @@ export default function Home() {
     return () => { alive = false; };
   }, []);
 
-  const toggle = (
-    <div className="view-toggle">
-      <button className={view === 'board' ? 'on' : ''} onClick={() => setView('board')}>Board</button>
-      <button className={view === 'table' ? 'on' : ''} onClick={() => setView('table')}>Table</button>
+  // Toggle stays pinned top-right in both views; the Select button (table view
+  // only) sits just to its left.
+  const viewbar = (
+    <div className="home-viewbar">
+      {view === 'table' && (
+        <button className={tableSelect ? 'btn-primary' : 'btn-ghost'} onClick={() => setTableSelect((v) => !v)}>
+          {tableSelect ? 'Exit Select' : 'Select'}
+        </button>
+      )}
+      <div className="view-toggle">
+        <button className={view === 'board' ? 'on' : ''} onClick={() => { setView('board'); setTableSelect(false); }}>Board</button>
+        <button className={view === 'table' ? 'on' : ''} onClick={() => setView('table')}>Table</button>
+      </div>
     </div>
   );
 
   return (
     <div>
-      {/* Board view: toggle pinned top-right. Table view: toggle rides in the
-          board toolbar, just right of the Select button. */}
+      {viewbar}
       {view === 'board' ? (
         <>
-          <div className="home-viewbar">{toggle}</div>
           <TodaysTask task={summary?.todays_task} loading={quickLoading} role={user?.role} tickets={summary?.unresolved_tickets} />
           <div className="page-head"><h2>Summary</h2></div>
           <BoardView s={summary} loading={stagesLoading} visitsLoading={visitsLoading} />
         </>
       ) : (
-        <InventoryBoard showReasonCol showExport toolbarExtra={toggle}
+        <InventoryBoard showReasonCol showExport hideSelectButton
+          controlledSelectMode={tableSelect} onSelectModeChange={setTableSelect}
           extraStageGroups={[{ key: 'post_visit', label: 'Post Visit', stages: SUPPLY_STAGES, color: '#6366f1', before: 'rejected' }]} />
       )}
     </div>
