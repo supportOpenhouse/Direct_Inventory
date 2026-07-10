@@ -275,16 +275,17 @@ export default function Home() {
 
   return (
     <div>
-      {/* Board/Table toggle pinned to the page's top-right, same spot in both views. */}
-      <div className="home-viewbar">{toggle}</div>
+      {/* Board view: toggle pinned top-right. Table view: toggle rides in the
+          board toolbar, just right of the Select button. */}
       {view === 'board' ? (
         <>
+          <div className="home-viewbar">{toggle}</div>
           <TodaysTask task={summary?.todays_task} loading={quickLoading} role={user?.role} tickets={summary?.unresolved_tickets} />
           <div className="page-head"><h2>Summary</h2></div>
           <BoardView s={summary} loading={stagesLoading} visitsLoading={visitsLoading} />
         </>
       ) : (
-        <InventoryBoard showReasonCol showExport
+        <InventoryBoard showReasonCol showExport toolbarExtra={toggle}
           extraStageGroups={[{ key: 'post_visit', label: 'Post Visit', stages: SUPPLY_STAGES, color: '#6366f1', before: 'rejected' }]} />
       )}
     </div>
