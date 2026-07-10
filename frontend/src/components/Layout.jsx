@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -38,6 +38,40 @@ function initials(name, email) {
   const parts = s.split(/\s+/).filter(Boolean);
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
   return s.slice(0, 2).toUpperCase() || '?';
+}
+
+// Page hierarchy (sidebar order) — drives the slide direction. Going DOWN the
+// list = new page slides in from the RIGHT; going UP = from the LEFT.
+const PAGE_ORDER = {
+  '/': 0, '/leads': 1, '/qualified-leads': 2, '/follow-ups': 3, '/visit-scheduled': 4,
+  '/pipeline': 5, '/rejected': 6, '/tickets': 7,
+  '/report': 8, '/my-report': 8, '/report/detail': 8,
+  '/track-tasks': 9, '/users': 10, '/logs': 11,
+};
+function pageIndex(path) {
+  if (path in PAGE_ORDER) return PAGE_ORDER[path];
+  const seg = `/${path.split('/')[1] || ''}`;
+  return seg in PAGE_ORDER ? PAGE_ORDER[seg] : -1;
+}
+
+// Slides the routed page in from the left/right based on where the destination
+// sits in the hierarchy relative to the page you left. Pages not in the list
+// (e.g. profile) get a plain fade.
+function AnimatedOutlet() {
+  const location = useLocation();
+  const prevPath = useRef(location.pathname);
+  const dir = useRef('none');
+  if (location.pathname !== prevPath.current) {
+    const from = pageIndex(prevPath.current);
+    const to = pageIndex(location.pathname);
+    dir.current = (from < 0 || to < 0 || from === to) ? 'none' : (to > from ? 'fwd' : 'back');
+    prevPath.current = location.pathname;
+  }
+  return (
+    <div key={location.pathname} className={`page-anim page-${dir.current}`}>
+      <Outlet />
+    </div>
+  );
 }
 
 export default function Layout() {
@@ -171,7 +205,7 @@ export default function Layout() {
           </button>
           <button className="icon-btn" onClick={handleLogout} aria-label="Logout" title="Logout"><IconLogout /></button>
         </header>
-        <main className="main"><Outlet /></main>
+        <main className="main"><AnimatedOutlet /></main>
       </div>
       <BusyOverlay />
     </div>
