@@ -267,17 +267,24 @@ export default function Home() {
     return () => { alive = false; };
   }, []);
 
-  const toggle = (
-    <div className="view-toggle">
-      <button className={view === 'board' ? 'on' : ''} onClick={() => { setView('board'); setTableSelect(false); }}>Board</button>
-      <button className={view === 'table' ? 'on' : ''} onClick={() => setView('table')}>Table</button>
+  // Toggle pinned top-right (unchanged); Select sits to its left in table view.
+  const viewbar = (
+    <div className="home-viewbar">
+      {view === 'table' && (
+        <button className={tableSelect ? 'btn-primary' : 'btn-ghost'} onClick={() => setTableSelect((v) => !v)}>
+          {tableSelect ? 'Exit Select' : 'Select'}
+        </button>
+      )}
+      <div className="view-toggle">
+        <button className={view === 'board' ? 'on' : ''} onClick={() => { setView('board'); setTableSelect(false); }}>Board</button>
+        <button className={view === 'table' ? 'on' : ''} onClick={() => setView('table')}>Table</button>
+      </div>
     </div>
   );
 
   return (
     <div>
-      {/* Toggle pinned top-right, unchanged in both views. */}
-      <div className="home-viewbar">{toggle}</div>
+      {viewbar}
       {view === 'board' ? (
         <>
           <TodaysTask task={summary?.todays_task} loading={quickLoading} role={user?.role} tickets={summary?.unresolved_tickets} />
@@ -285,17 +292,9 @@ export default function Home() {
           <BoardView s={summary} loading={stagesLoading} visitsLoading={visitsLoading} />
         </>
       ) : (
-        <>
-          {/* Select sits just beneath the toggle. */}
-          <div className="home-selectbar">
-            <button className={tableSelect ? 'btn-primary' : 'btn-ghost'} onClick={() => setTableSelect((v) => !v)}>
-              {tableSelect ? 'Exit Select' : 'Select'}
-            </button>
-          </div>
-          <InventoryBoard showReasonCol showExport hideSelectButton
-            controlledSelectMode={tableSelect} onSelectModeChange={setTableSelect}
-            extraStageGroups={[{ key: 'post_visit', label: 'Post Visit', stages: SUPPLY_STAGES, color: '#6366f1', before: 'rejected' }]} />
-        </>
+        <InventoryBoard showReasonCol showExport hideSelectButton
+          controlledSelectMode={tableSelect} onSelectModeChange={setTableSelect}
+          extraStageGroups={[{ key: 'post_visit', label: 'Post Visit', stages: SUPPLY_STAGES, color: '#6366f1', before: 'rejected' }]} />
       )}
     </div>
   );
