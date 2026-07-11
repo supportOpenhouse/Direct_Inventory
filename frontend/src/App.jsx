@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext.jsx';
 import Layout from './components/Layout.jsx';
+import Toaster from './components/Toaster.jsx';
 import Login from './pages/Login.jsx';
 import Home from './pages/Home.jsx';
 import Leads from './pages/Leads.jsx';
@@ -33,8 +34,10 @@ function RequireAuth({ children, roles }) {
 
 export default function App() {
   return (
-    <Suspense fallback={<div className="loading">Loading…</div>}>
-      <Routes>
+    <>
+      <Toaster />
+      <Suspense fallback={<div className="loading">Loading…</div>}>
+        <Routes>
         <Route path="/login" element={<Login />} />
         <Route element={<RequireAuth><Layout /></RequireAuth>}>
           <Route path="/" element={<Home />} />
@@ -56,8 +59,9 @@ export default function App() {
           <Route path="/logs" element={<RequireAuth roles={[]}><Logs /></RequireAuth>} />
           <Route path="/track-tasks" element={<RequireAuth roles={[]}><TrackTasks /></RequireAuth>} />
         </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+    </>
   );
 }

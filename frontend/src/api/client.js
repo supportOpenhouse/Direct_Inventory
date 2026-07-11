@@ -7,6 +7,7 @@
 // and reachable to go fully real.
 
 import { mockApi } from './mock.js';
+import { toast } from '../utils/toast.js';
 
 const BASE = import.meta.env.VITE_API_BASE || '';
 const FORCE_MOCKS = String(import.meta.env.VITE_USE_MOCKS ?? 'true') !== 'false';
@@ -158,9 +159,29 @@ function busyDelta(d) {
   window.dispatchEvent(new CustomEvent('api:busy', { detail: busyCount }));
 }
 
+// opts.silent → no overlay AND no toast (background/fire-and-forget writes).
+// opts.toast → custom success message (string), or false to skip the success
+// toast for this one call. Failures ALWAYS toast (unless silent) — this is the
+// safety net so a note that never reached the server can't fail invisibly.
 function mutate(method, path, body, opts = {}) {
   if (!opts.silent) busyDelta(1);
-  return request(method, path, body).finally(() => {
+  return request(method, path, body).then(
+    (data) => {
+      if (!opts.silent && opts.toast !== false) {
+        toast(typeof opts.toast === 'string' ? opts.toast : 'Saved', 'success');
+      }
+      return data;
+    },
+    (err) => {
+      if (!opts.silent) {
+        const msg = err?.status === 0
+          ? 'Not saved — network issue. Your change wasn’t stored. Please retry.'
+          : `Not saved — ${err?.message || 'the server rejected the change'}. Please retry.`;
+        toast(msg, 'error');
+      }
+      throw err;  // re-throw so component-level catch/optimistic-revert still runs
+    },
+  ).finally(() => {
     if (!opts.silent) busyDelta(-1);
     epoch += 1;
     cache.clear();

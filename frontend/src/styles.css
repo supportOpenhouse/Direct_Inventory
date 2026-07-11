@@ -262,6 +262,21 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 }
 .icon-btn:hover { background: var(--surface-3); color: var(--text); }
 .main { flex: 1; overflow: auto; padding: 24px; }
+/* Toasts — top-right, above modals (backdrop z 1000). Errors get a red accent
+   and linger; success/info are brief. */
+.toaster { position: fixed; top: 16px; right: 16px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; max-width: min(400px, calc(100vw - 32px)); }
+.toast { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--border); border-left-width: 3px; box-shadow: var(--shadow-md); font-size: 13.5px; color: var(--text); cursor: pointer; animation: toastIn .18s ease; }
+.toast-success { border-left-color: var(--green); }
+.toast-error { border-left-color: var(--red); }
+.toast-info { border-left-color: var(--brand); }
+.toast-ic { font-weight: 700; line-height: 1.4; }
+.toast-success .toast-ic { color: var(--green); }
+.toast-error .toast-ic { color: var(--red); }
+.toast-info .toast-ic { color: var(--brand); }
+.toast-msg { flex: 1; line-height: 1.4; }
+.toast-x { background: transparent; border: 0; color: var(--text-muted); font-size: 18px; line-height: 1; padding: 0 2px; cursor: pointer; flex-shrink: 0; }
+.toast-x:hover { color: var(--text); }
+@keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
 /* Directional page transition — slides the routed page in from the side that
    matches the sidebar hierarchy (down the list = from right, up = from left). */
 /* No fill-mode / will-change: those persist a transform on the wrapper, which
