@@ -579,6 +579,10 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .lg-area { width: 12px; height: 12px; border-radius: 3px; }
 .lg-mm { background: #eab308; }
 .lg-city { background: rgba(251,146,60,0.18); border: 1px solid #ea580c; }
+/* Dark mode: match the map — society dots cyan, city border hot pink (mm stays
+   yellow, so target .lg-society, not every .lg-dot). */
+[data-theme='dark'] .lg-society { background: #06b6d4; }
+[data-theme='dark'] .lg-city { background: rgba(254,20,146,0.18); border-color: #fe1492; }
 .scope-map-note { margin-top: 8px; font-size: 12px; color: var(--amber-fg); }
 .pf-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
 .pf-avatar { width: 48px; height: 48px; border-radius: 999px; display: grid; place-items: center; font-weight: 700; font-size: 16px; background: var(--brand); color: #fff; flex-shrink: 0; }

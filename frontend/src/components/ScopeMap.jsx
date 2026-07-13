@@ -4,6 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { lookupCoord, societyCoords } from '../utils/societyCoords.js';
 import { cityBoundary } from '../utils/cityBoundary.js';
 import { lookupMicro, microMarkets } from '../utils/microMarkets.js';
+import { useTheme } from '../contexts/ThemeContext.jsx';
 
 const NCR_CENTER = [77.2, 28.55]; // [lng, lat]
 
@@ -15,28 +16,45 @@ const CITY_CENTERS = {
 };
 const cityCenter = (city) => CITY_CENTERS[city] || null;
 
-// White background, orange roads — vector style over OpenFreeMap tiles (no key).
-const ORANGE = '#ea580c';   // markers / area outlines (darker, for contrast)
-const ROAD = '#FEBA4F';     // road lines (lighter orange)
-const STYLE = {
-  version: 8,
-  glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
-  sources: { omt: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' } },
-  layers: [
-    { id: 'bg', type: 'background', paint: { 'background-color': '#ffffff' } },
-    { id: 'water', type: 'fill', source: 'omt', 'source-layer': 'water', paint: { 'fill-color': '#f4f4f5' } },
-    {
-      id: 'roads', type: 'line', source: 'omt', 'source-layer': 'transportation',
-      paint: { 'line-color': ROAD, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.4, 10, 1, 14, 2.4, 18, 7] },
-    },
-    {
-      id: 'roads-major', type: 'line', source: 'omt', 'source-layer': 'transportation',
-      filter: ['match', ['get', 'class'], ['motorway', 'trunk', 'primary'], true, false],
-      paint: { 'line-color': ROAD, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1, 10, 2.4, 14, 5, 18, 12] },
-    },
-    // No OSM text labels — we add our own city labels (see 'city-labels' layer).
-  ],
-};
+// Theme-aware palette. Light = white bg / orange. Dark = Midnight Ink bg, hot
+// pink roads + city border, cyan society dots — matches the app's dark theme.
+function palette(dark) {
+  return {
+    bg: dark ? '#121212' : '#ffffff',
+    water: dark ? '#1b1b1b' : '#f4f4f5',
+    road: dark ? '#fe1492' : '#FEBA4F',     // roads: pink in dark
+    society: dark ? '#06b6d4' : '#ea580c',  // society dots: cyan in dark
+    mm: '#eab308',                          // micro-market yellow — reads on both
+    stroke: dark ? '#121212' : '#ffffff',   // marker outline = background colour
+    label: dark ? '#ffffff' : '#111111',
+    halo: dark ? '#000000' : '#ffffff',
+    cityFill: dark ? '#fe1492' : '#fb923c',
+    cityLine: dark ? '#fe1492' : '#ea580c',
+  };
+}
+
+// Vector style over OpenFreeMap tiles (no key).
+function buildStyle(pal) {
+  return {
+    version: 8,
+    glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
+    sources: { omt: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' } },
+    layers: [
+      { id: 'bg', type: 'background', paint: { 'background-color': pal.bg } },
+      { id: 'water', type: 'fill', source: 'omt', 'source-layer': 'water', paint: { 'fill-color': pal.water } },
+      {
+        id: 'roads', type: 'line', source: 'omt', 'source-layer': 'transportation',
+        paint: { 'line-color': pal.road, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.4, 10, 1, 14, 2.4, 18, 7] },
+      },
+      {
+        id: 'roads-major', type: 'line', source: 'omt', 'source-layer': 'transportation',
+        filter: ['match', ['get', 'class'], ['motorway', 'trunk', 'primary'], true, false],
+        paint: { 'line-color': pal.road, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1, 10, 2.4, 14, 5, 18, 12] },
+      },
+      // No OSM text labels — we add our own city labels (see 'city-labels' layer).
+    ],
+  };
+}
 
 const emptyFC = () => ({ type: 'FeatureCollection', features: [] });
 
@@ -61,6 +79,7 @@ function circleFeature([lat, lng], radiusM, props, steps = 64) {
 }
 
 export default function ScopeMap({ cities = [], society = [], micro_market = [], plotAll = false }) {
+  const { theme } = useTheme();
   const elRef = useRef(null);
   const mapRef = useRef(null);
   const loadedRef = useRef(false);
@@ -156,10 +175,12 @@ export default function ScopeMap({ cities = [], society = [], micro_market = [],
     }
   };
 
-  // Init map once.
+  // Init map once per theme — rebuilds on light/dark toggle so the base style +
+  // road/society/city colours all flip together.
   useEffect(() => {
     if (mapRef.current || !elRef.current) return undefined;
-    const map = new maplibregl.Map({ container: elRef.current, style: STYLE, center: NCR_CENTER, zoom: 9, attributionControl: true });
+    const pal = palette(theme === 'dark');
+    const map = new maplibregl.Map({ container: elRef.current, style: buildStyle(pal), center: NCR_CENTER, zoom: 9, attributionControl: true });
     mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
     map.on('load', () => {
@@ -167,17 +188,17 @@ export default function ScopeMap({ cities = [], society = [], micro_market = [],
       map.addSource('mm-dots', { type: 'geojson', data: emptyFC() });
       map.addSource('societies', { type: 'geojson', data: emptyFC() });
       // City boundary (only the scope city): shade + outline, drawn underneath.
-      map.addLayer({ id: 'city-fill', type: 'fill', source: 'cities', paint: { 'fill-color': '#fb923c', 'fill-opacity': 0.12 } });
-      map.addLayer({ id: 'city-line', type: 'line', source: 'cities', layout: { 'line-cap': 'round' }, paint: { 'line-color': '#ea580c', 'line-width': 2.5, 'line-dasharray': [0, 2.5] } });
-      map.addLayer({ id: 'soc', type: 'circle', source: 'societies', paint: { 'circle-radius': 6, 'circle-color': ORANGE, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
+      map.addLayer({ id: 'city-fill', type: 'fill', source: 'cities', paint: { 'fill-color': pal.cityFill, 'fill-opacity': 0.12 } });
+      map.addLayer({ id: 'city-line', type: 'line', source: 'cities', layout: { 'line-cap': 'round' }, paint: { 'line-color': pal.cityLine, 'line-width': 2.5, 'line-dasharray': [0, 2.5] } });
+      map.addLayer({ id: 'soc', type: 'circle', source: 'societies', paint: { 'circle-radius': 6, 'circle-color': pal.society, 'circle-stroke-color': pal.stroke, 'circle-stroke-width': 2 } });
       // Micro-market marks — yellow dots (same as societies).
-      map.addLayer({ id: 'mm-dots', type: 'circle', source: 'mm-dots', paint: { 'circle-radius': 6, 'circle-color': '#eab308', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
+      map.addLayer({ id: 'mm-dots', type: 'circle', source: 'mm-dots', paint: { 'circle-radius': 6, 'circle-color': pal.mm, 'circle-stroke-color': pal.stroke, 'circle-stroke-width': 2 } });
       // Our own city labels (replace the removed OSM place/road labels).
       map.addSource('city-labels', { type: 'geojson', data: emptyFC() });
       map.addLayer({
         id: 'city-labels', type: 'symbol', source: 'city-labels',
         layout: { 'text-field': ['get', 'name'], 'text-size': 15, 'text-font': ['Noto Sans Bold'], 'text-anchor': 'center' },
-        paint: { 'text-color': '#111111', 'text-halo-color': '#ffffff', 'text-halo-width': 2.4 },
+        paint: { 'text-color': pal.label, 'text-halo-color': pal.halo, 'text-halo-width': 2.4 },
       });
 
       const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false });
@@ -198,7 +219,7 @@ export default function ScopeMap({ cities = [], society = [], micro_market = [],
       renderRef.current();
     });
     return () => { map.remove(); mapRef.current = null; loadedRef.current = false; };
-  }, []);
+  }, [theme]);
 
   // Re-render layers when the scope changes.
   useEffect(() => { if (loadedRef.current) renderRef.current(); /* eslint-disable-next-line */ }, [JSON.stringify(cities), JSON.stringify(society), JSON.stringify(micro_market), plotAll]);
