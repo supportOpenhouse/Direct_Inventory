@@ -218,7 +218,7 @@ export default function MyProfile() {
 
   const adminBar = isAdminViewer && (
     <div className="card-block pov-bar">
-      <label>Map — view as</label>
+      <label>View Map</label>
       <select value={viewId} onChange={(e) => setViewId(e.target.value)} className="role-select">
         <option value="">— select a user —</option>
         <option value={ALL_ASSIGNED}>View all assigned</option>
