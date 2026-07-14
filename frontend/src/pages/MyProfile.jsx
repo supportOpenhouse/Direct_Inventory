@@ -54,6 +54,7 @@ export default function MyProfile() {
   // Admin "view as" — only feeds the coverage MAP, never the left side.
   const [people, setPeople] = useState([]);
   const [viewId, setViewId] = useState(ALL_ASSIGNED);  // default the map to "View all assigned"
+  const [heatmap, setHeatmap] = useState(false);       // map: dots vs heat map
   const [mapProfile, setMapProfile] = useState(null);
 
   useEffect(() => {
@@ -280,12 +281,18 @@ export default function MyProfile() {
 
   const mapCard = showMap ? (
     <div className="card-block scope-card">
-      <h3>Coverage map
-        {isAdminViewer && mapScope.label && <span className="muted"> — {mapScope.label}</span>}
-        <span className="muted"> · approximate</span>
-      </h3>
+      <div className="scope-map-head">
+        <h3>Coverage map
+          {isAdminViewer && mapScope.label && <span className="muted"> — {mapScope.label}</span>}
+          <span className="muted"> · approximate</span>
+        </h3>
+        <div className="view-toggle scope-map-toggle">
+          <button className={!heatmap ? 'on' : ''} onClick={() => setHeatmap(false)}>Dots</button>
+          <button className={heatmap ? 'on' : ''} onClick={() => setHeatmap(true)}>Heat map</button>
+        </div>
+      </div>
       <Suspense fallback={<div className="scope-map-skeleton">Loading map…</div>}>
-        <ScopeMap cities={mapScope.cities} society={mapScope.society} micro_market={mapScope.micro_market || []} plotAll={!!mapScope.plotAll} />
+        <ScopeMap cities={mapScope.cities} society={mapScope.society} micro_market={mapScope.micro_market || []} plotAll={!!mapScope.plotAll} heatmap={heatmap} />
       </Suspense>
     </div>
   ) : isAdminViewer && (

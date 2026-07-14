@@ -30,6 +30,23 @@ function palette(dark) {
     halo: dark ? '#000000' : '#ffffff',
     cityFill: dark ? '#fe1492' : '#fb923c',
     cityLine: dark ? '#fe1492' : '#ea580c',
+    // Heatmap density ramp — dark: blue → hot pink; light: yellow → deep red.
+    heat: dark ? [
+      'interpolate', ['linear'], ['heatmap-density'],
+      0, 'rgba(37, 99, 235, 0)',
+      0.15, 'rgba(37, 99, 235, 0.75)',
+      0.45, '#7c3aed',
+      0.7, '#db2777',
+      1, '#fe1492',
+    ] : [
+      'interpolate', ['linear'], ['heatmap-density'],
+      0, 'rgba(255, 237, 160, 0)',
+      0.15, 'rgba(255, 237, 160, 0.8)',
+      0.4, '#fed976',
+      0.6, '#fd8d3c',
+      0.8, '#f03b20',
+      1, '#bd0026',
+    ],
   };
 }
 
@@ -78,13 +95,24 @@ function circleFeature([lat, lng], radiusM, props, steps = 64) {
   return { type: 'Feature', properties: props, geometry: { type: 'Polygon', coordinates: [ring] } };
 }
 
-export default function ScopeMap({ cities = [], society = [], micro_market = [], plotAll = false }) {
+export default function ScopeMap({ cities = [], society = [], micro_market = [], plotAll = false, heatmap = false }) {
   const { theme } = useTheme();
   const elRef = useRef(null);
   const mapRef = useRef(null);
   const loadedRef = useRef(false);
   const renderRef = useRef(() => {});
+  const heatmapRef = useRef(heatmap);
+  heatmapRef.current = heatmap;
   const [note, setNote] = useState('');
+
+  // Dots ↔ heatmap: flip layer visibility (both read the 'societies' source).
+  const applyMode = () => {
+    const map = mapRef.current;
+    if (!map || !loadedRef.current) return;
+    const heat = heatmapRef.current;
+    if (map.getLayer('soc')) map.setLayoutProperty('soc', 'visibility', heat ? 'none' : 'visible');
+    if (map.getLayer('soc-heat')) map.setLayoutProperty('soc-heat', 'visibility', heat ? 'visible' : 'none');
+  };
 
   // Latest renderer (captures current props) — called on load + on scope change.
   renderRef.current = async () => {
@@ -191,6 +219,19 @@ export default function ScopeMap({ cities = [], society = [], micro_market = [],
       map.addLayer({ id: 'city-fill', type: 'fill', source: 'cities', paint: { 'fill-color': pal.cityFill, 'fill-opacity': 0.12 } });
       map.addLayer({ id: 'city-line', type: 'line', source: 'cities', layout: { 'line-cap': 'round' }, paint: { 'line-color': pal.cityLine, 'line-width': 2.5, 'line-dasharray': [0, 2.5] } });
       map.addLayer({ id: 'soc', type: 'circle', source: 'societies', paint: { 'circle-radius': 6, 'circle-color': pal.society, 'circle-stroke-color': pal.stroke, 'circle-stroke-width': 2 } });
+      // Heatmap alternative over the same societies — hidden until toggled on.
+      // Constant weight (our societies carry no submission count) → the glow
+      // reflects density of coverage.
+      map.addLayer({
+        id: 'soc-heat', type: 'heatmap', source: 'societies', layout: { visibility: 'none' },
+        paint: {
+          'heatmap-weight': 1,
+          'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 8, 1, 14, 3],
+          'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 8, 20, 14, 45],
+          'heatmap-opacity': 0.85,
+          'heatmap-color': pal.heat,
+        },
+      });
       // Micro-market marks — yellow dots (same as societies).
       map.addLayer({ id: 'mm-dots', type: 'circle', source: 'mm-dots', paint: { 'circle-radius': 6, 'circle-color': pal.mm, 'circle-stroke-color': pal.stroke, 'circle-stroke-width': 2 } });
       // Our own city labels (replace the removed OSM place/road labels).
@@ -217,12 +258,16 @@ export default function ScopeMap({ cities = [], society = [], micro_market = [],
 
       loadedRef.current = true;
       renderRef.current();
+      applyMode();
     });
     return () => { map.remove(); mapRef.current = null; loadedRef.current = false; };
   }, [theme]);
 
   // Re-render layers when the scope changes.
   useEffect(() => { if (loadedRef.current) renderRef.current(); /* eslint-disable-next-line */ }, [JSON.stringify(cities), JSON.stringify(society), JSON.stringify(micro_market), plotAll]);
+
+  // Flip dots ↔ heatmap when the toggle changes.
+  useEffect(() => { applyMode(); /* eslint-disable-next-line */ }, [heatmap]);
 
   return (
     <div className="scope-map-wrap">
