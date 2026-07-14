@@ -92,6 +92,17 @@ export default function MyProfile() {
     };
   }, [people]);
 
+  // Admin view: every manager with the RMs reporting to them (grouped by the
+  // RM's `manager` id), plus any RMs not under a manager.
+  const managerTeams = useMemo(() => {
+    const byName = (a, b) => (a.name || a.email).localeCompare(b.name || b.email);
+    const managers = people.filter((u) => u.role === 'manager').sort(byName);
+    const rms = people.filter((u) => u.role === 'rm');
+    const groups = managers.map((mgr) => ({ manager: mgr, team: rms.filter((r) => r.manager === mgr.id).sort(byName) }));
+    const unassigned = rms.filter((r) => !managers.some((m) => m.id === r.manager)).sort(byName);
+    return { groups, unassigned };
+  }, [people]);
+
   if (loading) {
     // Card skeletons mirroring the loaded layout — no whole-page "Loading…".
     return (
@@ -145,7 +156,7 @@ export default function MyProfile() {
   const p = me;                       // left side = own profile (unchanged by "view as")
   const { role } = p;
   const cityList = foldCities(p.cities);
-  const showTeam = role === 'admin' || role === 'manager';
+  const showTeam = role === 'manager';   // admins get the grouped managers card instead
   const showScope = role === 'manager' || role === 'rm';
 
   // What the coverage map shows: { cities, society, plotAll, label }.
@@ -216,6 +227,45 @@ export default function MyProfile() {
     </div>
   );
 
+  // Admin: all managers and their teams (RMs), plus any unassigned RMs.
+  const teamRows = (members) => (
+    <table className="data-table">
+      <thead><tr><th>Name</th><th>Email</th><th>Status</th></tr></thead>
+      <tbody>
+        {members.map((m) => (
+          <tr key={m.id}>
+            <td>{m.name || '—'}</td>
+            <td>{m.email}</td>
+            <td>{m.is_active ? 'Active' : <span className="muted">Inactive</span>}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+  const adminTeamsCard = isAdminViewer && (
+    <div className="card-block">
+      <h3>Managers &amp; teams <span className="muted">{managerTeams.groups.length}</span></h3>
+      {managerTeams.groups.length === 0 ? (
+        <p className="muted">No managers yet.</p>
+      ) : managerTeams.groups.map(({ manager, team }) => (
+        <div key={manager.id} className="pf-team-group">
+          <div className="pf-team-head">
+            <strong>{manager.name || manager.email}</strong>
+            <span className="role-chip">manager</span>
+            <span className="muted">{team.length} RM{team.length === 1 ? '' : 's'}</span>
+          </div>
+          {team.length === 0 ? <p className="muted pf-team-empty">No RMs assigned.</p> : teamRows(team)}
+        </div>
+      ))}
+      {managerTeams.unassigned.length > 0 && (
+        <div className="pf-team-group">
+          <div className="pf-team-head"><strong>Unassigned RMs</strong><span className="muted">{managerTeams.unassigned.length}</span></div>
+          {teamRows(managerTeams.unassigned)}
+        </div>
+      )}
+    </div>
+  );
+
   const adminBar = isAdminViewer && (
     <div className="card-block pov-bar">
       <label>View Map</label>
@@ -251,7 +301,7 @@ export default function MyProfile() {
   return (
     <div className="profile-page">
       <div className="profile-grid2">
-        <div className="profile-col">{detailsCard}{teamCard}</div>
+        <div className="profile-col">{detailsCard}{teamCard}{adminTeamsCard}</div>
         <div className="profile-col">{adminBar}{mapCard}</div>
       </div>
     </div>

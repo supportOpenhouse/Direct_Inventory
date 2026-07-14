@@ -130,11 +130,10 @@ export default function Report() {
           <div className="ur-user-list">
             {data.users.map((u) => (
               <a key={u.actor_email} href={detailHref(u.actor_email)} target="_blank" rel="noreferrer" className="ur-user-card">
-                {/* Row 1 (name line): name + role on the left, the headline
-                    counts on the right. Row 2 (email line): email left, all the
-                    stage pills right — so each block lines up with its row. */}
+                {/* Row 1 (name line): name + role + email on the left, headline
+                    counts on the right. Row 2: the stage pills. */}
                 <div className="ur-card-row">
-                  <span className="ur-card-name"><strong>{u.actor_name || u.actor_email}</strong>{u.actor_role && <span className="role-chip dr-role">{u.actor_role}</span>}</span>
+                  <span className="ur-card-name"><strong>{u.actor_name || u.actor_email}</strong>{u.actor_role && <span className="role-chip dr-role">{u.actor_role}</span>}<span className="dr-user-email ur-inline-email">{u.actor_email}</span></span>
                   <div className="dr-meta-row">
                     <span className="dr-total">{u.unique_leads || 0} unique</span>
                     <span className="dr-total">{u.total} actions</span>
@@ -142,7 +141,6 @@ export default function Report() {
                   </div>
                 </div>
                 <div className="ur-card-row">
-                  <span className="dr-user-email">{u.actor_email}</span>
                   <div className="dr-stage-row"><StageCountPills counts={u.counts} /></div>
                 </div>
               </a>
