@@ -53,7 +53,7 @@ export default function MyProfile() {
 
   // Admin "view as" — only feeds the coverage MAP, never the left side.
   const [people, setPeople] = useState([]);
-  const [viewId, setViewId] = useState('');
+  const [viewId, setViewId] = useState(ALL_ASSIGNED);  // default the map to "View all assigned"
   const [mapProfile, setMapProfile] = useState(null);
 
   useEffect(() => {
