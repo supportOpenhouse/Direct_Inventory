@@ -1,13 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
-import { stageLabel } from '../utils/format.js';
+import { STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
 
 const STAGE_ORDER = ['lead', 'active', 'qualified', 'call_not_received', 'follow_up', 'visit_scheduled', 'visit_completed', 'offer_given', 'rejected'];
 const FUNNEL_STAGES = ['qualified', 'visit_scheduled', 'visit_completed', 'offer_given'];
-const STAGE_COLOR = {
-  lead: '#fa541c', active: '#f59e0b', qualified: '#16a34a', call_not_received: '#EF9F27', follow_up: '#f97316',
-  visit_scheduled: '#a855f7', visit_completed: '#639922', offer_given: '#BA7517', rejected: '#cbd5e1',
-};
 function sortStages(keys) {
   return [...keys].sort((a, b) => {
     const ia = STAGE_ORDER.indexOf(a); const ib = STAGE_ORDER.indexOf(b);
@@ -15,7 +11,79 @@ function sortStages(keys) {
     if (ia === -1) return 1; if (ib === -1) return -1; return ia - ib;
   });
 }
-const stageColor = (s) => STAGE_COLOR[s] || '#94a3b8';
+// Single source of truth: the same stage colours the filter boxes / stage dots use.
+const stageColor = (s) => STAGE_DOT_COLOR[s] || '#94a3b8';
+
+const SEG_GAP = 2;   // surface gap between stacked segments
+const BAR_R = 4;     // rounded data-end (top of the stack only)
+
+// Bar with a rounded TOP and a square baseline — the data-end is rounded, the
+// end anchored to the axis is not. Interior stack segments use a plain rect.
+function roundedTopPath(x, y, w, h, r) {
+  const rr = Math.max(0, Math.min(r, h, w / 2));
+  return `M${x},${y + h} L${x},${y + rr} Q${x},${y} ${x + rr},${y} L${x + w - rr},${y} Q${x + w},${y} ${x + w},${y + rr} L${x + w},${y + h} Z`;
+}
+
+// Monotone cubic (Fritsch–Carlson). Smooth, but cannot overshoot — a plain
+// Catmull-Rom dips below zero between two zero days, which for counts is a lie.
+function smoothPath(pts) {
+  const n = pts.length;
+  if (n === 0) return '';
+  if (n === 1) return `M${pts[0][0]},${pts[0][1]}`;
+  if (n === 2) return `M${pts[0][0]},${pts[0][1]} L${pts[1][0]},${pts[1][1]}`;
+  const dx = [], dy = [], m = [];
+  for (let i = 0; i < n - 1; i += 1) {
+    dx[i] = pts[i + 1][0] - pts[i][0];
+    dy[i] = pts[i + 1][1] - pts[i][1];
+    m[i] = dy[i] / dx[i];
+  }
+  const t = [m[0]];
+  for (let i = 1; i < n - 1; i += 1) {
+    if (m[i - 1] * m[i] <= 0) { t[i] = 0; continue; }
+    const w1 = 2 * dx[i] + dx[i - 1];
+    const w2 = dx[i] + 2 * dx[i - 1];
+    t[i] = (w1 + w2) / (w1 / m[i - 1] + w2 / m[i]);
+  }
+  t[n - 1] = m[n - 2];
+  let d = `M${pts[0][0]},${pts[0][1]}`;
+  for (let i = 0; i < n - 1; i += 1) {
+    d += ` C${pts[i][0] + dx[i] / 3},${pts[i][1] + (t[i] * dx[i]) / 3}`
+      + ` ${pts[i + 1][0] - dx[i] / 3},${pts[i + 1][1] - (t[i + 1] * dx[i]) / 3}`
+      + ` ${pts[i + 1][0]},${pts[i + 1][1]}`;
+  }
+  return d;
+}
+
+const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// Roll daily rows up into week (Mon-start) or month buckets. 'all' stays daily.
+function bucketDays(days, mode) {
+  if (mode === 'all') return days;
+  const keyOf = (day) => {
+    if (mode === 'months') return day.slice(0, 7);
+    const d = new Date(`${day}T00:00:00`);
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));   // back to Monday
+    return isoLocal(d);
+  };
+  const map = new Map();
+  for (const d of days) {
+    const k = keyOf(d.day);
+    if (!map.has(k)) map.set(k, { day: k, total: 0, counts: {}, by_user: {} });
+    const b = map.get(k);
+    b.total += d.total || 0;
+    for (const [s, n] of Object.entries(d.counts || {})) b.counts[s] = (b.counts[s] || 0) + n;
+    for (const [e, n] of Object.entries(d.by_user || {})) b.by_user[e] = (b.by_user[e] || 0) + n;
+  }
+  return [...map.values()].sort((a, b) => a.day.localeCompare(b.day));
+}
+
+function bucketLabel(key, mode) {
+  if (mode === 'months') {
+    const [y, m] = key.split('-');
+    return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+  }
+  return key.slice(5);
+}
 
 const USER_PALETTE = ['#fa541c', '#378ADD', '#1D9E75', '#7F77DD', '#BA7517', '#dc2626', '#06b6d4', '#a855f7'];
 const TOP_USERS = 8; const OTHER_KEY = '__other__';
@@ -56,7 +124,7 @@ function buildSeries({ days, groupBy, userNames }) {
   return { series, rows };
 }
 
-function DailyTrendChart({ days, chartType, groupBy, userNames }) {
+function DailyTrendChart({ days, chartType, groupBy, userNames, bucketMode }) {
   const [hover, setHover] = useState(null);
   const { series, rows } = useMemo(() => buildSeries({ days, groupBy, userNames: userNames || {} }), [days, groupBy, userNames]);
   const rawMax = useMemo(() => {
@@ -68,7 +136,7 @@ function DailyTrendChart({ days, chartType, groupBy, userNames }) {
 
   const W = 880, H = 300, PAD = { top: 28, right: 16, bottom: 36, left: 40 };
   const innerW = W - PAD.left - PAD.right, innerH = H - PAD.top - PAD.bottom;
-  const slot = innerW / rows.length, barW = Math.max(4, Math.min(28, slot * 0.7));
+  const slot = innerW / rows.length, barW = Math.max(4, Math.min(24, slot * 0.7));
   const xLabelEvery = Math.max(1, Math.ceil(rows.length / 8));
   const xOf = (i) => PAD.left + slot * i + slot / 2;
   const yOf = (v) => PAD.top + innerH - (v / niceMax) * innerH;
@@ -80,14 +148,33 @@ function DailyTrendChart({ days, chartType, groupBy, userNames }) {
           <g key={i}><line x1={PAD.left} y1={y} x2={W - PAD.right} y2={y} stroke="var(--hairline)" /><text x={PAD.left - 6} y={y + 3} fontSize="10" fill="var(--text-faint)" textAnchor="end">{t}</text></g>
         ); })}
         {chartType === 'bar' && rows.map((r, i) => {
-          const x = PAD.left + slot * i + (slot - barW) / 2; let yc = PAD.top + innerH; const segs = [];
-          for (const s of series) { const v = r.values[s.key] || 0; if (!v) continue; const h = (v / niceMax) * innerH; yc -= h; segs.push(<rect key={s.key} x={x} y={yc} width={barW} height={h} fill={s.color} rx="2" />); }
+          const x = PAD.left + slot * i + (slot - barW) / 2;
+          let yc = PAD.top + innerH;                                   // baseline
+          const nz = series.filter((s) => (r.values[s.key] || 0) > 0);
+          const segs = nz.map((s, idx) => {
+            const h = ((r.values[s.key] || 0) / niceMax) * innerH;
+            const yTop = yc - h;
+            // Leave SEG_GAP of surface above the segment below (never below the
+            // baseline one), so touching stage colours read apart without a stroke.
+            const drawH = Math.max(1, h - (idx > 0 ? SEG_GAP : 0));
+            const isTop = idx === nz.length - 1;
+            yc = yTop;
+            return isTop
+              ? <path key={s.key} d={roundedTopPath(x, yTop, barW, drawH, BAR_R)} fill={s.color} />
+              : <rect key={s.key} x={x} y={yTop} width={barW} height={drawH} fill={s.color} />;
+          });
           return <g key={r.day}>{segs}</g>;
         })}
         {chartType === 'line' && series.map((s) => (
           <g key={s.key}>
-            <polyline points={rows.map((r, i) => `${xOf(i)},${yOf(r.values[s.key] || 0)}`).join(' ')} fill="none" stroke={s.color} strokeWidth="2" strokeLinejoin="round" />
-            {rows.map((r, i) => <circle key={i} cx={xOf(i)} cy={yOf(r.values[s.key] || 0)} r="3" fill={s.color} />)}
+            <path d={smoothPath(rows.map((r, i) => [xOf(i), yOf(r.values[s.key] || 0)]))}
+              fill="none" stroke={s.color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+            {/* Markers only when they can breathe; 2px surface ring keeps them
+                legible where series cross. */}
+            {rows.length <= 31 && rows.map((r, i) => (
+              <circle key={i} cx={xOf(i)} cy={yOf(r.values[s.key] || 0)} r="4"
+                fill={s.color} stroke="var(--surface)" strokeWidth="2" />
+            ))}
           </g>
         ))}
         {rows.map((r, i) => {
@@ -96,14 +183,14 @@ function DailyTrendChart({ days, chartType, groupBy, userNames }) {
           return (
             <g key={`o-${r.day}`} onMouseEnter={() => setHover({ x, y: topY, ...r })} onMouseLeave={() => setHover(null)}>
               <rect x={PAD.left + slot * i} y={PAD.top} width={slot} height={innerH} fill="transparent" />
-              {showLabel && <text x={x} y={H - PAD.bottom + 14} fontSize="10" fill="var(--text-muted)" textAnchor="middle">{r.day.slice(5)}</text>}
+              {showLabel && <text x={x} y={H - PAD.bottom + 14} fontSize="10" fill="var(--text-muted)" textAnchor="middle">{bucketLabel(r.day, bucketMode)}</text>}
             </g>
           );
         })}
       </svg>
       {hover && (
         <div className="ura-tooltip" style={{ left: `${(hover.x / W) * 100}%`, top: `${(hover.y / H) * 100}%` }}>
-          <div className="ura-tt-title">{hover.day} · {hover.total} action{hover.total === 1 ? '' : 's'}</div>
+          <div className="ura-tt-title">{bucketLabel(hover.day, bucketMode)} · {hover.total} action{hover.total === 1 ? '' : 's'}</div>
           {series.filter((s) => (hover.values?.[s.key] || 0) > 0).map((s) => (
             <div key={s.key} className="ura-tt-row"><span className="stage-dot" style={{ background: s.color }} /><span>{s.label}</span><strong>{hover.values[s.key]}</strong></div>
           ))}
@@ -204,17 +291,31 @@ export default function UserReportAnalytics({ from, to, users, reportData }) {
   const [error, setError] = useState(null);
   const [chartType, setChartType] = useState('bar');
   const [groupBy, setGroupBy] = useState('stage');
+  const [tlMode, setTlMode] = useState('all');   // all | months | weeks
+  const [tlN, setTlN] = useState(3);             // 1–12 of the chosen unit
+
+  // Timeline window. 'all' keeps the page's date filter; months/weeks look back
+  // N units from today and roll the days up into that many buckets.
+  const range = useMemo(() => {
+    if (tlMode === 'all') return { from, to };
+    const start = new Date();
+    if (tlMode === 'months') { start.setDate(1); start.setMonth(start.getMonth() - (tlN - 1)); }
+    else { start.setDate(start.getDate() - (tlN * 7 - 1)); }
+    return { from: isoLocal(start), to: isoLocal(new Date()) };
+  }, [tlMode, tlN, from, to]);
 
   useEffect(() => {
     let alive = true; setLoading(true); setError(null);
-    const params = new URLSearchParams({ from, to });
+    const params = new URLSearchParams({ from: range.from, to: range.to });
     if (users.length) params.set('users', users.join(','));
     api.get(`/api/activity/user-report/analytics?${params}`)
       .then((r) => { if (alive) setAnalytics(r); })
       .catch((e) => { if (alive) setError(e.data?.error || e.message); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [from, to, users]);
+  }, [range.from, range.to, users]);
+
+  const trend = useMemo(() => bucketDays(analytics.daily_trend || [], tlMode), [analytics, tlMode]);
 
   const totals = useMemo(() => {
     const out = {};
@@ -230,13 +331,30 @@ export default function UserReportAnalytics({ from, to, users, reportData }) {
     <div className="ura-grid">
       <section className="ura-card ura-card-wide">
         <div className="ura-card-head">
-          <div><h3 className="ura-title">Daily activity</h3><div className="ura-subtitle">Stage changes per day, {groupBy === 'stage' ? 'by final stage' : 'by user'}.</div></div>
+          <div>
+            <h3 className="ura-title">{tlMode === 'all' ? 'Daily activity' : tlMode === 'months' ? 'Monthly activity' : 'Weekly activity'}</h3>
+            <div className="ura-subtitle">
+              Stage changes per {tlMode === 'all' ? 'day' : tlMode === 'months' ? 'month' : 'week'}, {groupBy === 'stage' ? 'by final stage' : 'by user'}
+              {tlMode !== 'all' && ` · last ${tlN} ${tlMode === 'months' ? 'month' : 'week'}${tlN === 1 ? '' : 's'}`}.
+            </div>
+          </div>
           <div className="ura-card-controls">
             <div className="ura-seg"><button className={chartType === 'bar' ? 'ura-seg-on' : ''} onClick={() => setChartType('bar')}>Bar</button><button className={chartType === 'line' ? 'ura-seg-on' : ''} onClick={() => setChartType('line')}>Line</button></div>
             <div className="ura-seg"><button className={groupBy === 'stage' ? 'ura-seg-on' : ''} onClick={() => setGroupBy('stage')}>By stage</button><button className={groupBy === 'user' ? 'ura-seg-on' : ''} onClick={() => setGroupBy('user')}>By user</button></div>
+            <div className="ura-seg">
+              <button className={tlMode === 'all' ? 'ura-seg-on' : ''} onClick={() => setTlMode('all')}>All</button>
+              <button className={tlMode === 'months' ? 'ura-seg-on' : ''} onClick={() => setTlMode('months')}>Months</button>
+              <button className={tlMode === 'weeks' ? 'ura-seg-on' : ''} onClick={() => setTlMode('weeks')}>Weeks</button>
+            </div>
+            {tlMode !== 'all' && (
+              <select className="role-select ura-tl-n" value={tlN} onChange={(e) => setTlN(Number(e.target.value))}
+                aria-label={`Number of ${tlMode}`}>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            )}
           </div>
         </div>
-        <DailyTrendChart days={analytics.daily_trend || []} chartType={chartType} groupBy={groupBy} userNames={analytics.user_names || {}} />
+        <DailyTrendChart days={trend} chartType={chartType} groupBy={groupBy} userNames={analytics.user_names || {}} bucketMode={tlMode} />
       </section>
 
       <section className="ura-card">
