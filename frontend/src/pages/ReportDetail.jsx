@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { displayCity, formatDateShort, rejectReasonLabel, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
 import { PRESETS, PRESET_LABELS, downloadCSV, todayIST } from '../utils/reportFilters.js';
 import { IconClose } from '../components/icons.jsx';
+import CardDetailModal from '../components/CardDetailModal.jsx';
 
 function StageCountPills({ counts }) {
   return Object.entries(counts).map(([s, n]) => (
@@ -23,7 +24,7 @@ function StagePill({ stage, rejectReason }) {
 }
 function fmtTime(iso) { return iso ? new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }) : ''; }
 
-function DayLeadsModal({ email, date, onClose }) {
+function DayLeadsModal({ email, date, onOpenUid, onClose }) {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,10 +36,30 @@ function DayLeadsModal({ email, date, onClose }) {
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [email, date]);
+
+  // Export exactly what the table shows — stage labels, with the reject reason
+  // folded in the same way StagePill renders it.
+  function exportDayCSV() {
+    const stageTxt = (l, s) => (!s ? '' : stageLabel(s) + (s === 'rejected' && l.stage_reason ? ` (${rejectReasonLabel(l.stage_reason)})` : ''));
+    const headers = ['Time', 'OH-ID', 'Society', 'City', 'Seller', 'From', 'Final', 'Current', 'Latest note'];
+    const rows = leads.map((l) => [
+      fmtTime(l.last_change_at), l.oh_id, l.society || '', displayCity(l.city) || '', l.seller_name || '',
+      stageTxt(l, l.from_stage), stageTxt(l, l.final_stage),
+      l.current_stage === l.final_stage ? 'same' : stageTxt(l, l.current_stage),
+      l.day_note?.body || '',
+    ]);
+    downloadCSV(`report_${email.replace(/[^a-z0-9]+/gi, '_')}_${date}.csv`, headers, rows);
+  }
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal modal-day-leads" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-head-row"><h3>{formatDateShort(date)}</h3><span className="role-chip">{email}</span><button className="modal-close" onClick={onClose}><IconClose /></button></div>
+        <div className="modal-head-row">
+          <h3>{formatDateShort(date)}</h3>
+          <button className="btn-ghost" onClick={exportDayCSV} disabled={loading || leads.length === 0}>Download CSV</button>
+          <span className="role-chip">{email}</span>
+          <button className="modal-close" onClick={onClose}><IconClose /></button>
+        </div>
         {loading && <div className="al-empty">Loading…</div>}
         {error && <div className="modal-error">{error}</div>}
         {!loading && !error && leads.length === 0 && <div className="al-empty">No actions.</div>}
@@ -49,7 +70,11 @@ function DayLeadsModal({ email, date, onClose }) {
               <tbody>
                 {leads.map((l) => (
                   <tr key={l.oh_id}>
-                    <td>{fmtTime(l.last_change_at)}</td><td className="inv-td-id">{l.oh_id}</td><td>{l.society || '—'}</td><td>{displayCity(l.city) || '—'}</td><td>{l.seller_name || '—'}</td>
+                    <td>{fmtTime(l.last_change_at)}</td>
+                    <td className="inv-td-id">
+                      {l.oh_id ? <button type="button" className="al-uid-link" onClick={() => onOpenUid(l.oh_id)}>{l.oh_id}</button> : '—'}
+                    </td>
+                    <td>{l.society || '—'}</td><td>{displayCity(l.city) || '—'}</td><td>{l.seller_name || '—'}</td>
                     <td><StagePill stage={l.from_stage} rejectReason={l.stage_reason} /></td>
                     <td><StagePill stage={l.final_stage} rejectReason={l.stage_reason} /></td>
                     <td>{l.current_stage === l.final_stage ? <span className="muted">same</span> : <StagePill stage={l.current_stage} rejectReason={l.stage_reason} />}</td>
@@ -81,6 +106,16 @@ export default function ReportDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openDay, setOpenDay] = useState(null);
+  const [detail, setDetail] = useState(null);
+
+  // OH-ID click (same as Logs): open the popup INSTANTLY with the id, then fill
+  // in the record. Cached by the client layer, so re-opening never refetches.
+  function openUid(uid) {
+    setDetail({ oh_id: uid, _loading: true });
+    api.get(`/api/inventory/${encodeURIComponent(uid)}`)
+      .then((r) => setDetail((prev) => (prev && prev.oh_id === uid ? r : prev)))
+      .catch(() => setDetail((prev) => (prev && prev.oh_id === uid ? { ...prev, _loading: false } : prev)));
+  }
 
   async function refresh() {
     if (!email) { setError('email is required'); setLoading(false); return; }
@@ -129,7 +164,17 @@ export default function ReportDetail() {
         ))}
       </div>
 
-      {openDay && <DayLeadsModal email={email} date={openDay} onClose={() => setOpenDay(null)} />}
+      {openDay && <DayLeadsModal email={email} date={openDay} onOpenUid={openUid} onClose={() => setOpenDay(null)} />}
+      {/* Rendered after the day modal so it stacks on top of it. */}
+      {detail && (
+        <CardDetailModal
+          item={detail}
+          role={user?.role}
+          showAssignedRm
+          onUpdated={(u) => setDetail((p) => ({ ...p, ...u }))}
+          onClose={() => setDetail(null)}
+        />
+      )}
     </div>
   );
 }

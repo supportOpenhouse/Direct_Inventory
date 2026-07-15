@@ -105,18 +105,22 @@ def create_one():
     if stage not in VALID_STAGES:
         return jsonify({"error": f"invalid stage: {stage}"}), 400
 
-    if not (fields.get("listing_link") or "").strip():
-        fields["listing_link"] = f"internal://manual/{_uuid.uuid4()}"
+    # Only a real listing URL is a dedup key. Anything else (blank, or free text
+    # the user typed) gets a unique internal id instead, so it can neither trip
+    # the listing_link UNIQUE constraint nor be checked for duplicates below.
+    raw_link = (fields.get("listing_link") or "").strip()
+    is_real_link = raw_link.startswith("http://") or raw_link.startswith("https://")
+    fields["listing_link"] = raw_link if is_real_link else f"internal://manual/{_uuid.uuid4()}"
 
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
-            # dedup on listing_link (auto-generated UUIDs are unique by construction;
-            # this still catches user-provided duplicates).
-            cur.execute("SELECT oh_id FROM inventory WHERE listing_link = %s", (fields["listing_link"],))
-            existing = cur.fetchone()
-            if existing:
-                return jsonify({"error": "listing already exists", "oh_id": existing["oh_id"]}), 409
+            # dedup on listing_link — only for real URLs (see above).
+            if is_real_link:
+                cur.execute("SELECT oh_id FROM inventory WHERE listing_link = %s", (fields["listing_link"],))
+                existing = cur.fetchone()
+                if existing:
+                    return jsonify({"error": "listing already exists", "oh_id": existing["oh_id"]}), 409
 
             oh_id = next_oh_id(cur, fields["city"])
 

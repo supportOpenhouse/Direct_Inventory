@@ -94,7 +94,11 @@ export default function AddInventoryModal({ onClose, onAdded, defaultStage = 'le
           <div><label>Seller Name</label><input value={f.seller_name} onChange={(e) => set('seller_name', e.target.value)} /></div>
           <div><label>Contact No.</label><input type="tel" maxLength={10} value={f.seller_phone} onChange={(e) => set('seller_phone', e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit" /></div>
           <div><label>Posting Date</label><input type="date" value={f.posting_date} onChange={(e) => set('posting_date', e.target.value)} /></div>
-          <div className="form-wide-2"><label>Listing link <span className="muted">(optional)</span></label><input value={f.listing_link} onChange={(e) => set('listing_link', e.target.value)} placeholder="https://www.99acres.com/…" /></div>
+          <div className="form-wide-2">
+            <label>Listing link <span className="muted">(optional)</span></label>
+            <input value={f.listing_link} onChange={(e) => set('listing_link', e.target.value)} placeholder="https://www.99acres.com/…" />
+            <span className="page-hint">Only add valid listing links.</span>
+          </div>
         </div>
         {error && <div className="modal-error">{error}</div>}
         <div className="modal-actions">
