@@ -13,12 +13,26 @@ const BASE = import.meta.env.VITE_API_BASE || '';
 const FORCE_MOCKS = String(import.meta.env.VITE_USE_MOCKS ?? 'true') !== 'false';
 
 let token = null;
+// Guards the expiry notice: parallel 401s must not stack toasts/redirects.
+let expiredFired = false;
+
 export function setAuthToken(t) {
   token = t;
+  if (t) expiredFired = false;   // fresh session — re-arm the expiry notice
   // User changed (login/logout) — drop everything cached for the old identity.
   epoch += 1;
   cache.clear();
   inflight.clear();
+}
+
+// A 401 while we still hold a token = the server killed the session. Say so once,
+// then let AuthContext drop auth so RequireAuth lands the user on /login. A soft
+// redirect (not location.reload) keeps the toast alive across the route change.
+function sessionExpired() {
+  if (expiredFired) return;
+  expiredFired = true;
+  toast('Session expired. Please login again.', 'error');
+  window.dispatchEvent(new CustomEvent('auth:expired'));
 }
 
 function fromMock(method, path, body) {
@@ -62,6 +76,8 @@ async function request(method, path, body) {
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;
   if (!res.ok) {
+    // `token` gate: a 401 with no token is just a failed sign-in, not an expiry.
+    if (res.status === 401 && token) sessionExpired();
     const err = new Error(data?.error || `HTTP ${res.status}`);
     err.status = res.status;
     err.data = data;
@@ -173,7 +189,8 @@ function mutate(method, path, body, opts = {}) {
       return data;
     },
     (err) => {
-      if (!opts.silent) {
+      // 401 → the session-expired toast already explains it; don't stack a second.
+      if (!opts.silent && err?.status !== 401) {
         const msg = err?.status === 0
           ? 'Not saved — network issue. Your change wasn’t stored. Please retry.'
           : `Not saved — ${err?.message || 'the server rejected the change'}. Please retry.`;

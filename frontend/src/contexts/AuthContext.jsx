@@ -38,6 +38,20 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
+  // Session killed server-side (any 401 while signed in) — drop auth immediately
+  // so RequireAuth redirects to /login. No "Goodbye" curtain: this isn't a
+  // deliberate sign-out, and the client's toast needs to stay readable.
+  useEffect(() => {
+    function onExpired() {
+      localStorage.removeItem('di_token');
+      localStorage.removeItem('di_mock_email');
+      setAuthToken(null);
+      setUser(null);
+    }
+    window.addEventListener('auth:expired', onExpired);
+    return () => window.removeEventListener('auth:expired', onExpired);
+  }, []);
+
   async function loginWithGoogle(idToken) {
     const r = await api.post('/api/auth/google', { id_token: idToken });
     localStorage.setItem('di_token', r.token);
