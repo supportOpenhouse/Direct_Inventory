@@ -1274,9 +1274,12 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 }
 
 /* New Ticket modal */
-.tk-mode-toggle { display: inline-flex; gap: 4px; background: var(--surface-2, #f1f5f9); border-radius: 999px; padding: 3px; margin-top: 4px; }
-.tk-mode-toggle button { border: 0; background: transparent; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--text-faint); cursor: pointer; }
-.tk-mode-toggle button.on { background: var(--surface, #fff); color: var(--text); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,.08)); }
+/* Matches the app's other segmented toggles (city tabs / Board-Table): same
+   surface-3 track, border, and brand-strong active label. <SlideTabs> supplies
+   the sliding thumb, so `.on` here only carries the colour. */
+.tk-mode-toggle { display: inline-flex; gap: 4px; background: var(--surface-3); border: 1px solid var(--border); border-radius: var(--r-pill); padding: 3px; margin-top: 4px; }
+.tk-mode-toggle button { border: 0; background: transparent; padding: 6px 14px; border-radius: var(--r-pill); font-size: 13px; font-weight: 600; color: var(--text-2); cursor: pointer; transition: color var(--t); }
+.tk-mode-toggle button.on { color: var(--brand-strong); }
 .tk-search-list { list-style: none; margin: 6px 0 0; padding: 0; border: 1px solid var(--border); border-radius: var(--r-sm, 8px); max-height: 220px; overflow-y: auto; }
 .tk-search-row { width: 100%; text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--border); padding: 8px 10px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
 .tk-search-list li:last-child .tk-search-row { border-bottom: 0; }

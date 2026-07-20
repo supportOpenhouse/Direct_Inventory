@@ -5,6 +5,7 @@ import { displayCity } from '../utils/format.js';
 import { IconClose } from './icons.jsx';
 import { emitTicketsChanged } from './TicketModal.jsx';
 import { useModalExit } from '../utils/useModalExit.js';
+import SlideTabs from './SlideTabs.jsx';
 
 function rmLabel(rm) {
   if (!rm) return '—';
@@ -106,10 +107,10 @@ export default function CreateTicketModal({ onClose: rawClose, onCreated }) {
           <button className="modal-close" onClick={onClose}><IconClose /></button>
         </div>
 
-        <div className="tk-mode-toggle">
+        <SlideTabs className="tk-mode-toggle">
           <button type="button" className={mode === 'property' ? 'on' : ''} onClick={() => setMode('property')}>On a property</button>
           <button type="button" className={mode === 'direct' ? 'on' : ''} onClick={() => setMode('direct')}>Direct to RM</button>
-        </div>
+        </SlideTabs>
 
         {mode === 'property' ? (
           <div style={{ marginTop: 6 }}>
