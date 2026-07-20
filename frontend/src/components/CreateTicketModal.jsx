@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { displayCity } from '../utils/format.js';
 import { IconClose } from './icons.jsx';
 import { emitTicketsChanged } from './TicketModal.jsx';
+import { useModalExit } from '../utils/useModalExit.js';
 
 function rmLabel(rm) {
   if (!rm) return '—';
@@ -18,7 +19,8 @@ function rmLabel(rm) {
  * Admin/manager only (the topbar button is gated). Managers may only target RMs
  * on their own team (the backend enforces this too).
  */
-export default function CreateTicketModal({ onClose, onCreated }) {
+export default function CreateTicketModal({ onClose: rawClose, onCreated }) {
+  const { onClose, backdropClass } = useModalExit(rawClose);
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -97,7 +99,7 @@ export default function CreateTicketModal({ onClose, onCreated }) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className={backdropClass} onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head-row">
           <h3>New Ticket</h3>

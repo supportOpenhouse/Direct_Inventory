@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
 import { STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
+import SlideTabs from './SlideTabs.jsx';
 
 const STAGE_ORDER = ['lead', 'active', 'qualified', 'call_not_received', 'follow_up', 'visit_scheduled', 'visit_completed', 'offer_given', 'rejected'];
 const FUNNEL_STAGES = ['qualified', 'visit_scheduled', 'visit_completed', 'offer_given'];
@@ -339,13 +340,13 @@ export default function UserReportAnalytics({ from, to, users, reportData }) {
             </div>
           </div>
           <div className="ura-card-controls">
-            <div className="ura-seg"><button className={chartType === 'bar' ? 'ura-seg-on' : ''} onClick={() => setChartType('bar')}>Bar</button><button className={chartType === 'line' ? 'ura-seg-on' : ''} onClick={() => setChartType('line')}>Line</button></div>
-            <div className="ura-seg"><button className={groupBy === 'stage' ? 'ura-seg-on' : ''} onClick={() => setGroupBy('stage')}>By stage</button><button className={groupBy === 'user' ? 'ura-seg-on' : ''} onClick={() => setGroupBy('user')}>By user</button></div>
-            <div className="ura-seg">
+            <SlideTabs className="ura-seg"><button className={chartType === 'bar' ? 'ura-seg-on' : ''} onClick={() => setChartType('bar')}>Bar</button><button className={chartType === 'line' ? 'ura-seg-on' : ''} onClick={() => setChartType('line')}>Line</button></SlideTabs>
+            <SlideTabs className="ura-seg"><button className={groupBy === 'stage' ? 'ura-seg-on' : ''} onClick={() => setGroupBy('stage')}>By stage</button><button className={groupBy === 'user' ? 'ura-seg-on' : ''} onClick={() => setGroupBy('user')}>By user</button></SlideTabs>
+            <SlideTabs className="ura-seg">
               <button className={tlMode === 'all' ? 'ura-seg-on' : ''} onClick={() => setTlMode('all')}>All</button>
               <button className={tlMode === 'months' ? 'ura-seg-on' : ''} onClick={() => setTlMode('months')}>Months</button>
               <button className={tlMode === 'weeks' ? 'ura-seg-on' : ''} onClick={() => setTlMode('weeks')}>Weeks</button>
-            </div>
+            </SlideTabs>
             {tlMode !== 'all' && (
               <select className="role-select ura-tl-n" value={tlN} onChange={(e) => setTlN(Number(e.target.value))}
                 aria-label={`Number of ${tlMode}`}>

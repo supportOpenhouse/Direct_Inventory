@@ -6,6 +6,7 @@ import { displayCity, formatDateShort, rejectReasonLabel, STAGE_DOT_COLOR, stage
 import { PRESETS, PRESET_LABELS, downloadCSV, todayIST } from '../utils/reportFilters.js';
 import { IconClose } from '../components/icons.jsx';
 import CardDetailModal from '../components/CardDetailModal.jsx';
+import { useModalExit } from '../utils/useModalExit.js';
 
 function StageCountPills({ counts }) {
   return Object.entries(counts).map(([s, n]) => (
@@ -24,7 +25,8 @@ function StagePill({ stage, rejectReason }) {
 }
 function fmtTime(iso) { return iso ? new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }) : ''; }
 
-function DayLeadsModal({ email, date, onOpenUid, onClose }) {
+function DayLeadsModal({ email, date, onOpenUid, onClose: rawClose }) {
+  const { onClose, backdropClass } = useModalExit(rawClose);
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -52,7 +54,7 @@ function DayLeadsModal({ email, date, onOpenUid, onClose }) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className={backdropClass} onClick={onClose}>
       <div className="modal modal-day-leads" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head-row">
           <h3>{formatDateShort(date)}</h3>

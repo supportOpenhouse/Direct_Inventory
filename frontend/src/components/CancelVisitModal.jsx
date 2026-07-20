@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api/client.js';
 import { IconClose } from './icons.jsx';
+import { useModalExit } from '../utils/useModalExit.js';
 
 /**
  * Cancel a scheduled visit. The lead moves straight to the supply-tracker
@@ -10,7 +11,8 @@ import { IconClose } from './icons.jsx';
  * /api/visits/cancel — talks to the Forms app, clears our visit columns, sets
  * stage. A non-empty cancel note is mandatory (it lands in activity_log).
  */
-export default function CancelVisitModal({ item, onCancelled, onClose }) {
+export default function CancelVisitModal({ item, onCancelled, onClose: rawClose }) {
+  const { onClose, backdropClass } = useModalExit(rawClose);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -44,7 +46,7 @@ export default function CancelVisitModal({ item, onCancelled, onClose }) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className={backdropClass} onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head-row">
           <h3>Cancel Visit</h3>

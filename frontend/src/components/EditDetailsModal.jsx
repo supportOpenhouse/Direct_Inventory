@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { IconClose } from './icons.jsx';
+import { useModalExit } from '../utils/useModalExit.js';
 
 // Floors offered in the picker (mirrors AddInventoryModal): Top, Ground, 1–50.
 const BASE_FLOORS = ['Top', 'Ground', ...Array.from({ length: 50 }, (_, i) => String(i + 1))];
@@ -12,7 +13,8 @@ const BASE_FLOORS = ['Top', 'Ground', ...Array.from({ length: 50 }, (_, i) => St
  * fields the user actually changed are PATCHed (the backend skips no-ops anyway).
  * Admins additionally get to view / change the assigned RM.
  */
-export default function EditDetailsModal({ item, onUpdated, onClose }) {
+export default function EditDetailsModal({ item, onUpdated, onClose: rawClose }) {
+  const { onClose, backdropClass } = useModalExit(rawClose);
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -99,7 +101,7 @@ export default function EditDetailsModal({ item, onUpdated, onClose }) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className={backdropClass} onClick={onClose}>
       <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head-row">
           <h3>Edit Details</h3>

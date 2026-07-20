@@ -6,6 +6,7 @@ import { rejectReasonLabel, stageLabel, STAGE_DOT_COLOR, SUPPLY_STAGES } from '.
 import InventoryBoard from '../components/InventoryBoard.jsx';
 import CpScanButton from '../components/CpScanButton.jsx';
 import AddInventoryButton from '../components/AddInventoryButton.jsx';
+import SlideTabs from '../components/SlideTabs.jsx';
 import { IconLeads, IconFollowUp, IconPipeline, IconRejected, IconQualified, IconVisit, IconLock, IconTicket } from '../components/icons.jsx';
 
 const REJECTED_TOP = 3;
@@ -282,10 +283,10 @@ export default function Home() {
           <AddInventoryButton />
         </>
       )}
-      <div className="view-toggle">
+      <SlideTabs className="view-toggle">
         <button className={view === 'board' ? 'on' : ''} onClick={() => { setView('board'); setTableSelect(false); }}>Board</button>
         <button className={view === 'table' ? 'on' : ''} onClick={() => setView('table')}>Table</button>
-      </div>
+      </SlideTabs>
     </div>
   );
 

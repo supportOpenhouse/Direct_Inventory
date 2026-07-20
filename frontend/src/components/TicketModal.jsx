@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { IconClose } from './icons.jsx';
+import { useModalExit } from '../utils/useModalExit.js';
 
 // Notify the rest of the app (nav dot, home card) that a ticket changed.
 export function emitTicketsChanged() {
@@ -45,7 +46,8 @@ export function ticketStatusClass(t) {
  * Refetches on mount so the thread is current. Calls onChanged(updated) and
  * fires `tickets:changed` after every mutation so hosts can patch in place.
  */
-export default function TicketModal({ ticket, onChanged, onClose }) {
+export default function TicketModal({ ticket, onChanged, onClose: rawClose }) {
+  const { onClose, backdropClass } = useModalExit(rawClose);
   const { user } = useAuth();
   const [t, setT] = useState(ticket);
   const [draft, setDraft] = useState('');
@@ -100,7 +102,7 @@ export default function TicketModal({ ticket, onChanged, onClose }) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className={backdropClass} onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head-row">
           <h3>{t.title}</h3>

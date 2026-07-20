@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import TicketModal, { ticketStatusClass, ticketStatusLabel } from '../components/TicketModal.jsx';
 import CardDetailModal from '../components/CardDetailModal.jsx';
+import SlideTabs from '../components/SlideTabs.jsx';
 import { IconTicket, IconSearch } from '../components/icons.jsx';
 
 const TABS = [
@@ -114,11 +115,11 @@ export default function Tickets() {
   return (
     <div>
       <div className="toolbar">
-        <div className="city-tabs">
+        <SlideTabs className="city-tabs">
           {TABS.map((t) => (
             <button key={t.key} className={tab === t.key ? 'tab tab-active' : 'tab'} onClick={() => setTab(t.key)}>{t.label}</button>
           ))}
-        </div>
+        </SlideTabs>
         <form className="search-form" onSubmit={onSearch}>
           <input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Search tickets — OH-ID, title, summary" />
           <button type="submit" className="btn-primary"><IconSearch size={16} /> Search</button>

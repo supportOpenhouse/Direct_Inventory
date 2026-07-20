@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { ALL_REJECT_REASONS, CITIES } from '../utils/format.js';
 import SearchableMultiSelect from './SearchableMultiSelect.jsx';
 import { IconClose } from './icons.jsx';
+import { useModalExit } from '../utils/useModalExit.js';
 
 function isoLocal(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -38,7 +39,8 @@ const EMPTY = {
   fu_preset: '', follow_up_from: '', follow_up_to: '', follow_up_empty: false,
 };
 
-export default function FilterPanel({ initial, defaultCity = '', role = '', showReason = false, showFollowUp = true, reasonOptions = ALL_REJECT_REASONS, onApply, onClose }) {
+export default function FilterPanel({ initial, defaultCity = '', role = '', showReason = false, showFollowUp = true, reasonOptions = ALL_REJECT_REASONS, onApply, onClose: rawClose }) {
+  const { onClose, backdropClass } = useModalExit(rawClose);
   const [f, setF] = useState(() => ({
     ...EMPTY, ...initial,
     society: Array.isArray(initial?.society) ? initial.society : [],
@@ -155,7 +157,7 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className={backdropClass} onClick={onClose}>
       <div className="modal filter-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head-row">
           <h3>Filters</h3>

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { CITIES, foldCities } from '../utils/format.js';
+import SlideTabs from '../components/SlideTabs.jsx';
 
 const ALL_ASSIGNED = '__assigned__';
 const ALL_DATA = '__all__';
@@ -286,10 +287,10 @@ export default function MyProfile() {
           {isAdminViewer && mapScope.label && <span className="muted"> — {mapScope.label}</span>}
           <span className="muted"> · approximate</span>
         </h3>
-        <div className="view-toggle scope-map-toggle">
+        <SlideTabs className="view-toggle scope-map-toggle">
           <button className={!heatmap ? 'on' : ''} onClick={() => setHeatmap(false)}>Dots</button>
           <button className={heatmap ? 'on' : ''} onClick={() => setHeatmap(true)}>Heat map</button>
-        </div>
+        </SlideTabs>
       </div>
       <Suspense fallback={<div className="scope-map-skeleton">Loading map…</div>}>
         <ScopeMap cities={mapScope.cities} society={mapScope.society} micro_market={mapScope.micro_market || []} plotAll={!!mapScope.plotAll} heatmap={heatmap} />

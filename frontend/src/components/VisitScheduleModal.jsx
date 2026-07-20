@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { stageLabel } from '../utils/format.js';
 import { IconClose } from './icons.jsx';
+import { useModalExit } from '../utils/useModalExit.js';
 
 // Inventory fields the Forms payload needs (first_name, contact_no, …). The
 // backend pulls these off the row, so if any are blank the Forms app rejects —
@@ -71,7 +72,8 @@ function to24h(label) {
  * admin). Before sending, checks for existing OpenHouse units in the society
  * and asks for confirmation. Talks to /api/visits/*.
  */
-export default function VisitScheduleModal({ item, onClose, onScheduled }) {
+export default function VisitScheduleModal({ item, onClose: rawClose, onScheduled }) {
+  const { onClose, backdropClass } = useModalExit(rawClose);
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -172,7 +174,7 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
 
   if (existing) {
     return (
-      <div className="modal-backdrop" onClick={onClose}>
+      <div className={backdropClass} onClick={onClose}>
         <div className="modal" onClick={(e) => e.stopPropagation()}>
           <div className="modal-head-row"><h3>Visit Already Scheduled</h3><button className="modal-close" onClick={onClose}><IconClose /></button></div>
           <p className="modal-sub">A visit is already booked for <strong>{item.oh_id}</strong>{item.society ? ` · ${item.society}` : ''}.</p>
@@ -190,7 +192,7 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
 
   if (pendingUnits && pendingUnits.length > 0) {
     return (
-      <div className="modal-backdrop" onClick={onClose}>
+      <div className={backdropClass} onClick={onClose}>
         <div className="modal" onClick={(e) => e.stopPropagation()}>
           <div className="modal-head-row"><h3>Existing OpenHouse units</h3><button className="modal-close" onClick={onClose}><IconClose /></button></div>
           <p className="modal-sub">These units are already with OpenHouse in <strong>{item.society}</strong>. Continue?</p>
@@ -208,7 +210,7 @@ export default function VisitScheduleModal({ item, onClose, onScheduled }) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className={backdropClass} onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head-row"><h3>Schedule Visit</h3><button className="modal-close" onClick={onClose}><IconClose /></button></div>
         <p className="modal-sub">{item.oh_id} · {item.society || '—'}</p>

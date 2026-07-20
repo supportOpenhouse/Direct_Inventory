@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { rejectReasonsForStage } from '../utils/format.js';
 import { IconClose } from './icons.jsx';
+import { useModalExit } from '../utils/useModalExit.js';
 
-export default function RejectReasonModal({ ohId, stage, onSelect, onClose }) {
+export default function RejectReasonModal({ ohId, stage, onSelect, onClose: rawClose }) {
+  const { onClose, backdropClass } = useModalExit(rawClose);
   const reasons = rejectReasonsForStage(stage);
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -14,7 +16,7 @@ export default function RejectReasonModal({ ohId, stage, onSelect, onClose }) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className={backdropClass} onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head-row"><h3>Reject reason{ohId ? ` — ${ohId}` : ''}</h3><button className="modal-close" onClick={onClose}><IconClose /></button></div>
         <p className="modal-sub">Pick one before this lead moves to Rejected.</p>

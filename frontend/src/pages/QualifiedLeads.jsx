@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import ExpandPanel from '../components/ExpandPanel.jsx';
 import FilterPanel from '../components/FilterPanel.jsx';
+import SlideTabs from '../components/SlideTabs.jsx';
 import OhPrice from '../components/OhPrice.jsx';
 import StarCell from '../components/StarCell.jsx';
 import { CITIES, displayCity, formatPrice, variation } from '../utils/format.js';
@@ -119,10 +120,10 @@ export default function QualifiedLeads() {
   return (
     <div>
       <div className="toolbar">
-        <div className="city-tabs">
+        <SlideTabs className="city-tabs">
           <button className={!city ? 'tab tab-active' : 'tab'} onClick={() => setCity('')}>All</button>
           {CITIES.map((c) => <button key={c} className={city === c ? 'tab tab-active' : 'tab'} onClick={() => setCity(c)}>{c}</button>)}
-        </div>
+        </SlideTabs>
         <form className="search-form" onSubmit={onSearch}>
           <input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Search any field — e.g. 1003 D2 Sahaj" />
           <button type="submit" className="btn-primary"><IconSearch size={16} /> Search</button>

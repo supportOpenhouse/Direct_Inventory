@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { rejectReasonsForStage, STAGE_DOT_COLOR, STAGES, stageLabel, todayISO } from '../utils/format.js';
 import { IconClose } from './icons.jsx';
 import VisitScheduleModal from './VisitScheduleModal.jsx';
+import { useModalExit } from '../utils/useModalExit.js';
 
 /**
  * Edit-status popup — the old stage-change flow. A stage dropdown plus the
@@ -17,7 +18,8 @@ import VisitScheduleModal from './VisitScheduleModal.jsx';
  */
 const STAGE_OPTIONS = STAGES.filter((s) => s !== 'lead' && s !== 'active');
 
-export default function StatusEditModal({ item, onUpdated, onClose }) {
+export default function StatusEditModal({ item, onUpdated, onClose: rawClose }) {
+  const { onClose, backdropClass } = useModalExit(rawClose);
   const [stage, setStage] = useState(item.stage);
   const [followUp, setFollowUp] = useState(item.follow_up_at ? item.follow_up_at.slice(0, 10) : '');
   const [reason, setReason] = useState(item.stage_reason || '');
@@ -52,7 +54,7 @@ export default function StatusEditModal({ item, onUpdated, onClose }) {
 
   return (
     <>
-      <div className="modal-backdrop" onClick={onClose}>
+      <div className={backdropClass} onClick={onClose}>
         <div className="modal" onClick={(e) => e.stopPropagation()}>
           <div className="modal-head-row">
             <h3>Edit Status</h3>

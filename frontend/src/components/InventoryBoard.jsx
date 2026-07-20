@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { CITIES, STAGE_DOT_COLOR, STAGES, stageLabel } from '../utils/format.js';
 import InventoryTable from './InventoryTable.jsx';
 import FilterPanel from './FilterPanel.jsx';
+import SlideTabs from './SlideTabs.jsx';
 import AddInventoryModal from './AddInventoryModal.jsx';
 import BulkActionBar from './BulkActionBar.jsx';
 import { IconFilter, IconPlus, IconReload, IconSearch } from './icons.jsx';
@@ -242,10 +243,10 @@ export default function InventoryBoard({
   return (
     <div>
       <div className="toolbar">
-        <div className="city-tabs">
+        <SlideTabs className="city-tabs">
           <button className={!city ? 'tab tab-active' : 'tab'} onClick={() => setCity('')}>All</button>
           {CITIES.map((c) => <button key={c} className={city === c ? 'tab tab-active' : 'tab'} onClick={() => setCity(c)}>{c}</button>)}
-        </div>
+        </SlideTabs>
         {showAdd && <button className="btn-primary" onClick={() => setShowAddModal(true)}><IconPlus size={16} /> Add Inventory</button>}
         {!hideSelectButton && (
           <button className={selectMode ? 'btn-primary' : 'btn-ghost'} onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}>

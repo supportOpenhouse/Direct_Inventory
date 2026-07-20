@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import ExpandPanel from '../components/ExpandPanel.jsx';
 import FilterPanel from '../components/FilterPanel.jsx';
+import SlideTabs from '../components/SlideTabs.jsx';
 import StarCell from '../components/StarCell.jsx';
 import {
   CITIES, displayCity, isCreatedToday, rejectReasonsForStage,
@@ -265,10 +266,10 @@ export default function Leads() {
   return (
     <div className="leads-page">
       <div className="leads-toolbar">
-        <div className="city-tabs">
+        <SlideTabs className="city-tabs">
           <button className={!city ? 'tab tab-active' : 'tab'} onClick={() => setCity('')}>All</button>
           {CITIES.map((c) => <button key={c} className={city === c ? 'tab tab-active' : 'tab'} onClick={() => setCity(c)}>{c}</button>)}
-        </div>
+        </SlideTabs>
         <form className="search-form" onSubmit={onSearch}>
           <input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Search any field — e.g. 1003 D2 Sahaj" />
           <button type="submit" className="btn-primary"><IconSearch size={16} /> Search</button>
@@ -276,11 +277,11 @@ export default function Leads() {
         </form>
         <button className="btn-ghost" onClick={() => setShowFilters(true)}><IconFilter size={16} /> Filters{filterCount ? ` (${filterCount})` : ''}</button>
         {filterCount > 0 && <button className="btn-link" onClick={() => { setFiltersApplied({}); setFilterFormState({}); }}>Reset</button>}
-        <div className="view-toggle">
+        <SlideTabs className="view-toggle">
           <button className={paneView === 'lead' ? 'on' : ''} onClick={() => setPaneView('lead')}>Lead</button>
           <button className={paneView === 'both' ? 'on' : ''} onClick={() => setPaneView('both')}>Both</button>
           <button className={paneView === 'active' ? 'on' : ''} onClick={() => setPaneView('active')}>Active</button>
-        </div>
+        </SlideTabs>
       </div>
 
       <div className="leads-split" ref={containerRef}>

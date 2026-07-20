@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { CITIES } from '../utils/format.js';
 import SearchableMultiSelect from './SearchableMultiSelect.jsx';
 import { IconClose } from './icons.jsx';
+import { useModalExit } from '../utils/useModalExit.js';
 
 const INITIAL = {
   source: 'Website', city: 'Gurgaon', society: '', locality: '',
@@ -10,7 +11,8 @@ const INITIAL = {
   price: '', seller_name: '', seller_phone: '', posting_date: '', listing_link: '',
 };
 
-export default function AddInventoryModal({ onClose, onAdded, defaultStage = 'lead' }) {
+export default function AddInventoryModal({ onClose: rawClose, onAdded, defaultStage = 'lead' }) {
+  const { onClose, backdropClass } = useModalExit(rawClose);
   const [f, setF] = useState(INITIAL);
   const [societies, setSocieties] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -60,7 +62,7 @@ export default function AddInventoryModal({ onClose, onAdded, defaultStage = 'le
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className={backdropClass} onClick={onClose}>
       <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head-row"><h3>Add Inventory</h3><button className="modal-close" onClick={onClose}><IconClose /></button></div>
         <div className="form-grid">

@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { foldCities } from '../utils/format.js';
 import SearchableMultiSelect from './SearchableMultiSelect.jsx';
 import { IconClose } from './icons.jsx';
+import { useModalExit } from '../utils/useModalExit.js';
 
 const SCOPE_LEVELS = [
   { key: 'city', label: 'City' },
@@ -10,7 +11,8 @@ const SCOPE_LEVELS = [
   { key: 'society', label: 'Society' },
 ];
 
-export default function UserEditModal({ user, managers, areas, onClose, onSaved }) {
+export default function UserEditModal({ user, managers, areas, onClose: rawClose, onSaved }) {
+  const { onClose, backdropClass } = useModalExit(rawClose);
   const [cities, setCities] = useState(foldCities(user.cities));
   const [microMarkets, setMicroMarkets] = useState(user.micro_market || []);
   const [societies, setSocieties] = useState(user.society || []);
@@ -32,7 +34,7 @@ export default function UserEditModal({ user, managers, areas, onClose, onSaved 
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className={backdropClass} onClick={onClose}>
       <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head-row"><h3>{user.name || user.email}</h3><span className="role-chip">{user.role}</span><span className="muted" style={{ fontSize: 12 }}>{user.email}</span><button className="modal-close" onClick={onClose}><IconClose /></button></div>
 

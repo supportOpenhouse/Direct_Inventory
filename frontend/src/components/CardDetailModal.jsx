@@ -1,19 +1,17 @@
-import { useEffect } from 'react';
 import ExpandPanel from './ExpandPanel.jsx';
 import { displayCity, formatPrice, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
 import { IconClose } from './icons.jsx';
+import { useModalExit } from '../utils/useModalExit.js';
 
 /**
  * Read/notes detail popup for a single inventory row. Used by the notification
  * bell. Editing is delegated to the inline ExpandPanel sections; this is mainly
  * a focused view of one lead with its notes thread.
  */
-export default function CardDetailModal({ item, role, onUpdated, onClose, showAssignedRm = false }) {
-  useEffect(() => {
-    function onKey(e) { if (e.key === 'Escape') onClose(); }
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+export default function CardDetailModal({ item, role, onUpdated, onClose: rawClose, showAssignedRm = false }) {
+  // Escape handling lives in useModalExit — its version is stack-aware, so this
+  // modal no longer closes when something is open on top of it.
+  const { onClose, backdropClass } = useModalExit(rawClose);
 
   const canPost = ['admin', 'manager', 'rm'].includes(role);
   // _loading = opened with only a seed (society/city/oh_id) while the full
@@ -21,7 +19,7 @@ export default function CardDetailModal({ item, role, onUpdated, onClose, showAs
   const loading = item._loading;
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className={backdropClass} onClick={onClose}>
       <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head-row">
           <h3>{item.society || (loading ? <span className="inv-skel" style={{ display: 'inline-block', width: 160 }} /> : '—')}</h3>

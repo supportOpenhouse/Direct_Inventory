@@ -500,6 +500,28 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 
 /* ── toolbar (board / table view) ────────────────────────────────────── */
 .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+/* ── sliding segmented toggles ────────────────────────────────────────────
+   <SlideTabs> adds .seg-slide + a .seg-thumb that travels to the active option.
+   The thumb paints the "selected" surface, so the active BUTTON goes
+   transparent — otherwise both would render and the slide wouldn't read.
+   One moving part on --t-move (motion doc §5). */
+.seg-slide { position: relative; }
+.seg-slide > button { position: relative; z-index: 1; background: transparent; }
+.seg-thumb {
+  position: absolute; left: 0; top: 3px; bottom: 3px; z-index: 0;
+  border-radius: var(--r-pill); background: var(--surface); box-shadow: var(--shadow-sm);
+  pointer-events: none;
+  transition: transform var(--t-move) var(--ease), width var(--t-move) var(--ease), opacity var(--t);
+}
+/* Selected state is the COLOUR (which is instant); the thumb is the garnish —
+   so the toggle still reads correctly if the slide never plays. */
+.seg-slide .tab-active, .seg-slide button.on, .seg-slide .ura-seg-on {
+  background: transparent !important; box-shadow: none !important;
+}
+.ura-seg.seg-slide .seg-thumb { top: 2px; bottom: 2px; border-radius: 6px; }
+/* reduced-motion: the thumb still moves (it IS the selection), just instantly. */
+@media (prefers-reduced-motion: reduce) { .seg-thumb { transition: opacity var(--t); } }
+
 .city-tabs { display: inline-flex; gap: 4px; background: var(--surface-3); border: 1px solid var(--border); border-radius: var(--r-pill); padding: 3px; }
 .city-tabs .tab { border: 0; background: transparent; color: var(--text-2); font-weight: 600; font-size: 13px; padding: 7px 14px; border-radius: var(--r-pill); }
 .city-tabs .tab-active { background: var(--surface); color: var(--brand-strong); box-shadow: var(--shadow-sm); }
@@ -756,8 +778,22 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .edit-sec-h:first-of-type { margin-top: 6px; }
 
 /* ── modal ───────────────────────────────────────────────────────────── */
-.modal-backdrop { position: fixed; inset: 0; background: rgba(20,16,14,0.5); backdrop-filter: blur(2px); display: grid; place-items: start center; padding: 48px 16px; z-index: 1000; overflow: auto; }
-.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); width: 100%; max-width: 480px; padding: 24px; }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(20,16,14,0.5); backdrop-filter: blur(2px); display: grid; place-items: start center; padding: 48px 16px; z-index: 1000; overflow: auto; animation: modal-scrim-in var(--t-enter) var(--ease-out); }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); width: 100%; max-width: 480px; padding: 24px; animation: modal-in var(--t-enter) var(--ease-out); }
+/* The scrim FADES, the modal TRAVELS — two animations on purpose (motion doc
+   §5), so the panel can drop to the bottom on close while the scrim just fades.
+   `forwards` holds the end state for the ~240ms before useModalExit unmounts. */
+.modal-backdrop-closing { animation: modal-scrim-out var(--t-enter) var(--ease-out) forwards; }
+.modal-backdrop-closing .modal { animation: modal-out var(--t-enter) var(--ease-out) forwards; }
+@keyframes modal-scrim-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-scrim-out { to { opacity: 0; } }
+@keyframes modal-in  { from { opacity: 0; transform: translateY(12px) scale(.99); } to { opacity: 1; transform: none; } }
+@keyframes modal-out { to { opacity: 0; transform: translateY(24px); } }   /* exits downward */
+/* reduced-motion: a modal arriving/leaving carries meaning — keep it, make it
+   instant. useModalExit drops its unmount delay to 0 to match. */
+@media (prefers-reduced-motion: reduce) {
+  .modal-backdrop, .modal, .modal-backdrop-closing, .modal-backdrop-closing .modal { animation-duration: .01ms; }
+}
 .modal-wide { max-width: 720px; }
 .modal h3 { font-size: 19px; margin-bottom: 4px; }
 .modal-sub { color: var(--text-muted); font-size: 13px; margin: 0 0 16px; }
