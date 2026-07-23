@@ -70,3 +70,23 @@ services:
         sync: false
       - key: PROPERTIES_DB_URL
         sync: false
+
+  # Backfill inventory.locality from PROPERTIES_DB.master_societies (matches on
+  # society name, case/whitespace-insensitive). Daily at 10:00 IST.
+  # Render cron schedules are UTC — 10:00 IST = 04:30 UTC (IST is UTC+5:30, and
+  # India has no DST, so this holds year-round).
+  - type: cron
+    name: direct-inventory-backfill-locality
+    env: python
+    region: singapore
+    rootDir: backend
+    schedule: "30 4 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m scripts.backfill_locality_from_master
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: DATABASE_URL
+        sync: false
+      - key: PROPERTIES_DB_URL
+        sync: false
