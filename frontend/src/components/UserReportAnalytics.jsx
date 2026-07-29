@@ -13,7 +13,10 @@ function sortStages(keys) {
   });
 }
 // Single source of truth: the same stage colours the filter boxes / stage dots use.
-const stageColor = (s) => STAGE_DOT_COLOR[s] || '#94a3b8';
+// `note` isn't a pipeline stage (it's a logged note action), so it has no entry
+// in the shared stage palette — colour it blue here rather than the grey fallback.
+const NOTE_BLUE = '#3b82f6';
+const stageColor = (s) => (s === 'note' ? NOTE_BLUE : (STAGE_DOT_COLOR[s] || '#94a3b8'));
 
 const SEG_GAP = 2;   // surface gap between stacked segments
 const BAR_R = 4;     // rounded data-end (top of the stack only)
@@ -144,7 +147,10 @@ function DailyTrendChart({ days, chartType, groupBy, userNames, bucketMode }) {
 
   return (
     <div className="ura-chart-wrap">
-      <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="ura-chart">
+      {/* Hide only when the pointer leaves the whole plot — moving between bars
+          keeps the tooltip mounted so it glides to the next one instead of
+          flickering off and on. */}
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="ura-chart" onMouseLeave={() => setHover(null)}>
         {ticks.map((t, i) => { const y = yOf(t); return (
           <g key={i}><line x1={PAD.left} y1={y} x2={W - PAD.right} y2={y} stroke="var(--hairline)" /><text x={PAD.left - 6} y={y + 3} fontSize="10" fill="var(--text-faint)" textAnchor="end">{t}</text></g>
         ); })}
@@ -182,7 +188,7 @@ function DailyTrendChart({ days, chartType, groupBy, userNames, bucketMode }) {
           const x = xOf(i); const showLabel = i % xLabelEvery === 0 || i === rows.length - 1;
           const topY = chartType === 'line' ? yOf(Math.max(...series.map((s) => r.values[s.key] || 0), 0)) : yOf(r.total);
           return (
-            <g key={`o-${r.day}`} onMouseEnter={() => setHover({ x, y: topY, ...r })} onMouseLeave={() => setHover(null)}>
+            <g key={`o-${r.day}`} onMouseEnter={() => setHover({ x, y: topY, ...r })}>
               <rect x={PAD.left + slot * i} y={PAD.top} width={slot} height={innerH} fill="transparent" />
               {showLabel && <text x={x} y={H - PAD.bottom + 14} fontSize="10" fill="var(--text-muted)" textAnchor="middle">{bucketLabel(r.day, bucketMode)}</text>}
             </g>
