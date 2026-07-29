@@ -325,12 +325,34 @@ export default function UserReportAnalytics({ from, to, users, reportData }) {
   }, [reportData]);
   const rmRows = useMemo(() => (reportData.users || []).filter((u) => (u.actor_role || '').toLowerCase() !== 'admin'), [reportData]);
 
+  // The pipeline in four numbers — computed from the page's report period
+  // (reportData), so the ribbon stays put when the chart's timeline toggle moves.
+  const summary = useMemo(() => {
+    const list = reportData.users || [];
+    const actions = list.reduce((a, u) => a + (u.total || 0), 0);
+    const uniqueLeads = list.reduce((a, u) => a + (u.unique_leads || 0), 0);
+    const qualified = totals.qualified || 0;
+    const visits = totals.visit_scheduled || 0;
+    return { actions, uniqueLeads, qualified, visits, visitRate: qualified ? Math.round((visits / qualified) * 100) : null };
+  }, [reportData, totals]);
+  const fmt = (n) => (n || 0).toLocaleString('en-US');
+
   if (loading) return <div className="al-empty">Loading analytics…</div>;
   if (error) return <div className="modal-error">{error}</div>;
 
   return (
     <div className="ura-grid">
-      <section className="ura-card ura-card-wide">
+      <div className="ura-ribbon ura-rise">
+        <div className="ura-rib-cell"><div className="ura-rib-num">{fmt(summary.actions)}</div><div className="ura-rib-lbl">Actions logged</div></div>
+        <div className="ura-rib-cell"><div className="ura-rib-num">{fmt(summary.uniqueLeads)}</div><div className="ura-rib-lbl">Unique leads touched</div></div>
+        <div className="ura-rib-cell"><div className="ura-rib-num">{fmt(summary.qualified)}</div><div className="ura-rib-lbl">Reached qualified</div></div>
+        <div className="ura-rib-cell">
+          <div className="ura-rib-num">{fmt(summary.visits)}{summary.visitRate != null && <span className="ura-rib-sub">{summary.visitRate}%</span>}</div>
+          <div className="ura-rib-lbl">Reached visit{summary.visitRate != null ? ' · of qualified' : ''}</div>
+        </div>
+      </div>
+
+      <section className="ura-card ura-card-wide ura-rise">
         <div className="ura-card-head">
           <div>
             <h3 className="ura-title">{tlMode === 'all' ? 'Daily activity' : tlMode === 'months' ? 'Monthly activity' : 'Weekly activity'}</h3>
@@ -358,19 +380,19 @@ export default function UserReportAnalytics({ from, to, users, reportData }) {
         <DailyTrendChart days={trend} chartType={chartType} groupBy={groupBy} userNames={analytics.user_names || {}} bucketMode={tlMode} />
       </section>
 
-      <section className="ura-card">
+      <section className="ura-card ura-rise">
         <h3 className="ura-title">Activity by stage</h3>
         <div className="ura-subtitle">Actions grouped by the stage they ended at.</div>
         <StageDistribution totals={totals} />
       </section>
 
-      <section className="ura-card">
+      <section className="ura-card ura-rise">
         <h3 className="ura-title">Conversion funnel</h3>
         <div className="ura-subtitle">Of leads in this period, how many reached each stage.</div>
         <FunnelChart funnel={analytics.funnel || {}} />
       </section>
 
-      <section className="ura-card ura-card-wide">
+      <section className="ura-card ura-card-wide ura-rise">
         <h3 className="ura-title">RM leaderboard</h3>
         <div className="ura-subtitle">Top RMs by % of activity that reached Visit Scheduled. Admins excluded.</div>
         <UserLeaderboard users={rmRows} />
