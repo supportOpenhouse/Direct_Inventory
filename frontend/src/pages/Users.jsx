@@ -116,14 +116,14 @@ export default function Users() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <h3 style={{ margin: 0 }}>Clashed Societies</h3>
           {!clashLoading && <span className="role-chip">{clashes.length} societ{clashes.length === 1 ? 'y' : 'ies'}</span>}
-          <span className="page-hint" style={{ margin: 0 }}>Societies in more than one RM&apos;s scope — the overlaps that cause multi-RM leads.</span>
+          <span className="page-hint" style={{ margin: 0 }}></span>
           <span style={{ flex: 1 }} />
           <button className="btn-ghost" onClick={recompute} disabled={recomputing}>{recomputing ? 'Recomputing…' : 'Recompute scopes'}</button>
         </div>
         {clashLoading ? (
           <p className="muted">Loading…</p>
         ) : clashes.length === 0 ? (
-          <p className="muted">No clashes — every society is covered by at most one RM. 🎉</p>
+          <p className="muted">No clashes, every society is covered by at most one RM.</p>
         ) : (
           <table className="data-table">
             <thead><tr><th>Society</th><th>Shared by (RMs)</th></tr></thead>

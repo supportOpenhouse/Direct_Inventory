@@ -71,8 +71,9 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
   useEffect(() => {
     if (!canFilterRm) return undefined;
     let alive = true;
-    api.get('/api/users?role=rm')
-      .then((r) => { if (alive) setRms((r.items || []).filter((u) => u.is_active !== false)); })
+    // Active RMs + any manager/admin actually holding leads (see /rm-options).
+    api.get('/api/inventory/rm-options')
+      .then((r) => { if (alive) setRms(r.items || []); })
       .catch(() => { if (alive) setRms([]); });
     return () => { alive = false; };
   }, [canFilterRm]);

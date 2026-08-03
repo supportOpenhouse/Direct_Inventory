@@ -24,6 +24,35 @@ from ._common import (
 )
 
 
+@bp.get("/rm-options")
+@require_auth("admin", "manager")
+def rm_options():
+    """Users selectable in the RM filter: every active RM, PLUS any user of any
+    role — a manager or admin included — who is currently assigned to at least
+    one lead. A non-RM (or inactive user) appears only if actually assigned;
+    if they hold no leads they don't show.
+    (Static route — declared before /<oh_id> so it isn't read as an oh_id.)
+    """
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, name, email, role, is_active
+                FROM users
+                WHERE (role = 'rm' AND is_active = TRUE)
+                   OR id IN (
+                     SELECT DISTINCT unnest(assigned_rm_ids)
+                     FROM inventory WHERE cardinality(assigned_rm_ids) > 0
+                   )
+                ORDER BY name NULLS LAST, email
+                """
+            )
+            return jsonify({"items": cur.fetchall()})
+    finally:
+        conn.close()
+
+
 @bp.get("/<oh_id>")
 @require_auth()
 def get_one(oh_id: str):
