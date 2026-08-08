@@ -53,9 +53,9 @@ export default function InventoryTable({
   const [openId, setOpenId] = useState(null);
   const canSetPriority = ['admin', 'manager', 'rm'].includes(role);
   const isAdmin = role === 'admin';
-  // 16 always-on columns + OH-ID + Assigned RM (admin only) + select checkbox
-  // + optional Reason column.
-  const colCount = 16 + (isAdmin ? 2 : 0) + (selectMode ? 1 : 0) + (showReasonCol ? 1 : 0);
+  // 17 always-on columns (incl. Assigned date) + OH-ID + Assigned RM (admin
+  // only) + select checkbox + optional Reason column.
+  const colCount = 17 + (isAdmin ? 2 : 0) + (selectMode ? 1 : 0) + (showReasonCol ? 1 : 0);
 
   // Header checkbox state — tristate over the currently rendered (paged) rows.
   const visibleIds = items.map((it) => it.oh_id);
@@ -95,6 +95,7 @@ export default function InventoryTable({
             <SortTh field="posting_date" label="Posted" sort={sort} onSort={onSort} cls="inv-col-posted" />
             <SortTh field="created_at" label="Created" sort={sort} onSort={onSort} />
             {isAdmin && <th className="inv-th">Assigned RM</th>}
+            <th className="inv-th">Assigned</th>
             <th className="inv-th">Notes</th>
           </tr>
         </thead>
@@ -154,6 +155,7 @@ export default function InventoryTable({
                   <td className="inv-td-muted inv-col-posted">{formatDateShort(item.posting_date)}</td>
                   <td className="inv-td-muted">{item.created_at ? formatDateRel(item.created_at) : '—'}</td>
                   {isAdmin && <td className="inv-td-muted" title={assignedRmsTitle(item.assigned_rms)}><span className="inv-clip inv-clip-rm">{formatAssignedRms(item.assigned_rms)}</span></td>}
+                  <td className="inv-td-muted">{item.assigned_at ? formatDateShort(item.assigned_at) : '—'}</td>
                   <td className="inv-td-notes">
                     {noteCount > 0 ? (
                       <span className="inv-td-notes-wrap">
