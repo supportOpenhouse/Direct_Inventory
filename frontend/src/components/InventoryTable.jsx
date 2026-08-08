@@ -155,7 +155,7 @@ export default function InventoryTable({
                   <td className="inv-td-muted inv-col-posted">{formatDateCompact(item.posting_date)}</td>
                   <td className="inv-td-muted">{item.created_at ? formatDateRel(item.created_at) : '—'}</td>
                   {isAdmin && <td className="inv-td-muted" title={assignedRmsTitle(item.assigned_rms)}><span className="inv-clip inv-clip-rm">{formatAssignedRms(item.assigned_rms)}</span></td>}
-                  <td className="inv-td-muted">{formatDateCompact(item.assigned_at)}</td>
+                  <td className="inv-td-muted">{formatDateRel(item.assigned_at)}</td>
                   <td className="inv-td-notes">
                     {noteCount > 0 ? (
                       <span className="inv-td-notes-wrap">

@@ -92,6 +92,7 @@ export function formatDateRel(iso) {
   if (days <= 0) return 'Today';
   if (days === 1) return 'Yesterday';
   if (days < 7) return `${days}d ago`;
+  if (days >= 365) { const y = Math.floor(days / 365.25); return `${y} year${y === 1 ? '' : 's'} ago`; }
   return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
