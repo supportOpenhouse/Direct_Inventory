@@ -45,6 +45,34 @@ export default function TrackTasks() {
   // "Assigned at" range filter for the RM Lead Counts table (empty = all-time).
   const [assignedFrom, setAssignedFrom] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
+  const [month, setMonth] = useState('');   // selected 'YYYY-MM' from the dropdown ('' = custom/none)
+
+  // Last 12 months for the "Choose month" dropdown. Months outside the current
+  // year get a "'YY" suffix (e.g. Dec '25); each maps to that month's full range.
+  const monthOptions = useMemo(() => {
+    const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const now = new Date();
+    const cy = now.getFullYear();
+    return Array.from({ length: 12 }, (_, i) => {
+      const d = new Date(cy, now.getMonth() - i, 1);
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      const mm = String(m + 1).padStart(2, '0');
+      const lastDay = String(new Date(y, m + 1, 0).getDate()).padStart(2, '0');
+      return {
+        value: `${y}-${mm}`,
+        label: MON[m] + (y !== cy ? ` '${String(y).slice(2)}` : ''),
+        from: `${y}-${mm}-01`,
+        to: `${y}-${mm}-${lastDay}`,
+      };
+    });
+  }, []);
+  function pickMonth(v) {
+    setMonth(v);
+    const o = monthOptions.find((x) => x.value === v);
+    setAssignedFrom(o ? o.from : '');
+    setAssignedTo(o ? o.to : '');
+  }
 
   const loadTasks = useCallback(() => api.get('/api/home/task-tracking')
     .then((r) => setUsers(r.users || []))
@@ -108,6 +136,17 @@ export default function TrackTasks() {
     });
   }, [rmCounts, rmSort]);
 
+  // Column totals across all RMs, for the TOTAL footer row.
+  const totalsRow = useMemo(() => {
+    const byStage = {};
+    let total = 0;
+    for (const u of rmCounts) {
+      total += u.total || 0;
+      for (const s of Object.keys(u.counts || {})) byStage[s] = (byStage[s] || 0) + u.counts[s];
+    }
+    return { total, byStage };
+  }, [rmCounts]);
+
   const cols = 3;
   return (
     <div>
@@ -154,14 +193,18 @@ export default function TrackTasks() {
 
       <div className="page-head" style={{ marginTop: 28 }}>
         <h2>RM Lead Counts</h2>
-        <div className="ph-sub">All leads per RM, broken down by stage.</div>
+        <div className="ph-sub"></div>
         <span className="page-head-spacer" />
         <div className="al-date-range">
           <span className="al-date-lbl">ASSIGNED AT</span>
-          <input type="date" className="al-date" value={assignedFrom} max={assignedTo || todayIST()} onChange={(e) => setAssignedFrom(e.target.value)} aria-label="Assigned from" />
+          <select className="role-select al-month" value={month} onChange={(e) => pickMonth(e.target.value)} aria-label="Choose month">
+            <option value="">Choose month…</option>
+            {monthOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+          <input type="date" className="al-date" value={assignedFrom} max={assignedTo || todayIST()} onChange={(e) => { setAssignedFrom(e.target.value); setMonth(''); }} aria-label="Assigned from" />
           <span className="al-date-sep">to</span>
-          <input type="date" className="al-date" value={assignedTo} min={assignedFrom} max={todayIST()} onChange={(e) => setAssignedTo(e.target.value)} aria-label="Assigned to" />
-          {(assignedFrom || assignedTo) && <button type="button" className="btn-link" onClick={() => { setAssignedFrom(''); setAssignedTo(''); }}>Clear</button>}
+          <input type="date" className="al-date" value={assignedTo} min={assignedFrom} max={todayIST()} onChange={(e) => { setAssignedTo(e.target.value); setMonth(''); }} aria-label="Assigned to" />
+          {(assignedFrom || assignedTo) && <button type="button" className="btn-link" onClick={() => { setAssignedFrom(''); setAssignedTo(''); setMonth(''); }}>Clear</button>}
         </div>
       </div>
 
@@ -202,6 +245,15 @@ export default function TrackTasks() {
               </tr>
             ))}
           </tbody>
+          {!loadingCounts && rmCounts.length > 0 && (
+            <tfoot>
+              <tr className="rmlc-total">
+                <td>Total</td>
+                <td className="inv-td-num">{totalsRow.total}</td>
+                {stageCols.map((s) => <td key={s} className="inv-td-num">{totalsRow.byStage[s] || 0}</td>)}
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
     </div>

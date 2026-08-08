@@ -878,7 +878,8 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .al-date-range { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
 .al-filters .btn-primary { flex: 0 0 auto; }
 .al-date { width: auto; }
-.al-date-lbl, .al-date-sep { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+.al-month { width: auto; min-width: 140px; }
+.al-date-lbl, .al-date-sep { font-size: 12px; color: var(--text-muted); font-weight: 600; white-space: nowrap; letter-spacing: .04em; }
 .al-banner { background: var(--amber-bg); color: var(--amber-fg); padding: 9px 13px; border-radius: var(--r-sm); font-size: 12.5px; margin-bottom: 12px; }
 .al-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: auto; }
 .al-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -956,6 +957,10 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .stage-reason { color: var(--text-muted); }
 .stage-reason-line { margin-left: 16px; }
 .rmlc-hline { line-height: 1.15; white-space: nowrap; }
+/* TOTAL footer — clearly set apart from the RM rows: tinted band, heavy top
+   rule, bold brand-tinted numerals, sticks to the bottom on scroll. */
+.rmlc-total td { position: sticky; bottom: 0; background: var(--surface-2); border-top: 2px solid var(--brand); font-weight: 800; font-size: 14px; padding-top: 13px; padding-bottom: 13px; color: var(--text); }
+.rmlc-total td:first-child { text-transform: uppercase; letter-spacing: .06em; color: var(--brand-strong); }
 .dr-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 14px; }
 .dr-table th { text-align: left; padding: 8px 10px; font-size: 10.5px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); }
 .dr-table td { padding: 8px 10px; border-bottom: 1px solid var(--hairline); }
