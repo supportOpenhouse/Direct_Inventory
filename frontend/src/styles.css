@@ -959,7 +959,7 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .rmlc-hline { line-height: 1.15; white-space: nowrap; }
 /* TOTAL footer — clearly set apart from the RM rows: tinted band, heavy top
    rule, bold brand-tinted numerals, sticks to the bottom on scroll. */
-.rmlc-total td { position: sticky; bottom: 0; background: var(--surface-2); border-top: 2px solid var(--brand); font-weight: 800; font-size: 14px; padding-top: 13px; padding-bottom: 13px; color: var(--text); }
+.rmlc-total td { position: sticky; bottom: 0; background: var(--surface-2); border-top: 2px solid var(--brand); font-weight: 800; font-size: 14px; padding: 13px 12px; color: var(--text); }
 .rmlc-total td:first-child { text-transform: uppercase; letter-spacing: .06em; color: var(--brand-strong); }
 .dr-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 14px; }
 .dr-table th { text-align: left; padding: 8px 10px; font-size: 10.5px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); }
