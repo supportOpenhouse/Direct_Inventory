@@ -30,6 +30,8 @@ const DATE_PRESETS = [
   ['today', 'Today'], ['yesterday', 'Yesterday'], ['this_week', 'This Week'],
   ['this_month', 'This Month'], ['custom', 'Custom'], ['empty', 'Empty'],
 ];
+// created_at always exists, so no "Empty" option there.
+const CREATED_PRESETS = DATE_PRESETS.filter(([k]) => k !== 'empty');
 
 const EMPTY = {
   society: [], locality: [], bhk: [], star: [], reason: [],
@@ -37,6 +39,8 @@ const EMPTY = {
   source: '', rm_id: '', rm_ids: [], oh_price: '', no_phone: false, has_phone: false,
   date_preset: '', posting_from: '', posting_to: '', posting_empty: false,
   fu_preset: '', follow_up_from: '', follow_up_to: '', follow_up_empty: false,
+  created_preset: '', created_from: '', created_to: '',
+  assigned_preset: '', assigned_from: '', assigned_to: '', assigned_empty: false,
 };
 
 export default function FilterPanel({ initial, defaultCity = '', role = '', showReason = false, showFollowUp = true, reasonOptions = ALL_REJECT_REASONS, onApply, onClose: rawClose }) {
@@ -97,6 +101,8 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
     if (canFilterRm && (f.rm_id || f.rm_ids.length)) n += 1;
     if (f.posting_from || f.posting_to || f.posting_empty) n += 1;
     if (f.follow_up_from || f.follow_up_to || f.follow_up_empty) n += 1;
+    if (f.created_from || f.created_to) n += 1;
+    if (f.assigned_from || f.assigned_to || f.assigned_empty) n += 1;
     return n;
   }, [f, showReason, canFilterRm]);
 
@@ -129,6 +135,25 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
       return { ...p, fu_preset: name, follow_up_from: from, follow_up_to: to, follow_up_empty: false };
     });
   }
+  // Generic version of applyPreset for the created/assigned rows. `keys` names
+  // the form fields; `empty` is optional (created_at has no "Empty" option).
+  function applyDatePreset(keys, name) {
+    const { preset, from, to, empty } = keys;
+    const clearEmpty = empty ? { [empty]: false } : {};
+    setF((p) => {
+      if (name === 'custom') return { ...p, [preset]: p[preset] === 'custom' ? '' : 'custom', ...clearEmpty };
+      if (name === 'empty' && empty) {
+        const on = p[preset] === 'empty';
+        return { ...p, [preset]: on ? '' : 'empty', [from]: '', [to]: '', [empty]: !on };
+      }
+      if (p[preset] === name) return { ...p, [preset]: '', [from]: '', [to]: '', ...clearEmpty };
+      const r = presetRange(name);
+      return { ...p, [preset]: name, [from]: r.from, [to]: r.to, ...clearEmpty };
+    });
+  }
+  const CREATED_KEYS = { preset: 'created_preset', from: 'created_from', to: 'created_to' };
+  const ASSIGNED_KEYS = { preset: 'assigned_preset', from: 'assigned_from', to: 'assigned_to', empty: 'assigned_empty' };
+
   function reset() { setF(EMPTY); }
 
   function apply() {
@@ -154,6 +179,11 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
     if (f.follow_up_from) out.follow_up_from = f.follow_up_from;
     if (f.follow_up_to) out.follow_up_to = f.follow_up_to;
     if (f.follow_up_empty) out.follow_up_empty = 1;
+    if (f.created_from) out.created_from = f.created_from;
+    if (f.created_to) out.created_to = f.created_to;
+    if (f.assigned_from) out.assigned_from = f.assigned_from;
+    if (f.assigned_to) out.assigned_to = f.assigned_to;
+    if (f.assigned_empty) out.assigned_empty = 1;
     onApply(out, f);
   }
 
@@ -300,6 +330,40 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
                   <input type="date" value={f.follow_up_from} onChange={(e) => set('follow_up_from', e.target.value)} />
                   <span className="muted">to</span>
                   <input type="date" value={f.follow_up_to} onChange={(e) => set('follow_up_to', e.target.value)} />
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="filter-block" style={{ gridColumn: '1 / -1' }}>
+            <label>Created date</label>
+            <div className="preset-grid-3">
+              {CREATED_PRESETS.map(([k, lbl]) => (
+                <button key={k} type="button" className={f.created_preset === k ? 'pill pill-on' : 'pill'} onClick={() => applyDatePreset(CREATED_KEYS, k)}>{lbl}</button>
+              ))}
+            </div>
+            {f.created_preset === 'custom' && (
+              <div className="range-row" style={{ marginTop: 8 }}>
+                <input type="date" value={f.created_from} onChange={(e) => set('created_from', e.target.value)} />
+                <span className="muted">to</span>
+                <input type="date" value={f.created_to} onChange={(e) => set('created_to', e.target.value)} />
+              </div>
+            )}
+          </div>
+
+          {canFilterRm && (
+            <div className="filter-block" style={{ gridColumn: '1 / -1' }}>
+              <label>Assigned date <span className="muted">(when the current RM was assigned)</span></label>
+              <div className="preset-grid-3">
+                {DATE_PRESETS.map(([k, lbl]) => (
+                  <button key={k} type="button" className={f.assigned_preset === k ? 'pill pill-on' : 'pill'} onClick={() => applyDatePreset(ASSIGNED_KEYS, k)}>{lbl}</button>
+                ))}
+              </div>
+              {f.assigned_preset === 'custom' && (
+                <div className="range-row" style={{ marginTop: 8 }}>
+                  <input type="date" value={f.assigned_from} onChange={(e) => set('assigned_from', e.target.value)} />
+                  <span className="muted">to</span>
+                  <input type="date" value={f.assigned_to} onChange={(e) => set('assigned_to', e.target.value)} />
                 </div>
               )}
             </div>

@@ -74,6 +74,9 @@ def set_assigned_rms(oh_id: str):
             # + bump priority so the new RM sees it; the star color comes from the
             # actor's role (resolved at read time via reassigned_by_id).
             is_reassign = bool(before_ids) and bool(rm_ids) and set(before_ids) != set(rm_ids)
+            # assigned_at bumps on ANY change to a non-empty RM set — first
+            # assignment included, not just reassignments (unlike the pink star).
+            assignment_changed = bool(rm_ids) and set(before_ids or []) != set(rm_ids)
             # Admin-only endpoint → pink when it's a reassign.
             cur.execute(
                 "UPDATE inventory SET "
@@ -82,9 +85,10 @@ def set_assigned_rms(oh_id: str):
                 "  reassigned = CASE WHEN %s THEN TRUE ELSE reassigned END, "
                 "  reassigned_by_id = CASE WHEN %s THEN %s ELSE reassigned_by_id END, "
                 "  priority = CASE WHEN %s THEN TRUE ELSE priority END, "
-                "  star_color = CASE WHEN %s THEN 'pink' ELSE star_color END "
+                "  star_color = CASE WHEN %s THEN 'pink' ELSE star_color END, "
+                "  assigned_at = CASE WHEN %s THEN NOW() ELSE assigned_at END "
                 "WHERE oh_id = %s",
-                (rm_ids, new_mgr, is_reassign, is_reassign, g.user["id"], is_reassign, is_reassign, oh_id),
+                (rm_ids, new_mgr, is_reassign, is_reassign, g.user["id"], is_reassign, is_reassign, assignment_changed, oh_id),
             )
             log_activity(
                 cur,
@@ -198,6 +202,12 @@ def bulk_update():
                 for k, v in updates.items():
                     set_parts.append(f"{k} = %s")
                     params.append(v)
+                # Stamp assigned_at on rows whose RM set actually changes. The CASE
+                # compares the pre-update assigned_rm_ids (SET RHS sees the old row)
+                # to the new value, so unchanged rows keep their date.
+                if updates.get("assigned_rm_ids"):
+                    set_parts.append("assigned_at = CASE WHEN assigned_rm_ids IS DISTINCT FROM %s THEN NOW() ELSE assigned_at END")
+                    params.append(updates["assigned_rm_ids"])
                 params.append(allowed_ids)
                 cur.execute(
                     f"UPDATE inventory SET {', '.join(set_parts)} WHERE oh_id = ANY(%s)",

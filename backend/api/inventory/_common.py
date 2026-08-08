@@ -399,6 +399,27 @@ def _build_filters(user: dict, args, alias: str = ""):
         base_params.append(follow_up_to)
     if str(args.get("follow_up_empty") or "").strip() in ("1", "true", "yes"):
         base_filters.append(f"AND {p}follow_up_at IS NULL")
+    # Created / assigned date ranges. ::date so an inclusive `to` (e.g. 2026-07-08)
+    # covers the whole day regardless of the timestamp's time-of-day.
+    created_from = (args.get("created_from") or "").strip()
+    created_to   = (args.get("created_to") or "").strip()
+    if created_from:
+        base_filters.append(f"AND {p}created_at::date >= %s")
+        base_params.append(created_from)
+    if created_to:
+        base_filters.append(f"AND {p}created_at::date <= %s")
+        base_params.append(created_to)
+    assigned_from = (args.get("assigned_from") or "").strip()
+    assigned_to   = (args.get("assigned_to") or "").strip()
+    if assigned_from:
+        base_filters.append(f"AND {p}assigned_at::date >= %s")
+        base_params.append(assigned_from)
+    if assigned_to:
+        base_filters.append(f"AND {p}assigned_at::date <= %s")
+        base_params.append(assigned_to)
+    # "Empty" = never assigned (assigned_at still NULL, e.g. un-backfilled legacy).
+    if str(args.get("assigned_empty") or "").strip() in ("1", "true", "yes"):
+        base_filters.append(f"AND {p}assigned_at IS NULL")
     if source:
         base_filters.append(f"AND {p}source = %s")
         base_params.append(source)
