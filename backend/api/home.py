@@ -39,7 +39,7 @@ them (/summary itself is unchanged for backward compat):
 """
 from __future__ import annotations
 
-from flask import Blueprint, g, jsonify
+from flask import Blueprint, g, jsonify, request
 
 from ..db import get_conn
 from .auth import require_auth
@@ -433,23 +433,36 @@ def task_tracking():
 @bp.get("/rm-stage-counts")
 @require_auth("admin")
 def rm_stage_counts():
-    """Admin-only: per-RM lead counts broken down by stage (all-time).
+    """Admin-only: per-RM lead counts broken down by stage (all-time by default).
 
+    Optional ?assigned_from / ?assigned_to (YYYY-MM-DD) restrict to leads whose
+    assigned_at falls in that inclusive date range.
     Multi-RM leads count toward each assignee (unnest of assigned_rm_ids).
     Response: { users: [{ id, name, email, role, total, counts: {stage: n} }] }
     """
+    where = ["i.stage IS NOT NULL"]
+    params: list = []
+    af = (request.args.get("assigned_from") or "").strip()
+    at = (request.args.get("assigned_to") or "").strip()
+    if af:
+        where.append("i.assigned_at::date >= %s")
+        params.append(af)
+    if at:
+        where.append("i.assigned_at::date <= %s")
+        params.append(at)
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
             cur.execute(
-                """
+                f"""
                 SELECT u.id, u.name, u.email, u.role, i.stage, COUNT(*) AS n
                 FROM inventory i
                 JOIN LATERAL unnest(i.assigned_rm_ids) AS rm_id ON TRUE
                 JOIN users u ON u.id = rm_id AND u.is_active = TRUE
-                WHERE i.stage IS NOT NULL
+                WHERE {' AND '.join(where)}
                 GROUP BY u.id, u.name, u.email, u.role, i.stage
                 """,
+                params,
             )
             rows = cur.fetchall()
     finally:

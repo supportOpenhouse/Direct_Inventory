@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api/client.js';
 import { STAGES, SUPPLY_STAGES, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
+import { todayIST } from '../utils/reportFilters.js';
 import AssignNewLeadsButton from '../components/AssignNewLeadsButton.jsx';
 
 // Two-line column headers to keep columns narrow. 2-word labels split one word
@@ -41,20 +42,36 @@ export default function TrackTasks() {
   const [loading, setLoading] = useState(true);
   const [rmCounts, setRmCounts] = useState([]);
   const [loadingCounts, setLoadingCounts] = useState(true);
+  // "Assigned at" range filter for the RM Lead Counts table (empty = all-time).
+  const [assignedFrom, setAssignedFrom] = useState('');
+  const [assignedTo, setAssignedTo] = useState('');
 
   const loadTasks = useCallback(() => api.get('/api/home/task-tracking')
     .then((r) => setUsers(r.users || []))
     .catch(() => setUsers([]))
     .finally(() => setLoading(false)), []);
-  const loadCounts = useCallback(() => api.get('/api/home/rm-stage-counts')
-    .then((r) => setRmCounts(r.users || []))
-    .catch(() => setRmCounts([]))
-    .finally(() => setLoadingCounts(false)), []);
+  const loadCounts = useCallback(() => {
+    const p = new URLSearchParams();
+    if (assignedFrom) p.set('assigned_from', assignedFrom);
+    if (assignedTo) p.set('assigned_to', assignedTo);
+    const qs = p.toString();
+    setLoadingCounts(true);
+    return api.get(`/api/home/rm-stage-counts${qs ? `?${qs}` : ''}`)
+      .then((r) => setRmCounts(r.users || []))
+      .catch(() => setRmCounts([]))
+      .finally(() => setLoadingCounts(false));
+  }, [assignedFrom, assignedTo]);
+  // Latest loadCounts, callable from the mount effect without making it a dep
+  // (which would re-run the auto-assign every time the date range changes).
+  const loadCountsRef = useRef(loadCounts);
+  loadCountsRef.current = loadCounts;
+
+  // Counts refetch whenever the range changes (and on mount).
+  useEffect(() => { loadCounts(); }, [loadCounts]);
 
   useEffect(() => {
     let alive = true;
     loadTasks();
-    loadCounts();
     // Auto-assign unassigned leads when this tab opens. Only fires when there's
     // actual work, and the 15-min server cooldown still gates it (a 429 just
     // means it ran recently → silently ignored, no spam). Refresh the tables
@@ -64,11 +81,11 @@ export default function TrackTasks() {
         const c = await api.get('/api/inventory/counts?rm_id=none');
         if (!alive || !(c?.total > 0)) return;
         const r = await api.post('/api/inventory/assign-missing', { mode: 'missing' });
-        if (alive && r?.updated > 0) { loadTasks(); loadCounts(); }
+        if (alive && r?.updated > 0) { loadTasks(); loadCountsRef.current(); }
       } catch { /* cooldown 429 / transient — silent */ }
     })();
     return () => { alive = false; };
-  }, [loadTasks, loadCounts]);
+  }, [loadTasks]);
 
   // Columns = the stages that actually appear, in canonical board → supply order.
   const stageCols = useMemo(() => {
@@ -138,6 +155,14 @@ export default function TrackTasks() {
       <div className="page-head" style={{ marginTop: 28 }}>
         <h2>RM Lead Counts</h2>
         <div className="ph-sub">All leads per RM, broken down by stage.</div>
+        <span className="page-head-spacer" />
+        <div className="al-date-range">
+          <span className="al-date-lbl">ASSIGNED AT</span>
+          <input type="date" className="al-date" value={assignedFrom} max={assignedTo || todayIST()} onChange={(e) => setAssignedFrom(e.target.value)} aria-label="Assigned from" />
+          <span className="al-date-sep">to</span>
+          <input type="date" className="al-date" value={assignedTo} min={assignedFrom} max={todayIST()} onChange={(e) => setAssignedTo(e.target.value)} aria-label="Assigned to" />
+          {(assignedFrom || assignedTo) && <button type="button" className="btn-link" onClick={() => { setAssignedFrom(''); setAssignedTo(''); }}>Clear</button>}
+        </div>
       </div>
 
       <div className="inv-table-wrap">
