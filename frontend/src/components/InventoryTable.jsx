@@ -3,7 +3,7 @@ import ExpandPanel from './ExpandPanel.jsx';
 import OhPrice from './OhPrice.jsx';
 import StarCell from './StarCell.jsx';
 import {
-  displayCity, formatDateRel, formatDateShort, formatPrice, isCreatedToday, reasonLabelAny, rowFlag, starColor,
+  displayCity, formatDateCompact, formatDateRel, formatDateShort, formatPrice, isCreatedToday, reasonLabelAny, rowFlag, starColor,
   STAGE_DOT_COLOR, stageLabel, variation,
 } from '../utils/format.js';
 
@@ -152,10 +152,10 @@ export default function InventoryTable({
                   <td className="inv-td-muted inv-col-followup">{formatDateShort(item.follow_up_at)}</td>
                   <td><span className="inv-clip inv-clip-seller" title={item.seller_name || ''}>{item.seller_name || '—'}</span></td>
                   <td className="inv-td-muted">{item.seller_phone || '—'}</td>
-                  <td className="inv-td-muted inv-col-posted">{formatDateShort(item.posting_date)}</td>
+                  <td className="inv-td-muted inv-col-posted">{formatDateCompact(item.posting_date)}</td>
                   <td className="inv-td-muted">{item.created_at ? formatDateRel(item.created_at) : '—'}</td>
                   {isAdmin && <td className="inv-td-muted" title={assignedRmsTitle(item.assigned_rms)}><span className="inv-clip inv-clip-rm">{formatAssignedRms(item.assigned_rms)}</span></td>}
-                  <td className="inv-td-muted">{item.assigned_at ? formatDateShort(item.assigned_at) : '—'}</td>
+                  <td className="inv-td-muted">{formatDateCompact(item.assigned_at)}</td>
                   <td className="inv-td-notes">
                     {noteCount > 0 ? (
                       <span className="inv-td-notes-wrap">

@@ -25,6 +25,17 @@ export function formatDateShort(iso) {
   return `${day} ${MONTHS_SHORT[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
+// Table cells: day + month (no year) for anything under a year old; "N years
+// ago" once it crosses a year. Keeps recent dates tidy and old ones honest.
+export function formatDateCompact(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso);
+  const years = Math.floor((Date.now() - d.getTime()) / (365.25 * 24 * 3600 * 1000));
+  if (years >= 1) return `${years} year${years === 1 ? '' : 's'} ago`;
+  return `${String(d.getUTCDate()).padStart(2, '0')} ${MONTHS_SHORT[d.getUTCMonth()]}`;
+}
+
 // A DATE column (follow_up_at) serializes to UTC midnight; reading UTC parts
 // gives its calendar date. As a YYYY-MM-DD string for cheap comparisons.
 export function dateOnly(iso) {
