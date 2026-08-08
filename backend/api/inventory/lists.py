@@ -35,7 +35,7 @@ _LIST_COLS = ", ".join(f"j.{c}" for c in (
     "notes", "assigned_rm_id", "assigned_rm_ids", "assigned_mgr_id",
     "forms_visit_id", "visit_at", "visit_exec", "follow_up_at", "priority",
     "cp_match", "star_color", "reassigned", "reassigned_by_id",
-    "created_at", "updated_at", "last_synced_at",
+    "created_at", "updated_at", "last_synced_at", "assigned_at",
     # derived by INVENTORY_WITH_PRICING_SQL
     "oh_price", "oh_price_area", "oh_price_bhk", "oh_price_match",
     "oh_price_reason", "oh_near_diff", "assigned_rms", "reassigned_by_role",
