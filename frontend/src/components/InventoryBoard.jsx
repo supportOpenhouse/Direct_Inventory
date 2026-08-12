@@ -326,7 +326,7 @@ export default function InventoryBoard({
 
       {showFilters && (
         <FilterPanel initial={filterFormState} defaultCity={city} role={user?.role}
-          showReason={reasonFilter} showFollowUp={!hideFollowUpFilter}
+          showReason={reasonFilter} showFollowUp={!hideFollowUpFilter} showVisitOverdue={annotateVisitOverdue}
           {...(reasonOptions ? { reasonOptions } : {})}
           onClose={() => setShowFilters(false)}
           onApply={(applied, form) => { setFiltersApplied(applied); setFilterFormState(form); setShowFilters(false); }} />

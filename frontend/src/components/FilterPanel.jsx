@@ -36,14 +36,14 @@ const CREATED_PRESETS = DATE_PRESETS.filter(([k]) => k !== 'empty');
 const EMPTY = {
   society: [], locality: [], bhk: [], star: [], reason: [],
   price_min: '', price_max: '', variation_min: '', variation_max: '',
-  source: '', rm_id: '', rm_ids: [], oh_price: '', no_phone: false, has_phone: false,
+  source: '', rm_id: '', rm_ids: [], oh_price: '', no_phone: false, has_phone: false, visit_overdue: false,
   date_preset: '', posting_from: '', posting_to: '', posting_empty: false,
   fu_preset: '', follow_up_from: '', follow_up_to: '', follow_up_empty: false,
   created_preset: '', created_from: '', created_to: '',
   assigned_preset: '', assigned_from: '', assigned_to: '', assigned_empty: false,
 };
 
-export default function FilterPanel({ initial, defaultCity = '', role = '', showReason = false, showFollowUp = true, reasonOptions = ALL_REJECT_REASONS, onApply, onClose: rawClose }) {
+export default function FilterPanel({ initial, defaultCity = '', role = '', showReason = false, showFollowUp = true, showVisitOverdue = false, reasonOptions = ALL_REJECT_REASONS, onApply, onClose: rawClose }) {
   const { onClose, backdropClass } = useModalExit(rawClose);
   const [f, setF] = useState(() => ({
     ...EMPTY, ...initial,
@@ -98,13 +98,14 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
     if (f.source) n += 1;
     if (f.oh_price) n += 1;
     if (f.no_phone || f.has_phone) n += 1;
+    if (showVisitOverdue && f.visit_overdue) n += 1;
     if (canFilterRm && (f.rm_id || f.rm_ids.length)) n += 1;
     if (f.posting_from || f.posting_to || f.posting_empty) n += 1;
     if (f.follow_up_from || f.follow_up_to || f.follow_up_empty) n += 1;
     if (f.created_from || f.created_to) n += 1;
     if (f.assigned_from || f.assigned_to || f.assigned_empty) n += 1;
     return n;
-  }, [f, showReason, canFilterRm]);
+  }, [f, showReason, canFilterRm, showVisitOverdue]);
 
   function set(k, v) { setF((p) => ({ ...p, [k]: v })); }
   function toggleBhk(n) { setF((p) => ({ ...p, bhk: p.bhk.includes(n) ? p.bhk.filter((x) => x !== n) : [...p.bhk, n] })); }
@@ -171,6 +172,7 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
     if (f.oh_price) out.oh_price = f.oh_price;
     if (f.no_phone) out.no_phone = 1;
     if (f.has_phone) out.has_phone = 1;
+    if (showVisitOverdue && f.visit_overdue) out.visit_overdue = 1;
     if (canFilterRm && f.rm_id) out.rm_id = (f.rm_id === 'none' || f.rm_id === 'multiple') ? f.rm_id : Number(f.rm_id);
     if (canFilterRm && f.rm_ids?.length) out.rm_ids = f.rm_ids.join(',');
     if (f.posting_from) out.posting_from = f.posting_from;
@@ -245,6 +247,16 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
                 onClick={() => setF((p) => ({ ...p, no_phone: !p.no_phone, has_phone: false }))}>No phone no.</button>
             </div>
           </div>
+
+          {showVisitOverdue && (
+            <div className="filter-block">
+              <label>Visit</label>
+              <div className="bhk-pills">
+                <button type="button" className={f.visit_overdue ? 'pill pill-on' : 'pill'}
+                  onClick={() => setF((p) => ({ ...p, visit_overdue: !p.visit_overdue }))}>Visit overdue</button>
+              </div>
+            </div>
+          )}
 
           <div className="filter-block">
             <label>Star</label>

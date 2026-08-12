@@ -58,6 +58,23 @@ def list_inventory():
 
     conn = get_conn()
     try:
+        # "Visit overdue" filter. Overdue is computed cross-DB (scheduled-visit
+        # dates in the Properties DB), so it can't be a SQL predicate: resolve
+        # the overdue visit_scheduled oh_ids for the current scope first, then
+        # constrain the query to them. Doing it as an id filter (not a post-query
+        # row drop) keeps LIMIT/OFFSET and the count correct.
+        if (args.get("visit_overdue") or "").strip().lower() in ("1", "true", "yes"):
+            with conn.cursor() as cur0:
+                cur0.execute(
+                    f"SELECT oh_id FROM inventory i "
+                    f"WHERE TRUE {scope} {' '.join(base_filters)} AND i.stage = 'visit_scheduled'",
+                    [*scope_params, *base_params],
+                )
+                cand = [r["oh_id"] for r in cur0.fetchall()]
+            overdue = list(overdue_visit_ids(cand)) or ["__none__"]
+            base_filters = [*base_filters, "AND i.oh_id = ANY(%s)"]
+            base_params = [*base_params, overdue]
+
         inner_where = f"WHERE TRUE {scope} {' '.join(base_filters)}"
         outer_where = f"WHERE TRUE {' '.join(post_filters)}"
 

@@ -1,11 +1,11 @@
 import InventoryBoard from '../components/InventoryBoard.jsx';
 
-// Board scoped to visit-scheduled leads. Same layout as Rejected, but stage
-// editing is disabled here (the Edit Status button is hidden).
+// "Visit Status" board — visit_scheduled + visit_cancelled leads, with stage
+// pills (ALL / Visit Scheduled / Visit Cancelled). Stage editing is disabled.
 export default function VisitScheduled() {
   return (
     <div>
-      <InventoryBoard fixedStages={['visit_scheduled']} showAdd={false} stageFilterable={false} allowStatusEdit={false} annotateVisitOverdue />
+      <InventoryBoard fixedStages={['visit_scheduled', 'visit_cancelled']} showAdd={false} allowStatusEdit={false} annotateVisitOverdue />
     </div>
   );
 }

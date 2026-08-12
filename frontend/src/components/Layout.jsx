@@ -19,14 +19,14 @@ const PRIMARY = [
   { to: '/leads', label: 'Leads', Icon: IconLeads },
   { to: '/qualified-leads', label: 'Qualified Leads', Icon: IconQualified },
   { to: '/follow-ups', label: 'Follow Ups', Icon: IconFollowUp },
-  { to: '/visit-scheduled', label: 'Visit Scheduled', Icon: IconVisit },
+  { to: '/visit-scheduled', label: 'Visit Status', Icon: IconVisit },
   { to: '/pipeline', label: 'Supply Closure Tracker', Icon: IconPipeline },
   { to: '/rejected', label: 'Rejected', Icon: IconRejected },
   { to: '/tickets', label: 'Tickets', Icon: IconTicket, dotKey: 'tickets' },
 ];
 
 const TITLES = {
-  '': 'Home', leads: 'Leads', 'qualified-leads': 'Qualified Leads', 'follow-ups': 'Follow Ups', 'visit-scheduled': 'Visit Scheduled',
+  '': 'Home', leads: 'Leads', 'qualified-leads': 'Qualified Leads', 'follow-ups': 'Follow Ups', 'visit-scheduled': 'Visit Status',
   pipeline: 'Supply Closure Tracker', tickets: 'Tickets',
   'post-token': 'Post Token', rejected: 'Rejected', report: 'Report',
   'my-report': 'My Report', users: 'Users', logs: 'Activity Logs',
