@@ -310,7 +310,7 @@ export default function InventoryBoard({
       )}
 
       {reasonPills && (
-        <div className="stage-counts">
+        <div className="stage-counts reason-counts">
           <div className="stage-pills">
             <button type="button" className={reasonSel.size === 0 ? 'count-pill count-pill-active' : 'count-pill'} onClick={clearReasonPills}>
               <div className="num">{allReasonCount}</div><div className="lbl">ALL</div>
