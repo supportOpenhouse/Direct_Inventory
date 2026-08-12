@@ -498,33 +498,48 @@ def inventory_counts():
 @bp.get("/notifications")
 @require_auth()
 def notifications():
-    """Bell-icon payload: rows the user should look at today.
-
-    Two buckets, both visibility-scoped:
-      - new_items: created in the last 24 hours.
-      - today_follow_ups: rows with follow_up_at = CURRENT_DATE (IST).
+    """Bell-icon payload: rows the user should look at today. All IST-based,
+    visibility-scoped, and limited to lead-flow stages (never rejected /
+    visit-scheduled / supply):
+      - new_items:        lead or active, assigned today.
+      - new_qualified:    qualified, assigned today.
+      - today_follow_ups: call_not_received or follow_up, follow-up due today.
     """
     user = g.user
     scope, scope_params = _scope_clause(user)
+    today_ist = "(NOW() AT TIME ZONE 'Asia/Kolkata')::DATE"
+    assigned_today = f"(assigned_at AT TIME ZONE 'Asia/Kolkata')::DATE = {today_ist}"
 
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
             cur.execute(
-                f"""SELECT oh_id, society, city, bedrooms, floor, source, created_at
+                f"""SELECT oh_id, society, city, bedrooms, floor, source, assigned_at
                     FROM inventory
-                    WHERE created_at >= NOW() - INTERVAL '24 hours' {scope}
-                    ORDER BY created_at DESC
-                    LIMIT 50""",
+                    WHERE stage IN ('lead', 'active') AND {assigned_today} {scope}
+                    ORDER BY assigned_at DESC
+                    LIMIT 100""",
                 scope_params,
             )
             new_items = cur.fetchall()
 
             cur.execute(
                 f"""SELECT oh_id, society, city, bedrooms, floor,
+                           seller_name, seller_phone, assigned_at
+                    FROM inventory
+                    WHERE stage = 'qualified' AND {assigned_today} {scope}
+                    ORDER BY assigned_at DESC
+                    LIMIT 100""",
+                scope_params,
+            )
+            new_qualified = cur.fetchall()
+
+            cur.execute(
+                f"""SELECT oh_id, society, city, bedrooms, floor,
                            seller_name, seller_phone, follow_up_at, stage
                     FROM inventory
-                    WHERE follow_up_at = CURRENT_DATE {scope}
+                    WHERE stage IN ('call_not_received', 'follow_up')
+                      AND follow_up_at = {today_ist} {scope}
                     ORDER BY society
                     LIMIT 100""",
                 scope_params,
@@ -532,8 +547,9 @@ def notifications():
             today_follow_ups = cur.fetchall()
         return jsonify({
             "new_items": new_items,
+            "new_qualified": new_qualified,
             "today_follow_ups": today_follow_ups,
-            "total": len(new_items) + len(today_follow_ups),
+            "total": len(new_items) + len(new_qualified) + len(today_follow_ups),
         })
     finally:
         conn.close()

@@ -11,7 +11,7 @@ import CardDetailModal from './CardDetailModal.jsx';
  */
 export default function NotificationBell({ role }) {
   const [open, setOpen] = useState(false);
-  const [data, setData] = useState({ new_items: [], today_follow_ups: [], total: 0 });
+  const [data, setData] = useState({ new_items: [], new_qualified: [], today_follow_ups: [], total: 0 });
   const [openCat, setOpenCat] = useState(null);   // which category drawer is expanded
   const [openItem, setOpenItem] = useState(null);
   const ref = useRef(null);
@@ -52,8 +52,12 @@ export default function NotificationBell({ role }) {
   // city/BHK/source line.
   const categories = [
     {
-      key: 'new_items', label: 'New Inventory', hint: 'last 24h', items: data.new_items,
+      key: 'new_items', label: 'New Inventory', hint: 'assigned today', items: data.new_items,
       meta: (it) => `${displayCity(it.city)}${it.bedrooms != null ? ` · ${it.bedrooms} BHK` : ''}${it.source ? ` · ${it.source}` : ''}`,
+    },
+    {
+      key: 'new_qualified', label: 'New Qualified', hint: 'assigned today', items: data.new_qualified,
+      meta: (it) => `${displayCity(it.city)}${it.seller_name ? ` · ${it.seller_name}` : ''}${it.seller_phone ? ` · ${it.seller_phone}` : ''}`,
     },
     {
       key: 'today_follow_ups', label: "Today's Follow-ups", items: data.today_follow_ups,
