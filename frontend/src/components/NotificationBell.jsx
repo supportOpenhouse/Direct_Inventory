@@ -50,17 +50,19 @@ export default function NotificationBell({ role }) {
   // Category definitions — label, hint, its leads, and how to render each row's
   // meta line. `today_follow_ups` uses the seller/stage line; `new_items` the
   // city/BHK/source line.
+  // `|| []` guards against an older backend response that lacks a bucket — a
+  // missing key would otherwise crash on `.length`/`.map` and blank the page.
   const categories = [
     {
-      key: 'new_items', label: 'New Inventory', hint: 'assigned today', items: data.new_items,
+      key: 'new_items', label: 'New Inventory', hint: 'assigned today', items: data.new_items || [],
       meta: (it) => `${displayCity(it.city)}${it.bedrooms != null ? ` · ${it.bedrooms} BHK` : ''}${it.source ? ` · ${it.source}` : ''}`,
     },
     {
-      key: 'new_qualified', label: 'New Qualified', hint: 'assigned today', items: data.new_qualified,
+      key: 'new_qualified', label: 'New Qualified', hint: 'assigned today', items: data.new_qualified || [],
       meta: (it) => `${displayCity(it.city)}${it.seller_name ? ` · ${it.seller_name}` : ''}${it.seller_phone ? ` · ${it.seller_phone}` : ''}`,
     },
     {
-      key: 'today_follow_ups', label: "Today's Follow-ups", items: data.today_follow_ups,
+      key: 'today_follow_ups', label: "Today's Follow-ups", items: data.today_follow_ups || [],
       meta: (it) => `${it.seller_name || '—'}${it.seller_phone ? ` · ${it.seller_phone}` : ''}${it.stage ? ` · ${stageLabel(it.stage)}` : ''}`,
     },
   ];
