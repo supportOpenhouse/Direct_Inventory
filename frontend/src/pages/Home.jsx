@@ -302,7 +302,11 @@ export default function Home() {
       ) : (
         <InventoryBoard showReasonCol showExport hideSelectButton showAdd={false}
           controlledSelectMode={tableSelect} onSelectModeChange={setTableSelect}
-          extraStageGroups={[{ key: 'post_visit', label: 'Post Visit', stages: SUPPLY_STAGES, color: '#6366f1', before: 'rejected' }]} />
+          extraStageGroups={[
+            { key: 'post_visit', label: 'Post Visit', stages: SUPPLY_STAGES, color: '#6366f1', before: 'rejected' },
+            // Own box at the very end (no `before`), separate from Post Visit.
+            { key: 'visit_cancelled', label: 'Visit Cancelled', stages: ['visit_cancelled'], color: STAGE_DOT_COLOR.visit_cancelled },
+          ]} />
       )}
     </div>
   );

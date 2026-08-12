@@ -111,6 +111,7 @@ export function stageLabel(s) {
     onboarded: 'Onboarded',
     rejected_post_visit: 'Rejected Post Visit',
     cancelled_post_token: 'Cancelled Post Token',
+    visit_cancelled: 'Visit Cancelled',
     // Legacy — historical rows still render.
     unqualified: 'Lead',
     follow_up_cnr: 'Follow Up (CNR)',
@@ -149,6 +150,7 @@ export const STAGE_DOT_COLOR = {
   onboarded: '#16a34a',
   rejected_post_visit: '#ef4444',
   cancelled_post_token: '#64748b',
+  visit_cancelled: '#b45309',
   // Legacy
   lead: '#fa541c',
   follow_up_cnr: '#facc15',

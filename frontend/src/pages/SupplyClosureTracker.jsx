@@ -39,7 +39,7 @@ export default function SupplyClosureTracker() {
   return (
     <div>
       <InventoryBoard
-        fixedStages={SUPPLY_STAGES}
+        fixedStages={[...SUPPLY_STAGES, 'visit_cancelled']}
         showAdd={false}
         allowStatusEdit={false}
         reasonFilter

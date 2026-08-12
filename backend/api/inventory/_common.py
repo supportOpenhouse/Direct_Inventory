@@ -116,6 +116,7 @@ VALID_STAGES = {
     "onboarded",
     "rejected_post_visit",
     "cancelled_post_token",
+    "visit_cancelled",       # scheduled visit called off — shown on the tracker
     # Legacy stages — no longer shown on the kanban, but still accepted so the
     # Forms webhook (visit completed/cancelled/rescheduled flow) keeps working
     # and historical rows in these stages can be moved out manually if needed.
