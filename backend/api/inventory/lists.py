@@ -471,7 +471,26 @@ def inventory_counts():
                     total += r["n"]
                     if r["stage"] in by_stage:
                         by_stage[r["stage"]] += r["n"]
-        return jsonify({"total": total, "by_stage": by_stage})
+
+            # Reason boxes (Rejected page): per stage_reason counts among rejected
+            # leads. Ignores the active reason filter — like 'stage' is stripped
+            # above — so each box keeps its count regardless of which is selected.
+            by_reason = None
+            if str(args.get("with_reasons") or "").strip().lower() in ("1", "true", "yes"):
+                a2 = {k: v for k, v in args.items() if k not in ("stage", "reason")}
+                s2, sp2, bf2, bp2, _pf2, _pp2 = _build_filters(user, _Args(a2), alias="i")
+                cur.execute(
+                    f"SELECT i.stage_reason AS reason, COUNT(*) AS n FROM inventory i "
+                    f"WHERE TRUE {s2} {' '.join(bf2)} "
+                    f"  AND i.stage = 'rejected' AND i.stage_reason IS NOT NULL "
+                    f"GROUP BY i.stage_reason",
+                    [*sp2, *bp2],
+                )
+                by_reason = {r["reason"]: r["n"] for r in cur.fetchall()}
+        resp = {"total": total, "by_stage": by_stage}
+        if by_reason is not None:
+            resp["by_reason"] = by_reason
+        return jsonify(resp)
     finally:
         conn.close()
 

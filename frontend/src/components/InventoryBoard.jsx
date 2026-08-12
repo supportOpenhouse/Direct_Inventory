@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { CITIES, STAGE_DOT_COLOR, STAGES, stageLabel } from '../utils/format.js';
+import { CITIES, STAGE_DOT_COLOR, STAGES, reasonLabelAny, stageLabel } from '../utils/format.js';
 import InventoryTable from './InventoryTable.jsx';
 import FilterPanel from './FilterPanel.jsx';
 import SlideTabs from './SlideTabs.jsx';
@@ -27,6 +27,7 @@ export default function InventoryBoard({
   // Optional external control of select mode (Home renders the Select button up
   // in its view-toggle bar). When uncontrolled, the toolbar shows its own button.
   controlledSelectMode = undefined, onSelectModeChange = undefined, hideSelectButton = false,
+  reasonPills = false,
 }) {
   const { user } = useAuth();
   const [qInput, setQInput] = useState('');
@@ -95,9 +96,24 @@ export default function InventoryBoard({
     try {
       const params = makeParams();
       params.delete('stage'); // counts are per-stage
+      if (reasonPills) params.set('with_reasons', '1'); // also ask for per-reason counts
       const r = await api.get(`/api/inventory/counts?${params}`, { fresh });
       setCounts(r);
     } catch { /* non-blocking */ }
+  }
+
+  // Reason boxes (Rejected page): toggle a reason in/out of the reason filter.
+  function toggleReasonPill(v) {
+    setFiltersApplied((prev) => {
+      const set = new Set((prev.reason || '').split(',').filter(Boolean));
+      if (set.has(v)) set.delete(v); else set.add(v);
+      const next = { ...prev };
+      if (set.size) next.reason = [...set].join(','); else delete next.reason;
+      return next;
+    });
+  }
+  function clearReasonPills() {
+    setFiltersApplied((prev) => { const n = { ...prev }; delete n.reason; return n; });
   }
   // The list API no longer annotates visit_overdue inline. Boards that need it
   // (annotateVisitOverdue) hydrate the visible page from the cheap badges
@@ -219,6 +235,10 @@ export default function InventoryBoard({
   // "ALL" sums this board's own stages plus grouped extras (e.g. Post Visit),
   // matching the ALL stage filter which now includes them.
   const allCount = allStages.reduce((a, s) => a + (counts.by_stage?.[s] || 0), 0);
+  // Reason boxes: every reason present in the data, most-common first.
+  const reasonSel = new Set((filtersApplied.reason || '').split(',').filter(Boolean));
+  const reasonList = Object.entries(counts.by_reason || {}).sort((a, b) => b[1] - a[1]);
+  const allReasonCount = reasonList.reduce((a, [, n]) => a + n, 0);
 
   // A "grouped" count pill (e.g. Post Visit = all supply stages combined).
   // Toggles additively like the individual stage pills — adds/removes only its
@@ -285,6 +305,22 @@ export default function InventoryBoard({
               </Fragment>
             ))}
             {extraStageGroups.filter((g) => !g.before).map(groupPill)}
+          </div>
+        </div>
+      )}
+
+      {reasonPills && (
+        <div className="stage-counts">
+          <div className="stage-pills">
+            <button type="button" className={reasonSel.size === 0 ? 'count-pill count-pill-active' : 'count-pill'} onClick={clearReasonPills}>
+              <div className="num">{allReasonCount}</div><div className="lbl">ALL</div>
+            </button>
+            {reasonList.map(([r, n]) => (
+              <button key={r} type="button" className={reasonSel.has(r) ? 'count-pill count-pill-active' : 'count-pill'} onClick={() => toggleReasonPill(r)}>
+                <div className="num">{n}</div>
+                <div className="lbl">{reasonLabelAny(r).toUpperCase()}</div>
+              </button>
+            ))}
           </div>
         </div>
       )}

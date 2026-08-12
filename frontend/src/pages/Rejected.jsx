@@ -5,7 +5,7 @@ import InventoryBoard from '../components/InventoryBoard.jsx';
 export default function Rejected() {
   return (
     <div>
-      <InventoryBoard fixedStages={['rejected']} showAdd={false} stageFilterable={false} reasonFilter hideFollowUpFilter showReasonCol />
+      <InventoryBoard fixedStages={['rejected']} showAdd={false} stageFilterable={false} reasonPills reasonFilter hideFollowUpFilter showReasonCol />
     </div>
   );
 }
