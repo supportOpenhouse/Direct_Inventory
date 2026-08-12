@@ -434,7 +434,10 @@ def inventory_counts():
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
-            by_stage = {s: 0 for s in (*ALL_STAGES, *SUPPLY_STAGES)}
+            # visit_cancelled is a real stage but intentionally not in SUPPLY_STAGES
+            # (Home keeps it in its own box); seed it so its count isn't dropped by
+            # the "in by_stage" guard below.
+            by_stage = {s: 0 for s in (*ALL_STAGES, *SUPPLY_STAGES, "visit_cancelled")}
             if post_filters:
                 # oh_price / variation filters reference the pricing LATERAL.
                 cur.execute(
