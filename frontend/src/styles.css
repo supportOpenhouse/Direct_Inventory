@@ -544,10 +544,10 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .count-pill-active { border-color: var(--brand); background: var(--brand-softer); box-shadow: 0 0 0 3px var(--brand-ring); }
 .count-pill .num { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 700; line-height: 1; }
 .count-pill .lbl { font-size: 10px; font-weight: 700; letter-spacing: .04em; color: var(--text-muted); }
-/* Reject-reason boxes: smaller, red text + count. */
+/* Reject-reason boxes: smaller, red count (label stays the usual muted grey). */
 .reason-counts .count-pill { min-width: 72px; padding: 8px 10px; }
 .reason-counts .count-pill .num { font-size: 17px; color: var(--red); }
-.reason-counts .count-pill .lbl { font-size: 9.5px; color: var(--red); }
+.reason-counts .count-pill .lbl { font-size: 9.5px; line-height: 1.25; text-align: center; }
 
 .filtered-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 13px; }
 .page-num { display: flex; align-items: center; gap: 10px; color: var(--text-2); white-space: nowrap; }
