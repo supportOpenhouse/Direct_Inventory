@@ -175,8 +175,8 @@ function BoardView({ s, loading, visitsLoading }) {
 
       <QuadCard color="#f97316" Icon={IconFollowUp} title="Follow Up" to="/follow-ups">
         <div className="quad-stats">
-          <StatTile num={d(s?.follow_up?.new)} label="New" accent />
-          <StatTile num={d(s?.follow_up?.old)} label="Old" />
+          <StatTile num={d(s?.follow_up?.today)} label="Today" accent />
+          <StatTile num={d(s?.follow_up?.overdue)} label="Overdue" />
         </div>
       </QuadCard>
 

@@ -84,7 +84,6 @@ def _entered_today(stage: str) -> str:
 
 _QUALIFIED_TODAY = _entered_today("qualified")
 _ACTIVE_TODAY = _entered_today("active")
-_FOLLOW_UP_TODAY = _entered_today("follow_up")
 
 # Stage-card counts, shared by /summary and /summary/stages — one conditional-
 # aggregation pass over the scoped inventory rows. "new" = entered the stage
@@ -96,8 +95,8 @@ _STAGE_COUNT_COLS = f"""
                   COUNT(*) FILTER (WHERE stage = 'active' AND NOT {_ACTIVE_TODAY}) AS active_old,
                   COUNT(*) FILTER (WHERE stage = 'qualified' AND {_QUALIFIED_TODAY}) AS qualified_new,
                   COUNT(*) FILTER (WHERE stage = 'qualified' AND NOT {_QUALIFIED_TODAY}) AS qualified_old,
-                  COUNT(*) FILTER (WHERE stage = 'follow_up' AND {_FOLLOW_UP_TODAY}) AS follow_up_new,
-                  COUNT(*) FILTER (WHERE stage = 'follow_up' AND NOT {_FOLLOW_UP_TODAY}) AS follow_up_old,
+                  COUNT(*) FILTER (WHERE stage IN ('call_not_received', 'follow_up') AND follow_up_at = {_TODAY_IST}) AS follow_up_today,
+                  COUNT(*) FILTER (WHERE stage IN ('call_not_received', 'follow_up') AND follow_up_at < {_TODAY_IST}) AS follow_up_overdue,
 
                   COUNT(*) FILTER (WHERE stage = 'rejected') AS rejected_total,
 
@@ -177,7 +176,7 @@ def _stage_cards_payload(row, by_reason: dict, visit_to_be_completed, visit_over
             "active_old": row["active_old"],
         },
         "qualified": {"new": row["qualified_new"], "old": row["qualified_old"]},
-        "follow_up": {"new": row["follow_up_new"], "old": row["follow_up_old"]},
+        "follow_up": {"today": row["follow_up_today"], "overdue": row["follow_up_overdue"]},
         "visit": {
             "completed": sum(supply.values()),
             "to_be_completed": visit_to_be_completed,
