@@ -336,6 +336,10 @@ def schedule_visit():
 # matching what the supply-sync would derive from cp_inventory_status.
 CANCEL_TARGET_STAGES = {"qualified", "call_not_received", "follow_up", "rejected", "rejected_post_visit"}
 
+# This app's identity to the Forms app — recorded as rescheduled_from /
+# cancelled_from (and who reassigned). Always this value for Direct Inventory.
+SOURCE_APP = "Direct Inventory"
+
 
 @bp.post("/cancel")
 @require_auth("admin", "manager", "rm")
@@ -409,6 +413,7 @@ def cancel_visit():
             payload = {
                 "lead_id":     oh_id,
                 "reason":      reason,
+                "source_app":  SOURCE_APP,
                 "actor_email": user["email"],
                 "actor_name":  user.get("name") or user["email"],
             }
@@ -541,7 +546,7 @@ def reschedule_visit():
                 "lead_id":       oh_id,
                 "schedule_date": schedule_date,
                 "schedule_time": schedule_time,
-                "source_app":    "Direct Inventory",
+                "source_app":    SOURCE_APP,
                 "actor_email":   user["email"],
                 "actor_name":    user.get("name") or user["email"],
             }
