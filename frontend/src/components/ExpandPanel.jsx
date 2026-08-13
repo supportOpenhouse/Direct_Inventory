@@ -5,6 +5,7 @@ import StatusEditModal from './StatusEditModal.jsx';
 import EditDetailsModal from './EditDetailsModal.jsx';
 import CancelVisitModal from './CancelVisitModal.jsx';
 import RescheduleVisitModal from './RescheduleVisitModal.jsx';
+import VisitScheduleModal from './VisitScheduleModal.jsx';
 import OhPrice from './OhPrice.jsx';
 import TicketModal, { emitTicketsChanged, ticketStatusClass, ticketStatusLabel } from './TicketModal.jsx';
 import { formatDateShort, formatPrice, STAGE_DOT_COLOR, stageLabel, supplyReasonLabel, SUPPLY_STAGES, variation } from '../utils/format.js';
@@ -226,6 +227,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
   const [showCancel, setShowCancel] = useState(false);
   const [showReschedule, setShowReschedule] = useState(false);
   const [showVisitMenu, setShowVisitMenu] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
   // Cancel-Visit affordance only renders for live scheduled visits and the
   // three roles that can act on them. Backend enforces the precise per-user
   // check (admin / manager-of-assigned-RM / assigned RM) and will return 403
@@ -235,6 +237,9 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
   // editing is off (the Visit Status page passes allowStatusEdit=false). The
   // backend still enforces the precise per-user permission and 403s otherwise.
   const canCancelVisit = item.stage === 'visit_scheduled' && ['admin', 'manager', 'rm'].includes(role);
+  // Revisit: schedule a fresh visit for a cancelled one. Backend lets the
+  // schedule bypass the "already scheduled" guard for visit_cancelled rows.
+  const canScheduleRevisit = item.stage === 'visit_cancelled' && ['admin', 'manager', 'rm'].includes(role);
   // No stage/status editing from visit_scheduled onward: in visit_scheduled the
   // only action is Cancel Visit, and post-visit (supply-tracker) stages are
   // driven by the CP sync — manual stage edits there would just be overwritten.
@@ -300,6 +305,9 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
               {item.stage === 'visit_scheduled' && item.visit_overdue && <span className="stage-overdue">Overdue</span>}
               {item.stage_reason && <span className="muted"> · {supplyReasonLabel(item.stage_reason)}</span>}
             </span>
+            {canScheduleRevisit && (
+              <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowSchedule(true)}>📅 Schedule Revisit</button>
+            )}
             {canCancelVisit && (
               <span className="visit-change-wrap">
                 <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowVisitMenu((v) => !v)}>Change Visit ▾</button>
@@ -373,6 +381,13 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
           item={item}
           onRescheduled={(u) => onUpdated?.(u)}
           onClose={() => setShowReschedule(false)}
+        />
+      )}
+      {showSchedule && (
+        <VisitScheduleModal
+          item={item}
+          onClose={() => setShowSchedule(false)}
+          onScheduled={(u) => { setShowSchedule(false); onUpdated?.(u && u.oh_id ? u : { ...item, stage: 'visit_scheduled' }); }}
         />
       )}
     </div>

@@ -161,7 +161,10 @@ def schedule_visit():
             # on lead_id and returns an error, but we don't want to depend on
             # that — and we want the UI to show the existing visit details
             # instead of a generic failure.
-            if inv.get("forms_visit_id") or inv.get("visit_at"):
+            # A cancelled visit's old forms_visit_id / visit_at may linger; a
+            # revisit legitimately replaces them (the UPDATE below overwrites),
+            # so only block a genuine double-schedule — not a visit_cancelled row.
+            if inv.get("stage") != "visit_cancelled" and (inv.get("forms_visit_id") or inv.get("visit_at")):
                 return jsonify({
                     "error": "visit already scheduled for this oh_id",
                     "existing_visit": {
