@@ -495,6 +495,7 @@ def reschedule_visit():
     oh_id         = (body.get("oh_id") or "").strip()
     schedule_date = (body.get("schedule_date") or "").strip()
     schedule_time = (body.get("schedule_time") or "").strip()
+    field_exec    = (body.get("field_exec") or "").strip()   # optional reassign
 
     if not oh_id or not schedule_date or not schedule_time:
         return jsonify({"error": "oh_id, schedule_date, schedule_time required"}), 400
@@ -544,6 +545,10 @@ def reschedule_visit():
                 "actor_email":   user["email"],
                 "actor_name":    user.get("name") or user["email"],
             }
+            # Reassign only when a name is sent — Forms validates it against
+            # active users and 400s if unknown. Omitting = pure reschedule.
+            if field_exec:
+                payload["field_exec"] = field_exec
             try:
                 r = requests.post(
                     f"{config.FORMS_APP_URL}/api/external/reschedule",
@@ -563,9 +568,11 @@ def reschedule_visit():
                 }), 502
 
             prev_visit_at = inv["visit_at"].isoformat() if inv.get("visit_at") else None
+            # Mirror the reassign locally when one was sent (COALESCE keeps the
+            # existing exec on a pure reschedule).
             cur.execute(
-                "UPDATE inventory SET visit_at = %s WHERE oh_id = %s RETURNING *",
-                (visit_at, oh_id),
+                "UPDATE inventory SET visit_at = %s, visit_exec = COALESCE(%s, visit_exec) WHERE oh_id = %s RETURNING *",
+                (visit_at, field_exec or None, oh_id),
             )
             row = cur.fetchone()
             log_activity(
@@ -579,6 +586,8 @@ def reschedule_visit():
                     "schedule_date": schedule_date,
                     "schedule_time": schedule_time,
                     "prev_visit_at": prev_visit_at,
+                    "field_exec": field_exec or None,
+                    "prev_field_exec": inv.get("visit_exec"),
                 },
             )
         return jsonify(row)

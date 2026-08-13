@@ -230,7 +230,11 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
   // three roles that can act on them. Backend enforces the precise per-user
   // check (admin / manager-of-assigned-RM / assigned RM) and will return 403
   // if the click came from someone outside that set.
-  const canCancelVisit = canEdit && item.stage === 'visit_scheduled' && ['admin', 'manager', 'rm'].includes(role);
+  // Independent of canEditStatus: cancel/reschedule are the intended actions on
+  // a scheduled visit, so they must stay available even where general stage
+  // editing is off (the Visit Status page passes allowStatusEdit=false). The
+  // backend still enforces the precise per-user permission and 403s otherwise.
+  const canCancelVisit = item.stage === 'visit_scheduled' && ['admin', 'manager', 'rm'].includes(role);
   // No stage/status editing from visit_scheduled onward: in visit_scheduled the
   // only action is Cancel Visit, and post-visit (supply-tracker) stages are
   // driven by the CP sync — manual stage edits there would just be overwritten.

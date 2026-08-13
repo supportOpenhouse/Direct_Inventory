@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { useModalExit } from '../utils/useModalExit.js';
 import { IconClose } from './icons.jsx';
@@ -38,19 +38,35 @@ function istParts(iso) {
 export default function RescheduleVisitModal({ item, onRescheduled, onClose: rawClose }) {
   const { onClose, backdropClass } = useModalExit(rawClose);
   const pre = istParts(item.visit_at);
+  const currentExec = item.visit_exec || '';
   const [date, setDate] = useState(pre.date);
   const [time, setTime] = useState(pre.time || '10:00');
+  const [exec, setExec] = useState(currentExec);   // field exec, by name (Forms wants the name)
+  const [execs, setExecs] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   // Keep the prefilled time selectable even if it isn't on a 30-min slot.
   const slots = TIME_SLOTS.some((s) => s.value === time) ? TIME_SLOTS : [{ value: time, label: time }, ...TIME_SLOTS];
+
+  useEffect(() => {
+    let alive = true;
+    api.get('/api/visits/field-execs').then((r) => { if (alive) setExecs(r.items || []); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  // Exec options by name; keep the current one selectable even if inactive.
+  const execNames = execs.map((u) => u.name).filter(Boolean);
+  const execList = currentExec && !execNames.includes(currentExec) ? [currentExec, ...execNames] : execNames;
 
   async function submit() {
     setError(null);
     if (!date) { setError('Pick a new date.'); return; }
     try {
       setBusy(true);
-      const r = await api.post('/api/visits/reschedule', { oh_id: item.oh_id, schedule_date: date, schedule_time: time });
+      const payload = { oh_id: item.oh_id, schedule_date: date, schedule_time: time };
+      // Only send field_exec when it actually changed — omitting = pure reschedule.
+      if (exec && exec !== currentExec) payload.field_exec = exec;
+      const r = await api.post('/api/visits/reschedule', payload);
       onRescheduled?.(r);
       onClose();
     } catch (e) {
@@ -67,12 +83,18 @@ export default function RescheduleVisitModal({ item, onRescheduled, onClose: raw
           <span className="role-chip">{item.oh_id}</span>
           <button className="modal-close" onClick={onClose}><IconClose /></button>
         </div>
-        <p className="modal-sub">{item.society || '—'}{item.visit_exec ? ` · ${item.visit_exec}` : ''}</p>
+        <p className="modal-sub">{item.society || '—'}</p>
         <div className="form-grid">
           <div><label>New date</label><input type="date" min={todayISO()} value={date} onChange={(e) => setDate(e.target.value)} /></div>
           <div><label>New time</label>
             <select value={time} onChange={(e) => setTime(e.target.value)}>
               {slots.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
+          <div className="form-wide-2"><label>Field exec <span className="muted">(change to reassign)</span></label>
+            <select value={exec} onChange={(e) => setExec(e.target.value)}>
+              {!currentExec && <option value="">— keep current —</option>}
+              {execList.map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
           </div>
         </div>
