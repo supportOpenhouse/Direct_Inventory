@@ -734,8 +734,8 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .assigned-rm-edit select { width: auto; min-width: 150px; flex: 1; }
 .assigned-rm-edit .btn-soft, .assigned-rm-edit .btn-link { padding: 5px 9px; }
 .field-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.expand-status-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--hairline); }
-.expand-status-cur { display: inline-flex; align-items: center; font-size: 13px; font-weight: 600; color: var(--text); }
+.expand-status-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--hairline); }
+.expand-status-cur { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 13px; font-weight: 600; color: var(--text); }
 .btn-edit-status { font-size: 12px; padding: 6px 11px; }
 
 /* ── leads split view ────────────────────────────────────────────────── */

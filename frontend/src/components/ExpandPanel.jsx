@@ -301,9 +301,9 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
           <div className="expand-status-row">
             <span className="expand-status-cur">
               <span className="stage-dot" style={{ background: STAGE_DOT_COLOR[item.stage] }} />
-              {stageLabel(item.stage)}
+              <span className="expand-status-name">{stageLabel(item.stage)}</span>
               {item.stage === 'visit_scheduled' && item.visit_overdue && <span className="stage-overdue">Overdue</span>}
-              {item.stage_reason && <span className="muted"> · {supplyReasonLabel(item.stage_reason)}</span>}
+              {item.stage_reason && item.stage !== 'visit_cancelled' && <span className="muted"> · {supplyReasonLabel(item.stage_reason)}</span>}
             </span>
             {canScheduleRevisit && (
               <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowSchedule(true)}>📅 Schedule Revisit</button>
