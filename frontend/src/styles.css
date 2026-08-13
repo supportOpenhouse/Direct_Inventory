@@ -759,6 +759,9 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .lead-act-r { background: var(--red-bg); color: var(--red-fg); border: 1px solid transparent; border-radius: 7px; padding: 5px 11px; font-size: 12.5px; font-weight: 700; transition: background var(--t), color var(--t); }
 .lead-act-r:hover { background: var(--red); color: #fff; }
 .reject-menu { position: absolute; z-index: 50; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-md); padding: 6px; min-width: 180px; }
+/* "Change Visit" split button — the menu drops under the button. */
+.visit-change-wrap { position: relative; display: inline-block; }
+.visit-change-menu { top: calc(100% + 4px); left: 0; }
 .reject-menu .rm-title { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-faint); font-weight: 700; padding: 6px 8px; }
 .reject-menu button { display: block; width: 100%; text-align: left; background: transparent; border: 0; padding: 8px 10px; border-radius: 7px; font-size: 13px; color: var(--text-2); font-weight: 500; }
 .reject-menu button:hover { background: var(--red-bg); color: var(--red-fg); }

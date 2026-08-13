@@ -4,6 +4,7 @@ import NoteThread from './NoteThread.jsx';
 import StatusEditModal from './StatusEditModal.jsx';
 import EditDetailsModal from './EditDetailsModal.jsx';
 import CancelVisitModal from './CancelVisitModal.jsx';
+import RescheduleVisitModal from './RescheduleVisitModal.jsx';
 import OhPrice from './OhPrice.jsx';
 import TicketModal, { emitTicketsChanged, ticketStatusClass, ticketStatusLabel } from './TicketModal.jsx';
 import { formatDateShort, formatPrice, STAGE_DOT_COLOR, stageLabel, supplyReasonLabel, SUPPLY_STAGES, variation } from '../utils/format.js';
@@ -223,6 +224,8 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
   const [showStatus, setShowStatus] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
+  const [showReschedule, setShowReschedule] = useState(false);
+  const [showVisitMenu, setShowVisitMenu] = useState(false);
   // Cancel-Visit affordance only renders for live scheduled visits and the
   // three roles that can act on them. Backend enforces the precise per-user
   // check (admin / manager-of-assigned-RM / assigned RM) and will return 403
@@ -294,7 +297,15 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
               {item.stage_reason && <span className="muted"> · {supplyReasonLabel(item.stage_reason)}</span>}
             </span>
             {canCancelVisit && (
-              <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowCancel(true)}>✕ Cancel Visit</button>
+              <span className="visit-change-wrap">
+                <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowVisitMenu((v) => !v)}>Change Visit ▾</button>
+                {showVisitMenu && (
+                  <div className="reject-menu visit-change-menu" onMouseLeave={() => setShowVisitMenu(false)}>
+                    <button type="button" onClick={() => { setShowVisitMenu(false); setShowReschedule(true); }}>Reassign / Reschedule</button>
+                    <button type="button" onClick={() => { setShowVisitMenu(false); setShowCancel(true); }}>✕ Cancel</button>
+                  </div>
+                )}
+              </span>
             )}
             {canEditStage && (
               <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowStatus(true)}>✎ Edit Status</button>
@@ -351,6 +362,13 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
           item={item}
           onCancelled={(u) => onUpdated?.(u)}
           onClose={() => setShowCancel(false)}
+        />
+      )}
+      {showReschedule && (
+        <RescheduleVisitModal
+          item={item}
+          onRescheduled={(u) => onUpdated?.(u)}
+          onClose={() => setShowReschedule(false)}
         />
       )}
     </div>

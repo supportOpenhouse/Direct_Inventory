@@ -483,6 +483,109 @@ def cancel_visit():
         conn.close()
 
 
+@bp.post("/reschedule")
+@require_auth("admin", "manager", "rm")
+def reschedule_visit():
+    """Move a scheduled visit to a new date/time. Same permissions as cancel.
+    Forwards to the Forms app /api/external/reschedule (which updates the
+    calendar event + re-notifies the assignee), then updates visit_at on our
+    row — the stage stays visit_scheduled."""
+    user = g.user
+    body = request.get_json(silent=True) or {}
+    oh_id         = (body.get("oh_id") or "").strip()
+    schedule_date = (body.get("schedule_date") or "").strip()
+    schedule_time = (body.get("schedule_time") or "").strip()
+
+    if not oh_id or not schedule_date or not schedule_time:
+        return jsonify({"error": "oh_id, schedule_date, schedule_time required"}), 400
+    if not config.FORMS_APP_URL or not config.INTERNAL_API_KEY:
+        return jsonify({"error": "forms integration not configured"}), 500
+    try:
+        visit_at = datetime.fromisoformat(f"{schedule_date}T{schedule_time}").replace(tzinfo=IST)
+    except ValueError:
+        return jsonify({"error": f"invalid schedule_date/time: {schedule_date} {schedule_time}"}), 400
+
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT * FROM inventory WHERE oh_id = %s FOR UPDATE", (oh_id,))
+            inv = cur.fetchone()
+            if not inv:
+                return jsonify({"error": "inventory not found"}), 404
+            if inv.get("stage") != "visit_scheduled":
+                return jsonify({
+                    "error": f"can only reschedule from visit_scheduled (currently {inv.get('stage')!r})",
+                }), 409
+            if not inv.get("forms_visit_id") and not inv.get("visit_at"):
+                return jsonify({"error": "no scheduled visit on file for this oh_id"}), 409
+
+            # Permission check — identical to cancel.
+            assigned_rm_ids = inv.get("assigned_rm_ids") or []
+            allowed = False
+            if user["role"] == "admin":
+                allowed = True
+            elif user["role"] == "rm" and user["id"] in assigned_rm_ids:
+                allowed = True
+            elif user["role"] == "manager" and assigned_rm_ids:
+                cur.execute(
+                    "SELECT 1 FROM users WHERE id = ANY(%s) AND manager = %s LIMIT 1",
+                    (assigned_rm_ids, user["id"]),
+                )
+                allowed = cur.fetchone() is not None
+            if not allowed:
+                return jsonify({"error": "not authorized to reschedule this visit"}), 403
+
+            # Forms app first — retry-safe. Leave our row alone if it rejects.
+            payload = {
+                "lead_id":       oh_id,
+                "schedule_date": schedule_date,
+                "schedule_time": schedule_time,
+                "source_app":    "Direct Inventory",
+                "actor_email":   user["email"],
+                "actor_name":    user.get("name") or user["email"],
+            }
+            try:
+                r = requests.post(
+                    f"{config.FORMS_APP_URL}/api/external/reschedule",
+                    json=payload,
+                    headers={"X-Internal-Key": config.INTERNAL_API_KEY},
+                    timeout=10,
+                )
+            except requests.RequestException as e:
+                return jsonify({"error": f"forms app unreachable: {e}"}), 502
+            if not r.ok:
+                try:    forms_body = r.json()
+                except ValueError: forms_body = (r.text or "")[:500]
+                return jsonify({
+                    "error": "forms app rejected reschedule",
+                    "forms_status": r.status_code,
+                    "forms_response": forms_body,
+                }), 502
+
+            prev_visit_at = inv["visit_at"].isoformat() if inv.get("visit_at") else None
+            cur.execute(
+                "UPDATE inventory SET visit_at = %s WHERE oh_id = %s RETURNING *",
+                (visit_at, oh_id),
+            )
+            row = cur.fetchone()
+            log_activity(
+                cur,
+                actor_user_id=user["id"],
+                actor_email=user["email"],
+                entity_type="inventory",
+                entity_id=oh_id,
+                action="visit_rescheduled",
+                metadata={
+                    "schedule_date": schedule_date,
+                    "schedule_time": schedule_time,
+                    "prev_visit_at": prev_visit_at,
+                },
+            )
+        return jsonify(row)
+    finally:
+        conn.close()
+
+
 @bp.post("/forms-webhook")
 def forms_webhook():
     """Called by Forms app when a visit's status changes."""
