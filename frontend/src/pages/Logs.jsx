@@ -88,6 +88,7 @@ export default function Logs() {
   const [f, setF] = useState({ q: '', action: '', entity_type: '', actor_email: '', from: '', to: '' });
   const [sort, setSort] = useState({ field: 'created_at', dir: 'desc' });
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
   const [detail, setDetail] = useState(null); // inventory record shown in the popup
 
   // UID column → open the property detail popup IMMEDIATELY with a skeleton
@@ -102,20 +103,48 @@ export default function Logs() {
   }
 
   async function loadFilters() { try { setOpts(await api.get('/api/activity/filters')); } catch { /* non-blocking */ } }
-  async function refresh() {
-    setLoading(true);
+  // Filter + sort params shared by the list fetch and the CSV export, so the
+  // download always mirrors the current view.
+  function makeParams() {
     const params = new URLSearchParams();
     Object.entries(f).forEach(([k, v]) => v && params.set(k, v));
     if (sort.field !== 'created_at' || sort.dir !== 'desc') { params.set('sort', sort.field); params.set('dir', sort.dir); }
+    return params;
+  }
+  async function refresh() {
+    setLoading(true);
+    const params = makeParams();
     params.set('limit', '500');
     try { const r = await api.get(`/api/activity?${params}`); setItems(r.items); setTotal(r.total); } finally { setLoading(false); }
+  }
+  // Every matching row, not just the 500 on screen — the backend export
+  // honors the same filters/scope.
+  async function downloadCsv() {
+    try {
+      setDownloading(true);
+      const blob = await api.download(`/api/activity/export?${makeParams()}`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `activity_logs_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert('Download failed: ' + (e?.data?.error || e?.message || e));
+    } finally { setDownloading(false); }
   }
   useEffect(() => { loadFilters(); /* eslint-disable-next-line */ }, []);
   useEffect(() => { refresh(); /* eslint-disable-next-line */ }, [sort.field, sort.dir]);
 
   return (
     <div>
-      <div className="al-head"><div><div className="al-subtitle">All dashboard activity</div></div><div className="al-result-count">{total} result{total === 1 ? '' : 's'}</div></div>
+      <div className="al-head">
+        <div><div className="al-subtitle">All dashboard activity</div></div>
+        <div className="al-result-count">{total} result{total === 1 ? '' : 's'}</div>
+        <button className="btn-ghost" onClick={downloadCsv} disabled={loading || downloading || total === 0}>
+          {downloading ? 'Preparing…' : `Download CSV${total ? ` (${total})` : ''}`}
+        </button>
+      </div>
 
       <div className="al-filters">
         <input className="al-filter-input" placeholder="Search actor, action, UID, details…" value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && refresh()} />

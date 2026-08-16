@@ -1,6 +1,7 @@
 """Read-only activity log endpoints + per-user reports.
 
-Activity list is admin/manager only. Filters (all optional, AND-combined):
+Activity list (and its CSV export) is admin/manager only. Filters (all
+optional, AND-combined):
   q              — UID prefix/substring (matches activity_log.entity_id)
   action         — slug e.g. 'login', 'update', 'stage_change'
   entity_type    — 'auth' | 'inventory' | 'user' | 'sync' …
@@ -16,9 +17,12 @@ mid-step collapsing). note_added rows are mapped to a synthetic 'note' stage.
 """
 from __future__ import annotations
 
+import csv
+import io
+import json
 from datetime import datetime, timedelta, timezone
 
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, Response, g, jsonify, request
 
 from ..db import get_conn
 from .auth import require_auth
@@ -60,24 +64,18 @@ def _scope_clause(user: dict) -> tuple[str, list]:
     return ("", [])
 
 
-@bp.get("")
-@require_auth("admin", "manager")
-def list_activity():
-    user = g.user
-    args = request.args
+def _build_filters(user: dict, args) -> tuple[str, list]:
+    """Translate the query params into a WHERE clause + params.
 
+    Shared by the list endpoint and the CSV export so a download always
+    mirrors exactly what the page is showing (minus the 500-row cap).
+    """
     q = (args.get("q") or "").strip()
     action = (args.get("action") or "").strip()
     entity_type = (args.get("entity_type") or "").strip()
     actor_email = (args.get("actor_email") or "").strip()
     date_from = (args.get("from") or "").strip()
     date_to = (args.get("to") or "").strip()
-    sort = (args.get("sort") or "created_at").strip()
-    dir_ = "ASC" if (args.get("dir") or "").lower() == "asc" else "DESC"
-    sort_sql = SORTABLE.get(sort, SORTABLE["created_at"])
-
-    limit = min(args.get("limit", HARD_LIMIT, type=int), HARD_LIMIT)
-    offset = args.get("offset", 0, type=int)
 
     where: list[str] = []
     params: list = []
@@ -118,7 +116,22 @@ def list_activity():
     scope_sql, scope_params = _scope_clause(user)
     # Always start with WHERE TRUE so the scope's " AND ..." chains cleanly.
     where_sql = "WHERE TRUE " + "".join(f"AND {c} " for c in where) + scope_sql
+    return where_sql, [*params, *scope_params]
 
+
+@bp.get("")
+@require_auth("admin", "manager")
+def list_activity():
+    args = request.args
+
+    sort = (args.get("sort") or "created_at").strip()
+    dir_ = "ASC" if (args.get("dir") or "").lower() == "asc" else "DESC"
+    sort_sql = SORTABLE.get(sort, SORTABLE["created_at"])
+
+    limit = min(args.get("limit", HARD_LIMIT, type=int), HARD_LIMIT)
+    offset = args.get("offset", 0, type=int)
+
+    where_sql, params = _build_filters(g.user, args)
     base_from = (
         "FROM activity_log a "
         "LEFT JOIN users u ON u.email = a.actor_email "
@@ -138,13 +151,151 @@ def list_activity():
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
-            cur.execute(list_sql, [*params, *scope_params, limit, offset])
+            cur.execute(list_sql, [*params, limit, offset])
             rows = cur.fetchall()
-            cur.execute(count_sql, [*params, *scope_params])
+            cur.execute(count_sql, params)
             total = cur.fetchone()["n"]
         return jsonify({"items": rows, "total": total, "limit": limit, "offset": offset})
     finally:
         conn.close()
+
+
+EXPORT_CAP = 100000   # safety cap on the CSV export
+
+_EXPORT_COLS = [
+    "Timestamp (IST)", "UID", "Actor", "Actor Email", "Action", "Category",
+    "Field", "Before", "After", "Details", "Metadata",
+]
+
+
+def _details_text(r: dict) -> str:
+    """One-line plain-text rendering of the Details column.
+
+    Mirrors the FE <Details> component for the cases it special-cases; the
+    raw field/before/after/metadata are exported in their own columns too, so
+    nothing is lost when a row falls through to the generic branches.
+    """
+    action = r.get("action")
+    meta = r.get("metadata") if isinstance(r.get("metadata"), dict) else {}
+    field, before, after = r.get("field"), r.get("before_value"), r.get("after_value")
+
+    if r.get("entity_type") == "cp_match_scan" and meta:
+        return (f"CP match scan · {meta.get('total', '?')} rows · "
+                f"perfect {meta.get('perfect', 0)} · partial {meta.get('partial', 0)} · "
+                f"no match {meta.get('no_match', 0)}")
+    if r.get("entity_type") == "supply_sync" and meta:
+        return (f"Supply sync · {meta.get('updated', 0)} updated · "
+                f"{meta.get('matched', 0)} matched of {meta.get('source_rows', 0)} source rows")
+    if field and (before is not None or after is not None) and action != "note_added":
+        text = f"{before if before is not None else '—'} → {after if after is not None else '—'} (field: {field})"
+        if field == "assigned_rm_ids" and ("mgr_before" in meta or "mgr_after" in meta):
+            text += f" · Manager: {meta.get('mgr_before') or '—'} → {meta.get('mgr_after') or '—'}"
+        return text
+    if action == "note_added":
+        by = f" by {meta.get('author_name')}" if meta.get("author_name") else ""
+        return f"Note added{by}: {after or ''}".strip()
+    if action == "create":
+        return "Created"
+    if action == "login":
+        return "Logged in"
+    if action == "visit_scheduled":
+        when = " ".join(x for x in (meta.get("schedule_date"), meta.get("schedule_time")) if x)
+        sub = " · ".join(x for x in (
+            f"Exec: {meta['field_exec_name']}" if meta.get("field_exec_name") else None,
+            f"By: {meta['assigned_by_name']}" if meta.get("assigned_by_name") else None,
+        ) if x)
+        return " · ".join(x for x in (f"Visit scheduled{f' · {when}' if when else ''}", sub) if x)
+    if action == "visit_cancelled":
+        target = f" → {meta['target_stage']}" if meta.get("target_stage") else ""
+        reason = f" · {meta['reason']}" if meta.get("reason") else ""
+        return f"Visit cancelled{target}{reason}"
+    if action == "ticket_created":
+        return "Ticket created"
+    if action == "ticket_reply":
+        return "Ticket reply"
+    if action == "ticket_closed":
+        return "Ticket closed"
+    if action == "assign_missing":
+        return f"Auto-assign run · {meta.get('updated', 0)} assigned · {meta.get('remaining', 0)} remaining"
+    if action == "sync_run":
+        return (f"Sheet sync · {meta.get('inserted', 0)} new · "
+                f"{meta.get('updated', 0)} updated · {meta.get('skipped', 0)} skipped")
+    if action == "pricing_sync_run":
+        src = f" · {meta['source_sheet']}" if meta.get("source_sheet") else ""
+        return f"Pricing sync{src} · {meta.get('inserted', 0)} new · {meta.get('fetched', 0)} fetched"
+    if action == "auto_provision":
+        name = f" · {meta['name']}" if meta.get("name") else ""
+        return f"Account auto-provisioned{name}"
+    if action == "bulk_stage_cleanup":
+        hop = (f" · {meta['from_stage']} → {meta['to_stage']}"
+               if meta.get("from_stage") and meta.get("to_stage") else "")
+        csv_name = f" · {meta['csv']}" if meta.get("csv") else ""
+        return f"Bulk stage cleanup{hop} · {meta.get('updated', 0)} updated{csv_name}"
+    if meta:
+        return json.dumps(meta, default=str)
+    return ""
+
+
+@bp.get("/export")
+@require_auth("admin", "manager")
+def export_activity():
+    """CSV of every row matching the current filters/scope.
+
+    Honors the same filters (and manager scoping) as the list endpoint, but
+    without its 500-row display cap — the download is the whole result set.
+    """
+    args = request.args
+    sort = (args.get("sort") or "created_at").strip()
+    dir_ = "ASC" if (args.get("dir") or "").lower() == "asc" else "DESC"
+    sort_sql = SORTABLE.get(sort, SORTABLE["created_at"])
+
+    where_sql, params = _build_filters(g.user, args)
+    sql = (
+        "SELECT a.created_at, a.actor_email, u.name AS actor_name, "
+        "       a.entity_type, a.entity_id, a.action, a.field, "
+        "       a.before_value, a.after_value, a.metadata "
+        "FROM activity_log a "
+        "LEFT JOIN users u ON u.email = a.actor_email "
+        f"{where_sql} "
+        f"ORDER BY {sort_sql} {dir_}, a.id DESC "
+        "LIMIT %s"
+    )
+
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(sql, [*params, EXPORT_CAP])
+            rows = cur.fetchall()
+    finally:
+        conn.close()
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(_EXPORT_COLS)
+    for r in rows:
+        ts = r.get("created_at")
+        # Timestamps are stored UTC-aware; render in IST to match the page.
+        ts_str = ts.astimezone(IST).strftime("%Y-%m-%d %H:%M:%S") if ts else ""
+        meta = r.get("metadata")
+        w.writerow([
+            ts_str,
+            r.get("entity_id") or "",
+            r.get("actor_name") or "",
+            r.get("actor_email") or "",
+            r.get("action") or "",
+            r.get("entity_type") or "",
+            r.get("field") or "",
+            r.get("before_value") or "",
+            r.get("after_value") or "",
+            _details_text(r),
+            json.dumps(meta, default=str) if meta else "",
+        ])
+
+    return Response(
+        buf.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=activity_logs.csv"},
+    )
 
 
 @bp.get("/filters")
