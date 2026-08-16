@@ -141,7 +141,7 @@ export default function Logs() {
       <div className="al-head">
         <div><div className="al-subtitle">All dashboard activity</div></div>
         <div className="al-result-count">{total} result{total === 1 ? '' : 's'}</div>
-        <button className="btn-ghost" onClick={downloadCsv} disabled={loading || downloading || total === 0}>
+        <button className="btn-ghost al-export-btn" onClick={downloadCsv} disabled={loading || downloading || total === 0}>
           {downloading ? 'Preparing…' : `Download CSV${total ? ` (${total})` : ''}`}
         </button>
       </div>
