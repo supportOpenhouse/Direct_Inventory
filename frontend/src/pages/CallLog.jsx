@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { toast } from '../utils/toast.js';
 import RecordingPlayer from '../components/RecordingPlayer.jsx';
+import CardDetailModal from '../components/CardDetailModal.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { callDuration, formatCallTime } from '../utils/format.js';
 
 /* Bonvoice Call Log — every call Bonvoice has reported, with its recording.
@@ -28,6 +30,16 @@ export default function CallLog() {
   const [actors, setActors] = useState([]);
   const [syncing, setSyncing] = useState(false);
   const [nonce, setNonce] = useState(0);   // bumped after a sync to force a refetch
+  const { user } = useAuth();
+  const [detail, setDetail] = useState(null);  // property popup, opened from a lead name
+
+  // Open the property detail popup for an oh_id — same flow as the Activity Logs UID.
+  function openUid(uid) {
+    setDetail({ oh_id: uid, _loading: true });
+    api.get(`/api/inventory/${encodeURIComponent(uid)}`)
+      .then((r) => setDetail((prev) => (prev && prev.oh_id === uid ? r : prev)))
+      .catch(() => setDetail((prev) => (prev && prev.oh_id === uid ? { ...prev, _loading: false } : prev)));
+  }
 
   // Backfill window — last 30 days by default, the usual "why isn't that call here?"
   // range. Bonvoice holds the full history if you widen it.
@@ -82,7 +94,6 @@ export default function CallLog() {
   return (
     <div>
       <div className="al-head">
-        <div><div className="al-subtitle">Every call Bonvoice has reported</div></div>
         <div className="al-result-count">{total.toLocaleString('en-IN')} call{total === 1 ? '' : 's'}{loading ? ' · …' : ''}</div>
       </div>
 
@@ -144,7 +155,7 @@ export default function CallLog() {
                   <td>
                     {c.oh_id ? (
                       <>
-                        <span>{c.lead_name || c.oh_id}</span>
+                        <button type="button" className="al-uid-link" onClick={() => openUid(c.oh_id)}>{c.lead_name || c.oh_id}</button>
                         {c.lead_side === 'from' && <span className="muted" style={{ fontSize: 11.5, marginLeft: 6 }}>(incoming)</span>}
                       </>
                     ) : <span className="muted">—</span>}
@@ -180,6 +191,12 @@ export default function CallLog() {
           <button className="btn-ghost" disabled={end >= total} onClick={() => setPage((p) => p + 1)}>Next →</button>
         </span>
       </div>
+
+      {detail && (
+        <CardDetailModal item={detail} role={user?.role} showAssignedRm
+          onUpdated={(u) => setDetail((p) => ({ ...p, ...u }))}
+          onClose={() => setDetail(null)} />
+      )}
     </div>
   );
 }

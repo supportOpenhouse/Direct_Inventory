@@ -79,13 +79,18 @@ function CompletedRow({ lead, onMark }) {
 
   if (lead.call_result) {
     const ok = lead.call_result === 'connected';
-    // Offer a status change once the call is final: connected, or missed with no auto-redial left.
-    const canChange = ok || !lead.retries_left;
+    const retriesLeft = lead.retries_left || 0;
+    // A missed call still has auto-redials → show how many; once none are left (or it
+    // connected) the call is final, so offer a status change.
+    const canChange = ok || retriesLeft === 0;
     return (
       <li className="lc-done">
         <span className="lc-qname">{lead.name || 'Unnamed lead'}</span>
         <span className="lc-muted">{formatCallTime(lead.dialed_at)}</span>
         <span className={ok ? 'lc-ok' : 'lc-miss'}>{ok ? '✓ connected' : '✕ not reached'}</span>
+        {!ok && retriesLeft > 0 && (
+          <span className="lc-muted" style={{ fontSize: 11.5 }}>{retriesLeft} retr{retriesLeft === 1 ? 'y' : 'ies'} left</span>
+        )}
         {canChange && <button className="cc-btn no" style={{ marginLeft: 8 }} onClick={openStatus}>Change status</button>}
         {editItem && (
           <StatusEditModal item={editItem}

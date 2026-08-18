@@ -97,9 +97,10 @@ def my_calls():
                 "SELECT q.id::text AS id, q.oh_id, q.dialed_at, q.ended_at, q.answered, "
                 "       q.outcome, q.attempts, q.call_result, q.call_result_at, "
                 "       l.seller_name AS name, l.seller_phone AS phone, l.society, l.city, l.stage, "
-                # will the dialer ring this lead again? mirrors the requeue rule (unanswered
-                # + attempts left). false → the call is final → offer a status change.
-                "       (NOT q.answered AND q.attempts < COALESCE(c.max_attempts, 1)) AS retries_left "
+                # how many more times the dialer may ring this lead — mirrors the requeue
+                # rule (unanswered + attempts left). 0 → the call is final → offer a status change.
+                "       CASE WHEN q.answered THEN 0 "
+                "            ELSE GREATEST(COALESCE(c.max_attempts, 1) - q.attempts, 0) END AS retries_left "
                 "  FROM dial_queue q JOIN inventory l ON l.oh_id = q.oh_id "
                 "  LEFT JOIN dial_campaigns c ON c.id = q.campaign_id "
                 " WHERE lower(q.rm_email) = lower(%(email)s) AND q.dialed_at IS NOT NULL "

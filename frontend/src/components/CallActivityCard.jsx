@@ -20,7 +20,7 @@ export default function CallActivityCard({ ohId }) {
   if (!calls || calls.length === 0) return null;  // hidden until there's a call
 
   return (
-    <div className="expand-sec expand-sec-narrow">
+    <div className="expand-sec expand-sec-wide" style={{ minWidth: 320, flexBasis: 320 }}>
       <h4>📞 Call activity <span className="muted" style={{ fontWeight: 400 }}>· {calls.length}</span></h4>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 320, overflowY: 'auto' }}>
         {calls.map((c) => (
