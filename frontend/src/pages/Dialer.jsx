@@ -268,11 +268,6 @@ export default function Dialer() {
               );
             })}
           </div>
-          <p className="dl-note">
-            {rms.length || 'No'} RM{rms.length === 1 ? '' : 's'} selected — that's <b>{rms.length} call{rms.length === 1 ? '' : 's'} at a time</b>,
-            one per handset. Their phone rings first; the lead is only dialled once they pick up.
-            {strategy === 'assigned' && ' Each RM only calls their own leads, so a matched lead assigned to nobody here is dropped when the campaign starts.'}
-          </p>
         </section>
 
         <section className="card dl-card">
@@ -283,7 +278,6 @@ export default function Dialer() {
             <label className="dl-field"><span>Gap between calls (seconds)</span>
               <input type="number" min={0} max={3600} className="dl-input" value={gap}
                 onChange={(e) => setGap(Math.max(0, Number(e.target.value)))} />
-              <em className="dl-hint">0 = the next lead rings the moment the last call ends</em>
             </label>
             <label className="dl-field"><span>Calling window (IST)</span>
               <div className="dl-daterow">
@@ -298,7 +292,6 @@ export default function Dialer() {
             <label className="dl-field"><span>Max attempts / lead</span>
               <input type="number" min={1} max={10} className="dl-input" value={attempts}
                 onChange={(e) => setAttempts(Math.max(1, Number(e.target.value)))} />
-              <em className="dl-hint">Retries only leads that never connected</em>
             </label>
             <label className="dl-field"><span>Cooldown before a retry (minutes)</span>
               <input type="number" min={0} className="dl-input" value={cooldown} disabled={attempts < 2}

@@ -23,7 +23,6 @@ function NowCalling({ lead }) {
     return (
       <div className="lc-card lc-idle">
         <div className="lc-eyebrow">No live call</div>
-        <div className="lc-muted">The dialer will ring your handset when the next lead is ready.</div>
       </div>
     );
   }

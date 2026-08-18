@@ -17,6 +17,7 @@ export default function UserEditModal({ user, managers, areas, onClose: rawClose
   const [microMarkets, setMicroMarkets] = useState(user.micro_market || []);
   const [societies, setSocieties] = useState(user.society || []);
   const [manager, setManager] = useState(user.manager || '');
+  const [phone, setPhone] = useState(user.phone || '');
   const [isActive, setIsActive] = useState(!!user.is_active);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -28,7 +29,7 @@ export default function UserEditModal({ user, managers, areas, onClose: rawClose
   async function save() {
     setError(null); setSaving(true);
     try {
-      const body = { is_active: isActive, manager: manager ? Number(manager) : null, cities, micro_market: microMarkets, society: societies };
+      const body = { is_active: isActive, manager: manager ? Number(manager) : null, phone: phone.trim() || null, cities, micro_market: microMarkets, society: societies };
       onSaved(await api.patch(`/api/users/${user.id}`, body));
     } catch (e) { setError(e.data?.error || e.message); } finally { setSaving(false); }
   }
@@ -52,6 +53,13 @@ export default function UserEditModal({ user, managers, areas, onClose: rawClose
             <option value="">— none —</option>
             {managers.filter((m) => m.id !== user.id).map((m) => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}
           </select>
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label>Mobile number</label>
+          <input type="tel" className="role-select" value={phone} onChange={(e) => setPhone(e.target.value)}
+            placeholder="e.g. 98765 43210" inputMode="tel" />
+          <p className="page-hint">Used for click-to-call and the auto-dialer — the call rings this phone first, then connects the lead.</p>
         </div>
 
         <div>
