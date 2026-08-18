@@ -39,33 +39,31 @@ export default function UserEditModal({ user, managers, areas, onClose: rawClose
       <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head-row"><h3>{user.name || user.email}</h3><span className="role-chip">{user.role}</span><span className="muted" style={{ fontSize: 12 }}>{user.email}</span><button className="modal-close" onClick={onClose}><IconClose /></button></div>
 
-        <div style={{ marginBottom: 16 }}>
-          <label>Status</label>
-          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 500 }}>
-            <input type="checkbox" style={{ width: 'auto' }} checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-            <span>{isActive ? 'Active' : 'Inactive'}</span>
-          </label>
-        </div>
-
-        <div style={{ marginBottom: 16 }}>
-          <label>Manager</label>
-          <select className="role-select" value={manager} onChange={(e) => setManager(e.target.value)}>
-            <option value="">— none —</option>
-            {managers.filter((m) => m.id !== user.id).map((m) => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}
-          </select>
-        </div>
-
-        <div style={{ marginBottom: 16 }}>
-          <label>Mobile number</label>
-          <input type="tel" className="role-select" value={phone} onChange={(e) => setPhone(e.target.value)}
-            placeholder="e.g. 98765 43210" inputMode="tel" />
-          <p className="page-hint">Used for click-to-call and the auto-dialer — the call rings this phone first, then connects the lead.</p>
+        <div className="ue-row3">
+          <div>
+            <label>Mobile number</label>
+            <input type="tel" className="role-select" value={phone} onChange={(e) => setPhone(e.target.value)}
+              placeholder="e.g. 98765 43210" inputMode="tel" />
+          </div>
+          <div>
+            <label>Manager</label>
+            <select className="role-select" value={manager} onChange={(e) => setManager(e.target.value)}>
+              <option value="">— none —</option>
+              {managers.filter((m) => m.id !== user.id).map((m) => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}
+            </select>
+          </div>
+          <div>
+            <label>Status</label>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 500, height: 38 }}>
+              <input type="checkbox" style={{ width: 'auto' }} checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+              <span>{isActive ? 'Active' : 'Inactive'}</span>
+            </label>
+          </div>
         </div>
 
         <div>
           <label>Area scope</label>
-          <p className="page-hint">Set any combination. Assignment matches society first, then micro-market. City is used for manager visibility.</p>
-          <div className="form-grid">
+          <div className="ue-row3" style={{ marginTop: 6 }}>
             {SCOPE_LEVELS.map((lvl) => (
               <div key={lvl.key}>
                 <label>{lvl.label} <span className="muted">{valueFor[lvl.key].length || ''}</span></label>

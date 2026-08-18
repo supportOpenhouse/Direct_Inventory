@@ -298,7 +298,9 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .main { flex: 1; overflow: auto; padding: 24px; }
 /* Click-to-call button (📞) — sits inline after a phone number. */
 .phone-cell { display: inline-flex; align-items: center; gap: 6px; }
-.call-btn { border: 0; background: var(--surface-3); border-radius: 999px; width: 24px; height: 24px; display: inline-grid; place-items: center; font-size: 12px; cursor: pointer; line-height: 1; padding: 0; transition: background var(--t); }
+/* Call button sits to the left of the city chip. */
+.city-cell { display: inline-flex; align-items: center; gap: 7px; }
+.call-btn { border: 0; background: var(--surface-3); border-radius: 999px; width: 24px; height: 24px; display: inline-grid; place-items: center; color: var(--brand-strong); cursor: pointer; line-height: 1; padding: 0; flex: none; transition: background var(--t); }
 .call-btn:hover { background: var(--brand-soft); }
 .call-btn:disabled { opacity: .6; cursor: default; }
 /* Toasts — top-right, above modals (backdrop z 1000). Errors get a red accent
@@ -1457,7 +1459,9 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .dl-rmpool .dl-rmmeta b, .dl-rmpool .dl-rmmeta span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* pacing */
-.dl-settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.dl-settings { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: start; }
+@media (max-width: 1000px) { .dl-settings { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px)  { .dl-settings { grid-template-columns: 1fr; } }
 .dl-field { display: flex; flex-direction: column; gap: 5px; }
 .dl-field > span { font-size: 12px; font-weight: 600; color: var(--text-2); }
 .dl-hint { font-size: 11px; color: var(--text-muted); font-style: normal; }
@@ -1551,3 +1555,7 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .lc-mh { padding: 14px 18px; font-size: 15px; font-weight: 700; border-bottom: 1px solid var(--border); }
 .lc-mb { padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
 .lc-mf { padding: 12px 18px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border); }
+
+/* User-edit modal: three fields per row (Mobile/Manager/Status and City/Micro/Society). */
+.ue-row3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; margin-bottom: 16px; }
+@media (max-width: 640px) { .ue-row3 { grid-template-columns: 1fr; } }

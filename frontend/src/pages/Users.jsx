@@ -25,7 +25,7 @@ export default function Users() {
   const [users, setUsers] = useState([]);
   const [areas, setAreas] = useState({ cities: [], micro_markets: [], societies: [] });
   const [loading, setLoading] = useState(true);
-  const [draft, setDraft] = useState({ email: '', name: '', phone: '', role: 'rm', cities: [] });
+  const [draft, setDraft] = useState({ email: '', name: '', phone: '', role: 'rm', manager: '', cities: [] });
   const [error, setError] = useState(null);
   const [editUser, setEditUser] = useState(null);
   const [sort, setSort] = useState({ field: null, dir: 'asc' });
@@ -33,7 +33,8 @@ export default function Users() {
   const [clashLoading, setClashLoading] = useState(true);
   const [recomputing, setRecomputing] = useState(false);
 
-  function setRole(role) { setDraft((p) => ({ ...p, role, cities: role === 'admin' ? [...CITIES] : p.cities })); }
+  // Manager applies only to RMs; admin auto-gets all cities.
+  function setRole(role) { setDraft((p) => ({ ...p, role, cities: role === 'admin' ? [...CITIES] : p.cities, manager: role === 'rm' ? p.manager : '' })); }
 
   async function refresh() { setLoading(true); try { setUsers((await api.get('/api/users')).items); } finally { setLoading(false); } }
   async function loadAreas() { try { setAreas(await api.get('/api/users/master-areas')); } catch { /* non-blocking */ } }
@@ -53,7 +54,7 @@ export default function Users() {
   function toggleCity(c) { setDraft((p) => ({ ...p, cities: p.cities.includes(c) ? p.cities.filter((x) => x !== c) : [...p.cities, c] })); }
   async function add() {
     setError(null);
-    try { await api.post('/api/users', draft); setDraft({ email: '', name: '', phone: '', role: 'rm', cities: [] }); refresh(); }
+    try { await api.post('/api/users', draft); setDraft({ email: '', name: '', phone: '', role: 'rm', manager: '', cities: [] }); refresh(); }
     catch (e) { setError(e.data?.error || e.message); }
   }
   async function patch(id, body) { try { await api.patch(`/api/users/${id}`, body); refresh(); } catch (e) { alert(e.data?.error || e.message); } }
@@ -69,7 +70,18 @@ export default function Users() {
         </div>
         <div className="adduser-row">
           <div className="au-role"><label>Role</label><select className="role-select" value={draft.role} onChange={(e) => setRole(e.target.value)}>{ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}</select></div>
-          <div className="au-field"><label>Cities</label><div className="city-pills">{CITIES.map((c) => <button key={c} type="button" className={draft.cities.includes(c) ? 'pill pill-on' : 'pill'} onClick={() => toggleCity(c)}>{c}</button>)}</div></div>
+          {draft.role === 'rm' && (
+            <div className="au-role"><label>Manager</label>
+              <select className="role-select" value={draft.manager} onChange={(e) => setDraft({ ...draft, manager: e.target.value })}>
+                <option value="">— select manager —</option>
+                {managers.map((m) => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}
+              </select>
+            </div>
+          )}
+          {/* Cities show once a manager is chosen (RM); for admin/manager they show as before. */}
+          {(draft.role !== 'rm' || draft.manager) && (
+            <div className="au-field"><label>Cities</label><div className="city-pills">{CITIES.map((c) => <button key={c} type="button" className={draft.cities.includes(c) ? 'pill pill-on' : 'pill'} onClick={() => toggleCity(c)}>{c}</button>)}</div></div>
+          )}
           <div className="au-actions"><button className="btn-primary" onClick={add}>Add user</button></div>
         </div>
         {error && <div className="modal-error">{error}</div>}

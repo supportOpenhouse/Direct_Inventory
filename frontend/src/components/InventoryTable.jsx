@@ -130,7 +130,7 @@ export default function InventoryTable({
                   )}
                   <StarCell item={item} canSet={canSetPriority} onUpdated={onUpdated} />
                   {isAdmin && <td className="inv-td-id">{item.oh_id}</td>}
-                  <td><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></td>
+                  <td><span className="city-cell"><CallButton ohId={item.oh_id} phone={item.seller_phone} /><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></span></td>
                   <td className={`inv-td-society ${flag ? `inv-society-${flag}` : ''}`}>
                     <span className="inv-clip inv-clip-society" title={item.society || ''}>{item.society || '—'}</span>
                     {isCreatedToday(item.created_at) && <img className="new-badge-img" src="/new.png" alt="NEW" />}
@@ -152,7 +152,7 @@ export default function InventoryTable({
                   )}
                   <td className="inv-td-muted inv-col-followup">{formatDateShort(item.follow_up_at)}</td>
                   <td><span className="inv-clip inv-clip-seller" title={item.seller_name || ''}>{item.seller_name || '—'}</span></td>
-                  <td className="inv-td-muted"><span className="phone-cell">{item.seller_phone || '—'}<CallButton ohId={item.oh_id} phone={item.seller_phone} /></span></td>
+                  <td className="inv-td-muted">{item.seller_phone || '—'}</td>
                   <td className="inv-td-muted inv-col-posted">{formatDateCompact(item.posting_date)}</td>
                   <td className="inv-td-muted">{item.created_at ? formatDateRel(item.created_at) : '—'}</td>
                   {isAdmin && <td className="inv-td-muted" title={assignedRmsTitle(item.assigned_rms)}><span className="inv-clip inv-clip-rm">{formatAssignedRms(item.assigned_rms)}</span></td>}

@@ -147,6 +147,9 @@ def create_user():
     name = body.get("name")
     phone = body.get("phone")
     cities = body.get("cities") or []
+    # Manager is only meaningful for an RM; ignore it for other roles.
+    mv = body.get("manager")
+    manager = int(mv) if str(mv or "").strip().isdigit() and role == "rm" else None
 
     if not email or role not in VALID_ROLES:
         return jsonify({"error": "email and valid role required"}), 400
@@ -155,16 +158,17 @@ def create_user():
     try:
         with conn, conn.cursor() as cur:
             cur.execute(
-                """INSERT INTO users (email, name, phone, role, cities, is_active)
-                   VALUES (%s, %s, %s, %s, %s, TRUE)
+                """INSERT INTO users (email, name, phone, role, cities, manager, is_active)
+                   VALUES (%s, %s, %s, %s, %s, %s, TRUE)
                    ON CONFLICT (email) DO UPDATE
                      SET role = EXCLUDED.role,
                          name = COALESCE(EXCLUDED.name, users.name),
                          phone = COALESCE(EXCLUDED.phone, users.phone),
                          cities = EXCLUDED.cities,
+                         manager = EXCLUDED.manager,
                          is_active = TRUE
                    RETURNING *""",
-                (email, name, phone, role, cities),
+                (email, name, phone, role, cities, manager),
             )
             row = cur.fetchone()
             log_activity(

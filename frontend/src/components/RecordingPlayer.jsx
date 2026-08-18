@@ -86,11 +86,13 @@ export default function RecordingPlayer({ src, size = 34, total = 0 }) {
         {playing ? <IconPause /> : <IconPlay />}
       </button>
       <span style={{ fontFamily: "'Spline Sans Mono', monospace", fontSize: 12, color: 'var(--text-muted)' }}>
-        {/* elapsed / total — the audio's own length once it's loaded, else the call's
-            known duration passed in via `total`. Hidden when neither is known. */}
+        {/* elapsed / total — the total only shows where a `total` is passed in (the
+            modal/drawer call-activity card), never in the log tables. Uses the audio's
+            own length for accuracy once loaded, else the passed call duration. */}
         {fmt(t)}{(() => {
-          const tot = dur > 0 && isFinite(dur) ? dur : (Number(total) > 0 ? Number(total) : 0);
-          return tot > 0 ? ` / ${fmt(tot)}` : '';
+          if (!(Number(total) > 0)) return '';
+          const tot = dur > 0 && isFinite(dur) ? dur : Number(total);
+          return ` / ${fmt(tot)}`;
         })()}
       </span>
     </span>

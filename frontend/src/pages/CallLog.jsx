@@ -4,7 +4,7 @@ import { toast } from '../utils/toast.js';
 import RecordingPlayer from '../components/RecordingPlayer.jsx';
 import CardDetailModal from '../components/CardDetailModal.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { callDuration, callDurationSecs, formatCallTime } from '../utils/format.js';
+import { callDuration, formatCallTime } from '../utils/format.js';
 
 /* Bonvoice Call Log — every call Bonvoice has reported, with its recording.
    Rows are legs, not calls: a live bridged call writes one for the RM's handset and
@@ -170,7 +170,7 @@ export default function CallLog() {
                     <span className="muted" style={{ fontSize: 11.5 }}>{c.status || c.agent_status || ''}</span>
                   </td>
                   <td style={{ fontFamily: "'Spline Sans Mono', monospace", fontSize: 12 }}>{callDuration(c.start_at, c.end_at)}</td>
-                  <td>{c.recording_url ? <RecordingPlayer src={c.recording_url} total={callDurationSecs(c.start_at, c.end_at)} /> : <span className="muted">—</span>}</td>
+                  <td>{c.recording_url ? <RecordingPlayer src={c.recording_url} /> : <span className="muted">—</span>}</td>
                   <td className="muted" style={{ fontSize: 12 }}>
                     {/* Inbound has no placed_by — the lead dialled, so credit them. */}
                     {c.lead_side === 'from' && c.oh_id ? (c.lead_name || c.oh_id) : (c.placed_by || '—')}

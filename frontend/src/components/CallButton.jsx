@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api/client.js';
 import { toast } from '../utils/toast.js';
+import { IconPhone } from './icons.jsx';
 
 /**
  * 📞 click-to-call. Bonvoice rings the caller's OWN phone first, then bridges the
@@ -29,7 +30,7 @@ export default function CallButton({ ohId, phone, className = '' }) {
   return (
     <button type="button" className={`call-btn ${className}`} onClick={call} disabled={busy}
       title="Call this lead (rings your phone first)" aria-label="Call lead">
-      {busy ? <span className="btn-spinner" /> : '📞'}
+      {busy ? <span className="btn-spinner" /> : <IconPhone size={14} />}
     </button>
   );
 }
