@@ -1440,16 +1440,21 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .dl-stratcard.on { border-color: var(--brand); background: var(--brand-softer); }
 .dl-stratlabel { font-size: 13.5px; font-weight: 700; color: var(--text); }
 .dl-strathint { font-size: 11.5px; color: var(--text-muted); line-height: 1.35; }
-.dl-rmpool { display: flex; flex-wrap: wrap; gap: 8px; }
-.dl-rmchip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border: 1px solid var(--border);
-  border-radius: var(--r-pill); background: var(--surface); cursor: pointer; }
+/* 5 equal-width cards per row, same look as the strategy cards; collapses on narrow. */
+.dl-rmpool { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 1100px) { .dl-rmpool { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 720px)  { .dl-rmpool { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.dl-rmchip { display: flex; align-items: center; gap: 9px; padding: 11px 13px; border: 1.5px solid var(--border);
+  border-radius: var(--r); background: var(--surface); cursor: pointer; text-align: left; min-width: 0; }
 .dl-rmchip.on { border-color: var(--brand); background: var(--brand-softer); }
 .dl-rmchip:disabled { opacity: .5; cursor: not-allowed; }
-.dl-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 12px;
+.dl-avatar { width: 28px; height: 28px; flex: none; border-radius: 50%; background: var(--brand); color: #fff; font-size: 12px;
   font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
-.dl-rmmeta { display: flex; flex-direction: column; line-height: 1.25; }
+.dl-rmmeta { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
 .dl-rmmeta b { font-size: 12.5px; }
 .dl-rmmeta span { font-size: 11px; color: var(--text-muted); }
+/* keep long names/emails inside the equal-width box */
+.dl-rmpool .dl-rmmeta b, .dl-rmpool .dl-rmmeta span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* pacing */
 .dl-settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }

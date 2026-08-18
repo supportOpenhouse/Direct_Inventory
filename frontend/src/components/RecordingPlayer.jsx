@@ -24,7 +24,7 @@ const IconPause = () => (
   </svg>
 );
 
-export default function RecordingPlayer({ src, size = 34 }) {
+export default function RecordingPlayer({ src, size = 34, total = 0 }) {
   const ref = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [t, setT] = useState(0);
@@ -86,7 +86,12 @@ export default function RecordingPlayer({ src, size = 34 }) {
         {playing ? <IconPause /> : <IconPlay />}
       </button>
       <span style={{ fontFamily: "'Spline Sans Mono', monospace", fontSize: 12, color: 'var(--text-muted)' }}>
-        {fmt(t)}
+        {/* elapsed / total — the audio's own length once it's loaded, else the call's
+            known duration passed in via `total`. Hidden when neither is known. */}
+        {fmt(t)}{(() => {
+          const tot = dur > 0 && isFinite(dur) ? dur : (Number(total) > 0 ? Number(total) : 0);
+          return tot > 0 ? ` / ${fmt(tot)}` : '';
+        })()}
       </span>
     </span>
   );

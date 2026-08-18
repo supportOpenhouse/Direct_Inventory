@@ -364,9 +364,14 @@ export function formatCallTime(iso) {
   const d = new Date(iso);
   return `${d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}, ${d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
 }
+// Leg duration in whole seconds (0 if either bound is missing).
+export function callDurationSecs(start, end) {
+  if (!start || !end) return 0;
+  return Math.max(0, Math.round((new Date(end) - new Date(start)) / 1000));
+}
 // Leg duration as m:ss. No end_at → unknown length, shown as a dash (never faked 0).
 export function callDuration(start, end) {
   if (!start || !end) return '—';
-  const secs = Math.max(0, Math.round((new Date(end) - new Date(start)) / 1000));
+  const secs = callDurationSecs(start, end);
   return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
 }

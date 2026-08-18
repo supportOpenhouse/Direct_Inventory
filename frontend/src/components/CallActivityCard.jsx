@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import RecordingPlayer from './RecordingPlayer.jsx';
-import { callDuration, formatCallTime } from '../utils/format.js';
+import { callDuration, callDurationSecs, formatCallTime } from '../utils/format.js';
 
 /* Calls placed to one lead, inside the row's expand panel — newest first, with the
    recording where Bonvoice kept one. Renders nothing until a call has been made:
@@ -35,7 +35,7 @@ export default function CallActivityCard({ ohId }) {
               </span>
             </div>
             {/* Streams straight off Bonvoice's url. Zero-duration calls have no file. */}
-            {c.recording_url && <RecordingPlayer src={c.recording_url} />}
+            {c.recording_url && <RecordingPlayer src={c.recording_url} total={callDurationSecs(c.start_at, c.end_at)} />}
           </div>
         ))}
       </div>

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client.js';
 import { toast } from '../utils/toast.js';
 import RecordingPlayer from '../components/RecordingPlayer.jsx';
-import { callDuration, formatCallTime } from '../utils/format.js';
+import { callDuration, callDurationSecs, formatCallTime } from '../utils/format.js';
 
 /* Auto Dialer · Previous Campaigns — pick a campaign, see what it was set to, how it
    did, and every call it placed. The call table is the Bonvoice Call Log's own endpoint
@@ -266,7 +266,7 @@ export default function DialerPrevious() {
                       <span className="muted" style={{ fontSize: 11.5 }}>{r.status || r.agent_status || ''}</span>
                     </td>
                     <td style={{ fontFamily: "'Spline Sans Mono', monospace", fontSize: 12 }}>{callDuration(r.start_at, r.end_at)}</td>
-                    <td>{r.recording_url ? <RecordingPlayer src={r.recording_url} /> : <span className="muted">—</span>}</td>
+                    <td>{r.recording_url ? <RecordingPlayer src={r.recording_url} total={callDurationSecs(r.start_at, r.end_at)} /> : <span className="muted">—</span>}</td>
                     <td className="muted" style={{ fontSize: 12 }}>{r.placed_by || '—'}</td>
                   </tr>
                 ))}
