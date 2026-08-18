@@ -34,6 +34,21 @@ services:
         generateValue: true
       - key: INTERNAL_API_KEY
         sync: false
+      # Bonvoice calling suite (click-to-call, webhook, dialer API, live calls).
+      - key: BONVOICE_BASE_URL
+        sync: false
+      - key: BONVOICE_TOKEN
+        sync: false
+      - key: BONVOICE_USERNAME
+        sync: false
+      - key: BONVOICE_PASSWORD
+        sync: false
+      - key: BONVOICE_DID
+        sync: false
+      - key: BONVOICE_CHANNEL_ID
+        sync: false
+      - key: BONVOICE_WEBHOOK_SECRET
+        sync: false
 
   # Auto-assign POC for leads that arrived unassigned (bulk-seed etc).
   # mode='missing' → only empty assignments, never overwrites. Every 15 min.

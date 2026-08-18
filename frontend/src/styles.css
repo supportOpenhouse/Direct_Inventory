@@ -247,7 +247,21 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .nav-count { margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #f97316; color: #fff; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
 .app-shell.collapsed .nav-count { display: none; }
 .nav-spacer { flex: 1; }
-.sidebar-foot { border-top: 1px solid var(--sidebar-border); padding-top: 12px; }
+/* Scrollable nav region: brand + collapse stay pinned at the top, the user footer at
+   the bottom, and the nav items scroll between them when there are too many to fit.
+   The -14px horizontal bleed cancels the sidebar's padding so the active-item edge
+   indicator (nav-item.active::before at left:-14px) isn't clipped by overflow. */
+.sidebar-nav {
+  flex: 1 1 auto; min-height: 0;
+  overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column; gap: 4px;
+  margin: 4px -14px 0; padding: 2px 14px;
+  scrollbar-width: thin; scrollbar-color: var(--sidebar-border) transparent;
+}
+.sidebar-nav::-webkit-scrollbar { width: 6px; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: var(--sidebar-border); border-radius: 3px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar-foot { border-top: 1px solid var(--sidebar-border); padding-top: 12px; margin-top: 4px; }
 .sidebar-user { display: flex; align-items: center; gap: 10px; padding: 6px 8px; width: 100%; background: transparent; border: 0; cursor: pointer; border-radius: var(--r-sm); text-align: left; transition: background var(--t); }
 .sidebar-user:hover { background: var(--sidebar-hover, rgba(255,255,255,0.06)); }
 .sidebar-user .avatar { width: 32px; height: 32px; border-radius: 999px; display: grid; place-items: center; font-weight: 700; font-size: 12px; background: var(--brand); color: #fff; flex-shrink: 0; }

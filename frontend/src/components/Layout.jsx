@@ -189,6 +189,7 @@ export default function Layout() {
           <span className="scb-label">Collapse</span>
         </button>
 
+        <nav className="sidebar-nav">
         {PRIMARY.map(navItem)}
 
         {isRm && navItem({ to: '/live-calls', label: 'Live Calls', Icon: IconDialer, dotKey: 'liveCalls' })}
@@ -212,7 +213,8 @@ export default function Layout() {
           </>
         )}
 
-        <div className="nav-spacer" />
+        </nav>
+
         <div className="sidebar-foot">
           <button type="button" className="sidebar-user" onClick={() => { nav('/profile'); setMobileOpen(false); }} title="My profile">
             <span className="avatar">{initials(user?.name, user?.email)}</span>

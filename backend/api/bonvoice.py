@@ -118,6 +118,31 @@ def _dt(value):
         return None
 
 
+# Only log calls that actually went through our DID. A shared Bonvoice account's
+# pulled records (and possibly its webhook) also carry other numbers' calls, which
+# aren't ours — those are dropped. Checked against every number-ish field on the
+# record (last-10-digit match, since formats vary). An unset DID disables the filter.
+_DID_NUMBER_KEYS = (
+    "sourcenumber", "destinationnumber", "displaynumber", "did", "did_number",
+    "virtualnumber", "customer", "agent", "from", "to", "caller", "callee",
+    "callernumber", "callednumber", "source_number", "destination_number", "display_number",
+)
+
+
+def _involves_did(body):
+    """True if BONVOICE_DID appears in any number field of this record (or the DID
+    isn't configured, in which case nothing is filtered)."""
+    did10 = bv.digits(config.BONVOICE_DID)
+    if not did10:
+        return True
+    lowered = {str(k).lower(): v for k, v in body.items()}
+    for k in _DID_NUMBER_KEYS:
+        v = lowered.get(k)
+        if v and bv.digits(v) == did10:
+            return True
+    return False
+
+
 def parse_body(raw, content_type):
     """Bonvoice sends the same fields as JSON or x-www-form-urlencoded — which one
     is an account setting, so accept both regardless of the declared content type."""
@@ -201,6 +226,10 @@ def _persist(body):
     """Upsert one leg with only what this lifecycle event knows. COALESCE precedence
     per column so a late 'initiated' can't blank the hangup's end_at; `answered` is
     OR-ed so it never flips back to false."""
+    if not _involves_did(body):
+        log.info("bonvoice: ignoring call — BONVOICE_DID not among its numbers (call=%s)", body.get("callID"))
+        return
+
     _release_dial_slot(body)   # first + separate, best-effort
 
     call_id = body.get("callID")
@@ -452,15 +481,20 @@ def attach_lead_and_actor(mapped):
 def sync_calls(date_from, date_to, agent=None):
     """Pull Bonvoice's call records for a date range and upsert them."""
     records = fetch_call_records(date_from, date_to, agent)
-    mapped = [m for m in (record_to_callback(r) for r in records) if m["callID"]]
+    # Keep only calls that went through our DID — the account-wide pull also returns
+    # other numbers' calls. Filter the raw record (its original DisplayNumber/DID
+    # fields), before record_to_callback remaps them.
+    ours = [r for r in records if _involves_did(r)]
+    mapped = [m for m in (record_to_callback(r) for r in ours) if m["callID"]]
     linked = attach_lead_and_actor(mapped)
     # ponytail: one upsert per record, sequentially. A day is ~30 round trips on the
     # 15-min job — batch it if the window ever widens.
     for m in mapped:
         _persist(m)
-    log.info("bonvoice: synced %s/%s call records (%s linked to leads) for %s..%s",
-             len(mapped), len(records), linked, date_from, date_to)
-    return {"fetched": len(records), "stored": len(mapped), "linked": linked}
+    log.info("bonvoice: synced %s/%s call records (%s off-DID skipped, %s linked) for %s..%s",
+             len(mapped), len(records), len(records) - len(ours), linked, date_from, date_to)
+    return {"fetched": len(records), "stored": len(mapped),
+            "skipped_off_did": len(records) - len(ours), "linked": linked}
 
 
 def run_call_log_sync(trigger="scheduler"):
