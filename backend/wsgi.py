@@ -14,4 +14,10 @@ if _REPO_ROOT not in sys.path:
 
 from backend.app import app  # noqa: E402
 
+# Auto-dialer runs in-process as a daemon thread (one per gunicorn worker); a Postgres
+# advisory lock elects a single ticker so no RM is double-dialled. Started here (not in
+# create_app) so it only runs under gunicorn — never during tests/CLI that import the app.
+from backend.services.dialer import start_background_dialer  # noqa: E402
+start_background_dialer()
+
 __all__ = ["app"]

@@ -10,16 +10,19 @@ Two halves:
     slot done (see api/bonvoice.py _release_dial_slot), so "as soon as the previous call
     ends" is literally that: the callback frees the slot, the next tick fills it.
 
-Sync psycopg2, no flask — so the Render background worker can import this module without
-pulling in the web app. Model-mapped to inventory: lead → inventory row, lead.id → oh_id,
-lead.phone → seller_phone, assignment → inventory.assigned_rm_ids (INT[] of users.id).
+Runs in-process: start_background_dialer() (called from wsgi.py) spawns a daemon thread
+per gunicorn worker, and a Postgres advisory lock elects one ticker. Model-mapped to
+inventory: lead → inventory row, lead.id → oh_id, lead.phone → seller_phone, assignment →
+inventory.assigned_rm_ids (INT[] of users.id).
 """
 from __future__ import annotations
 
 import itertools
 import logging
+import os
+import threading
 from datetime import datetime, time, timedelta, timezone
-from time import monotonic
+from time import monotonic, sleep
 
 from .. import config
 from ..db import get_conn
@@ -28,6 +31,10 @@ from . import bonvoice as bv
 log = logging.getLogger("dialer")
 
 TICK_SECONDS = 3
+# Postgres advisory-lock key. The dialer now runs as a background thread inside the web
+# service, so every gunicorn worker starts a loop — this lock elects exactly one ticker
+# at a time (what a single dedicated worker gave us for free). Any stable int works.
+_TICK_LOCK_KEY = 741_926_305
 # a 'dialing' row with no hangup callback by now is assumed lost — otherwise one dropped
 # webhook would wedge that RM for the rest of the campaign
 STALE_AFTER_SECONDS = 420
@@ -485,3 +492,50 @@ def _release(item_id, detail, retry):
     finally:
         conn.close()
     log.warning("dialer: dial not placed (%s) — %s", "requeued" if retry else "failed", detail)
+
+
+# ── in-process loop (runs inside the web service) ────────────────────────────
+#
+# The dialer used to be its own Render service; it now runs as a daemon thread in the
+# same backend/web service. Every gunicorn worker starts one loop, so a transaction-level
+# advisory lock (held for the duration of each tick) makes exactly one of them dial at a
+# time — no two ticks ever ring the same RM at once. The lock auto-releases when the tick's
+# transaction ends, so a crashed/redeployed worker never leaks it.
+
+def _tick_once_locked():
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT pg_try_advisory_xact_lock(%s) AS got", (_TICK_LOCK_KEY,))
+            if cur.fetchone()["got"]:
+                tick_all()   # lock is held until this transaction commits below
+    finally:
+        conn.close()
+
+
+def _loop():
+    log.info("in-process dialer loop started (advisory-locked; every %ds)", TICK_SECONDS)
+    while True:
+        t0 = monotonic()
+        try:
+            _tick_once_locked()
+        except Exception:  # noqa: BLE001 — the loop must survive anything
+            log.exception("dialer: tick failed")
+        sleep(max(0.0, TICK_SECONDS - (monotonic() - t0)))
+
+
+_started = False
+
+
+def start_background_dialer():
+    """Start the dialer tick loop as a daemon thread. Called once per gunicorn worker
+    from wsgi.py; the advisory lock keeps only one worker actually dialing. Set
+    DIALER_ENABLED=0 to turn the dialer off (e.g. a maintenance window)."""
+    global _started
+    if os.environ.get("DIALER_ENABLED", "1") != "1":
+        log.info("dialer: not started (DIALER_ENABLED=0)")
+        return
+    if _started:
+        return
+    _started = True
+    threading.Thread(target=_loop, name="dialer", daemon=True).start()

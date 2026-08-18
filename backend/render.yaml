@@ -117,34 +117,10 @@ services:
       - key: BONVOICE_SYNC_LOOKBACK_DAYS
         sync: false
 
-  # Auto-dialer tick loop — a Background Worker running services/dialer.tick_all() every
-  # ~3s (Render cron's 5-min floor is far too slow for a dialer). rootDir is the top-level
-  # worker/ folder; the whole repo is checked out, so it imports the shared backend code.
-  # One process on purpose — see worker/README.md. Set the BONVOICE_* vars in the dashboard.
-  - type: worker
-    name: direct-inventory-dialer
-    env: python
-    region: singapore
-    rootDir: worker
-    buildCommand: pip install -r requirements.txt
-    startCommand: python run_dialer.py
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.7
-      - key: DATABASE_URL
-        sync: false
-      - key: BONVOICE_BASE_URL
-        sync: false
-      - key: BONVOICE_TOKEN
-        sync: false
-      - key: BONVOICE_USERNAME
-        sync: false
-      - key: BONVOICE_PASSWORD
-        sync: false
-      - key: BONVOICE_DID
-        sync: false
-      - key: BONVOICE_CHANNEL_ID
-        sync: false
+  # (The auto-dialer tick loop is NOT a separate service — it runs as a daemon thread
+  # inside the web service above, via start_background_dialer() in wsgi.py. A Postgres
+  # advisory lock elects a single ticker across the gunicorn workers. Set DIALER_ENABLED=0
+  # on the web service to turn dialling off.)
 
   # Backfill inventory.locality from PROPERTIES_DB.master_societies (matches on
   # society name, case/whitespace-insensitive). Daily at 10:00 IST.
