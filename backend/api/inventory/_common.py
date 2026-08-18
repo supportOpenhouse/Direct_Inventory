@@ -234,20 +234,24 @@ def _scope_clause(user: dict, alias: str = "") -> tuple[str, list]:
       manager  — sees rows in their assigned cities (empty cities → nothing;
                  'Noida' expands to include 'Greater Noida').
       rm       — sees only rows where the user is in `assigned_rm_ids`.
+    All roles additionally never see rows flagged `consider_deleted`.
 
     `alias` is the optional table alias prefix (e.g. 'i' if the query uses
     `inventory i`).
     """
     p = f"{alias}." if alias else ""
+    # Soft-deleted rows are invisible to every role. The only way back to one is
+    # GET /api/inventory/<oh_id> (unscoped), which the activity-log UID link uses.
+    d = f"AND NOT {p}consider_deleted"
     if user["role"] == "admin":
-        return ("", [])
+        return (d, [])
     if user["role"] == "manager":
         cities = user.get("cities") or []
         if not cities:
             return ("AND FALSE", [])
-        return (f"AND {p}city = ANY(%s)", [_expand_cities(cities)])
+        return (f"{d} AND {p}city = ANY(%s)", [_expand_cities(cities)])
     # rm
-    return (f"AND %s = ANY({p}assigned_rm_ids)", [user["id"]])
+    return (f"{d} AND %s = ANY({p}assigned_rm_ids)", [user["id"]])
 
 
 def _build_filters(user: dict, args, alias: str = ""):

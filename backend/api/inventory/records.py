@@ -63,6 +63,11 @@ def get_one(oh_id: str):
             row = cur.fetchone()
             if not row:
                 return jsonify({"error": "not found"}), 404
+            # Deliberately unscoped: this is the one endpoint that still serves a
+            # soft-deleted lead, because the activity-log UID popup links here.
+            # Its stage reads as 'deleted' (the stored stage is left intact).
+            if row.get("consider_deleted"):
+                row["stage"] = "deleted"
             # Pull recent activity for this entity.
             cur.execute(
                 """

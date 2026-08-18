@@ -397,6 +397,7 @@ def task_tracking():
                 JOIN LATERAL unnest(i.assigned_rm_ids) AS rm_id ON TRUE
                 JOIN users u ON u.id = rm_id AND u.is_active = TRUE
                 WHERE (i.created_at AT TIME ZONE 'Asia/Kolkata')::DATE = {_TODAY_IST}
+                  AND NOT i.consider_deleted
                 GROUP BY u.id, u.name, u.email, u.role
                 ORDER BY u.name NULLS LAST, u.email
                 """,
@@ -412,6 +413,7 @@ def task_tracking():
                 FROM inventory
                 WHERE (created_at AT TIME ZONE 'Asia/Kolkata')::DATE = {_TODAY_IST}
                   AND COALESCE(cardinality(assigned_rm_ids), 0) = 0
+                  AND NOT consider_deleted
                 """,
             )
             un = cur.fetchone()
@@ -439,7 +441,7 @@ def rm_stage_counts():
     Multi-RM leads count toward each assignee (unnest of assigned_rm_ids).
     Response: { users: [{ id, name, email, role, total, counts: {stage: n} }] }
     """
-    where = ["i.stage IS NOT NULL"]
+    where = ["i.stage IS NOT NULL", "NOT i.consider_deleted"]
     params: list = []
     af = (request.args.get("assigned_from") or "").strip()
     at = (request.args.get("assigned_to") or "").strip()

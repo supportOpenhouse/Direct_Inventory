@@ -804,6 +804,10 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
   .modal-backdrop, .modal, .modal-backdrop-closing, .modal-backdrop-closing .modal { animation-duration: .01ms; }
 }
 .modal-wide { max-width: 720px; }
+/* Soft-deleted lead (inventory.consider_deleted). It's gone from every board,
+   so the dashed red frame is the signal that what you're reading only still
+   exists behind an activity-log link. */
+.modal-deleted { border: 2px dashed #ff1f1f; }
 .modal h3 { font-size: 19px; margin-bottom: 4px; }
 .modal-sub { color: var(--text-muted); font-size: 13px; margin: 0 0 16px; }
 .modal-actions { display: flex; gap: 10px; align-items: center; margin-top: 20px; }

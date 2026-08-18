@@ -273,6 +273,7 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
             "SELECT id, society, bedrooms, floor, tower, unit_no, area_sqft "
             "FROM inventory "
             "WHERE cp_match IS NULL "
+            "  AND NOT consider_deleted "
             "  AND id > %s "
             "  AND society IS NOT NULL "
             "  AND TRIM(society) <> '' "

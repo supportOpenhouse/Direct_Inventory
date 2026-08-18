@@ -74,7 +74,7 @@ def run_supply_sync(actor_user_id: int | None = None, actor_email: str | None = 
             )
             cur.execute(
                 "UPDATE inventory i SET stage = s.stage, stage_reason = s.stage_reason, updated_at = NOW() "
-                "FROM _supply s WHERE i.oh_id = s.oh_id"
+                "FROM _supply s WHERE i.oh_id = s.oh_id AND NOT i.consider_deleted"
             )
             updated = cur.rowcount
             if actor_email is not None:

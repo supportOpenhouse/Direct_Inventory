@@ -112,6 +112,9 @@ export function stageLabel(s) {
     rejected_post_visit: 'Rejected Post Visit',
     cancelled_post_token: 'Cancelled Post Token',
     visit_cancelled: 'Visit Cancelled',
+    // Soft delete — derived by the API from inventory.consider_deleted; only
+    // ever reaches the client through the activity-log UID popup.
+    deleted: 'Deleted',
     // Legacy — historical rows still render.
     unqualified: 'Lead',
     follow_up_cnr: 'Follow Up (CNR)',
@@ -151,6 +154,7 @@ export const STAGE_DOT_COLOR = {
   rejected_post_visit: '#ef4444',
   cancelled_post_token: '#64748b',
   visit_cancelled: '#b45309',
+  deleted: '#ff1f1f',
   // Legacy
   lead: '#fa541c',
   follow_up_cnr: '#facc15',

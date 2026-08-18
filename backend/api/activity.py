@@ -627,6 +627,7 @@ def user_report_analytics():
             cur.execute(
                 "SELECT COUNT(*) AS leads FROM inventory i "
                 "WHERE i.created_at >= %s AND i.created_at < %s "
+                "  AND NOT i.consider_deleted "
                 f"  {cohort_user_clause}",
                 cohort_params,
             )
@@ -636,6 +637,7 @@ def user_report_analytics():
                 "WITH cohort AS ("
                 "  SELECT i.oh_id FROM inventory i "
                 "  WHERE i.created_at >= %s AND i.created_at < %s "
+                "    AND NOT i.consider_deleted "
                 f"    {cohort_user_clause}"
                 ") "
                 "SELECT a.after_value AS stage, "

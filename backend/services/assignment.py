@@ -246,6 +246,7 @@ def assign_missing_batch(
                     WHERE ((society IS NOT NULL AND TRIM(society) <> '')
                            OR (city IS NOT NULL AND TRIM(city) <> ''))
                       {unassigned_clause}
+                      AND NOT consider_deleted
                       AND id > %s
                     ORDER BY id
                     LIMIT %s""",
@@ -342,6 +343,7 @@ def assign_missing_batch(
         cur.execute(
             """SELECT COUNT(*) AS n FROM inventory
                WHERE cardinality(assigned_rm_ids) = 0
+                 AND NOT consider_deleted
                  AND ((society IS NOT NULL AND TRIM(society) <> '')
                       OR (city IS NOT NULL AND TRIM(city) <> ''))"""
         )
