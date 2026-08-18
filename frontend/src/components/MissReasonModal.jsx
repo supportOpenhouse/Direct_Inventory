@@ -30,7 +30,6 @@ export default function MissReasonModal({ ohId, queueItemId, onClose, onDone }) 
   const isReject = mins === null;
 
   async function submit() {
-    if (!notes.trim()) return toast('Notes are required.', 'error');
     setBusy(true);
     try {
       const r = await api.post(`/api/live-calls/leads/${encodeURIComponent(ohId)}/result`,
@@ -63,10 +62,9 @@ export default function MissReasonModal({ ohId, queueItemId, onClose, onDone }) 
             </select>
           </label>
           <label className="dl-field">
-            <span>Notes <b style={{ color: 'var(--red)' }}>*</b></span>
+            <span>Notes <span className="muted" style={{ fontWeight: 400 }}>(optional)</span></span>
             <textarea className="dl-input" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)}
               placeholder="What happened on the call…" />
-            {!notes.trim() && <em className="dl-hint" style={{ color: 'var(--red)' }}>⚠ Notes are required.</em>}
           </label>
           <p className="dl-note" style={{ margin: 0 }}>
             {isReject ? 'Invalid number — this lead moves to Rejected.' : `Follow-up will be set for ${previewDate(mins)}.`}
@@ -74,7 +72,7 @@ export default function MissReasonModal({ ohId, queueItemId, onClose, onDone }) 
         </div>
         <div className="lc-mf">
           <button className="btn-ghost" onClick={onClose} disabled={busy}>Cancel</button>
-          <button className="btn-primary" onClick={submit} disabled={busy || !notes.trim()}>
+          <button className="btn-primary" onClick={submit} disabled={busy}>
             {busy ? 'Saving…' : 'Log attempt'}
           </button>
         </div>

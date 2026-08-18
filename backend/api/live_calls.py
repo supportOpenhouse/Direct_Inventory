@@ -96,8 +96,12 @@ def my_calls():
             cur.execute(
                 "SELECT q.id::text AS id, q.oh_id, q.dialed_at, q.ended_at, q.answered, "
                 "       q.outcome, q.attempts, q.call_result, q.call_result_at, "
-                "       l.seller_name AS name, l.seller_phone AS phone, l.society, l.city, l.stage "
+                "       l.seller_name AS name, l.seller_phone AS phone, l.society, l.city, l.stage, "
+                # will the dialer ring this lead again? mirrors the requeue rule (unanswered
+                # + attempts left). false → the call is final → offer a status change.
+                "       (NOT q.answered AND q.attempts < COALESCE(c.max_attempts, 1)) AS retries_left "
                 "  FROM dial_queue q JOIN inventory l ON l.oh_id = q.oh_id "
+                "  LEFT JOIN dial_campaigns c ON c.id = q.campaign_id "
                 " WHERE lower(q.rm_email) = lower(%(email)s) AND q.dialed_at IS NOT NULL "
                 "   AND (q.dialed_at AT TIME ZONE 'Asia/Kolkata')::date "
                 "     = (now()       AT TIME ZONE 'Asia/Kolkata')::date "
@@ -189,8 +193,7 @@ def mark_result(oh_id):
         notes = (body.get("notes") or "").strip()
         if reason not in MISS_REASONS:
             return jsonify({"error": "pick a reason for the miss"}), 422
-        if not notes:
-            return jsonify({"error": "notes are required for a miss"}), 422
+        # notes are optional — the reason already drives the follow-up/reject logic
         reject = MISS_REASONS[reason] is None
         due_date = None if reject else _followup_date(MISS_REASONS[reason])
 
@@ -201,7 +204,7 @@ def mark_result(oh_id):
             # that isn't marked yet. The only authorization barrier, so never optional;
             # `call_result IS NULL` stops a double-submit double-counting the miss.
             cur.execute(
-                "SELECT id FROM dial_queue WHERE id = %(qid)s AND oh_id = %(oh)s "
+                "SELECT id FROM dial_queue WHERE id::text = %(qid)s AND oh_id = %(oh)s "
                 "  AND lower(rm_email) = lower(%(email)s) AND call_result IS NULL",
                 {"qid": queue_item_id, "oh": oh_id, "email": email})
             if cur.fetchone() is None:
@@ -218,7 +221,8 @@ def mark_result(oh_id):
                 result = {"status": "ok", "connected": True, "miss_count": 0}
                 blocked = False
             else:
-                note_json = json.dumps([_note_entry(f"Call attempt — {reason}. {notes}")])
+                note_body = f"Call attempt — {reason}." + (f" {notes}" if notes else "")
+                note_json = json.dumps([_note_entry(note_body)])
                 # One statement applies miss_count / stage / follow-up / reject / note
                 # atomically. A dialer retry is a legitimate repeat call, so the 2h
                 # anti-spam cooldown is waived (skip=true); ownership already gates it.
@@ -278,8 +282,11 @@ def mark_result(oh_id):
             if not blocked:
                 cur.execute(
                     "UPDATE dial_queue SET call_result = %(r)s, call_result_at = now(), "
-                    "  call_result_by = %(email)s WHERE id = %(qid)s",
+                    "  call_result_by = %(email)s WHERE id::text = %(qid)s",
                     {"r": "connected" if connected else "missed", "qid": queue_item_id, "email": email})
+    except Exception as e:  # noqa: BLE001 — surface the real cause instead of a bare 500
+        log.exception("live-calls: mark_result failed for oh_id=%s", oh_id)
+        return jsonify({"error": f"could not save the call result: {str(e)[:200]}"}), 500
     finally:
         conn.close()
     return jsonify(result)

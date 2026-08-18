@@ -196,7 +196,7 @@ export default function DialerPrevious() {
             {isLive ? (
               <span style={{ display: 'flex', gap: 6 }}>
                 <button className="btn-ghost" onClick={() => act(running ? 'pause' : 'start')}>{running ? 'Pause' : 'Resume'}</button>
-                <button className="btn-ghost" onClick={() => act('stop')}>Stop</button>
+                <button className="btn-ghost" onClick={() => { if (window.confirm('Cancel this campaign? Any calls already ringing finish, pending leads are dropped, and it can’t be resumed.')) act('stop'); }}>Cancel campaign</button>
               </span>
             ) : <span className="dl-count">{c?.started_at ? formatCallTime(c.started_at) : 'never started'}</span>}
           </div>

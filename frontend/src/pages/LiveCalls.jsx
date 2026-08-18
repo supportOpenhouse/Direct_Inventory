@@ -5,6 +5,7 @@ import { toast } from '../utils/toast.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { formatCallTime } from '../utils/format.js';
 import MissReasonModal from '../components/MissReasonModal.jsx';
+import StatusEditModal from '../components/StatusEditModal.jsx';
 
 /* Live Calls (RM) — who the dialer is ringing you right now, what's queued, and the
    disposition worklist for today's calls. Polls /my-calls every 4s (no SSE); marking a
@@ -63,14 +64,34 @@ function Upcoming({ items, shared }) {
 function CompletedRow({ lead, onMark }) {
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+
+  // Pull the full inventory record so the status modal (and its visit/reject sub-flows)
+  // has every field; fall back to the row's own fields if the fetch is denied.
+  async function openStatus() {
+    try {
+      const rec = await api.get(`/api/inventory/${encodeURIComponent(lead.oh_id)}`);
+      setEditItem(rec?.item || rec || { oh_id: lead.oh_id, stage: lead.stage, society: lead.society });
+    } catch {
+      setEditItem({ oh_id: lead.oh_id, stage: lead.stage, society: lead.society });
+    }
+  }
 
   if (lead.call_result) {
     const ok = lead.call_result === 'connected';
+    // Offer a status change once the call is final: connected, or missed with no auto-redial left.
+    const canChange = ok || !lead.retries_left;
     return (
       <li className="lc-done">
         <span className="lc-qname">{lead.name || 'Unnamed lead'}</span>
         <span className="lc-muted">{formatCallTime(lead.dialed_at)}</span>
         <span className={ok ? 'lc-ok' : 'lc-miss'}>{ok ? '✓ connected' : '✕ not reached'}</span>
+        {canChange && <button className="cc-btn no" style={{ marginLeft: 8 }} onClick={openStatus}>Change status</button>}
+        {editItem && (
+          <StatusEditModal item={editItem}
+            onClose={() => setEditItem(null)}
+            onUpdated={() => { setEditItem(null); onMark(); }} />
+        )}
       </li>
     );
   }
