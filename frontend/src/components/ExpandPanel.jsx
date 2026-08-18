@@ -7,6 +7,7 @@ import CancelVisitModal from './CancelVisitModal.jsx';
 import RescheduleVisitModal from './RescheduleVisitModal.jsx';
 import VisitScheduleModal from './VisitScheduleModal.jsx';
 import OhPrice from './OhPrice.jsx';
+import CallActivityCard from './CallActivityCard.jsx';
 import TicketModal, { emitTicketsChanged, ticketStatusClass, ticketStatusLabel } from './TicketModal.jsx';
 import { formatDateShort, formatPrice, STAGE_DOT_COLOR, stageLabel, supplyReasonLabel, SUPPLY_STAGES, variation } from '../utils/format.js';
 
@@ -295,6 +296,9 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
           {showAssignedRm && <AssignedRmField item={full} role={role} onUpdated={onUpdated} />}
         </div>
       )}
+
+      {/* Bonvoice call history — self-hides until this lead has been rung. */}
+      <CallActivityCard ohId={item.oh_id} />
 
       {show.includes('notes') && (
         <div className="expand-sec">

@@ -357,3 +357,16 @@ export function ohMatchInfo(item) {
       return { matched: false, sub: 'no match', title: 'No OH price for this society + BHK' };
   }
 }
+
+// ── Bonvoice call log ──────────────────────────────────────────────────────
+export function formatCallTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}, ${d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+}
+// Leg duration as m:ss. No end_at → unknown length, shown as a dash (never faked 0).
+export function callDuration(start, end) {
+  if (!start || !end) return '—';
+  const secs = Math.max(0, Math.round((new Date(end) - new Date(start)) / 1000));
+  return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+}

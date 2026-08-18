@@ -20,6 +20,10 @@ const Logs = lazy(() => import('./pages/Logs.jsx'));
 const TrackTasks = lazy(() => import('./pages/TrackTasks.jsx'));
 const Tickets = lazy(() => import('./pages/Tickets.jsx'));
 const MyProfile = lazy(() => import('./pages/MyProfile.jsx'));
+const CallLog = lazy(() => import('./pages/CallLog.jsx'));
+const Dialer = lazy(() => import('./pages/Dialer.jsx'));
+const DialerPrevious = lazy(() => import('./pages/DialerPrevious.jsx'));
+const LiveCalls = lazy(() => import('./pages/LiveCalls.jsx'));
 
 function RequireAuth({ children, roles }) {
   const { user, loading } = useAuth();
@@ -57,6 +61,13 @@ export default function App() {
           <Route path="/profile" element={<MyProfile />} />
           <Route path="/users" element={<RequireAuth roles={[]}><Users /></RequireAuth>} />
           <Route path="/logs" element={<RequireAuth roles={[]}><Logs /></RequireAuth>} />
+          <Route path="/call-log" element={<RequireAuth roles={[]}><CallLog /></RequireAuth>} />
+          <Route path="/dialer/schedule" element={<RequireAuth roles={[]}><Dialer /></RequireAuth>} />
+          <Route path="/dialer/previous" element={<RequireAuth roles={[]}><DialerPrevious /></RequireAuth>} />
+          <Route path="/dialer" element={<Navigate to="/dialer/schedule" replace />} />
+          {/* RM-facing live-call worklist. RequireAuth lets admins through; the page
+              itself bounces non-RMs home (admins run campaigns, they don't take calls). */}
+          <Route path="/live-calls" element={<RequireAuth roles={['rm']}><LiveCalls /></RequireAuth>} />
           <Route path="/track-tasks" element={<RequireAuth roles={[]}><TrackTasks /></RequireAuth>} />
         </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

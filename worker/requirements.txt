@@ -1,0 +1,3 @@
+# The worker imports the shared dialer core from ../backend, so it needs the same deps.
+# poll_open_calls lazily imports backend.api.bonvoice (Flask Blueprint), hence Flask too.
+-r ../backend/requirements.txt

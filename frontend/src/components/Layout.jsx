@@ -11,7 +11,7 @@ import AddInventoryButton from './AddInventoryButton.jsx';
 import CreateTicketButton from './CreateTicketButton.jsx';
 import {
   IconHome, IconLeads, IconQualified, IconFollowUp, IconVisit, IconPipeline, IconRejected,
-  IconReport, IconUsers, IconLogs, IconTasks, IconTicket, IconSun, IconMoon, IconMenu, IconLogout, IconChevron,
+  IconReport, IconUsers, IconLogs, IconTasks, IconTicket, IconPhone, IconDialer, IconSun, IconMoon, IconMenu, IconLogout, IconChevron,
 } from './icons.jsx';
 
 const PRIMARY = [
@@ -30,7 +30,8 @@ const TITLES = {
   pipeline: 'Supply Closure Tracker', tickets: 'Tickets',
   'post-token': 'Post Token', rejected: 'Rejected', report: 'Report',
   'my-report': 'My Report', users: 'Users', logs: 'Activity Logs',
-  'track-tasks': 'Track Tasks', profile: 'My Profile',
+  'track-tasks': 'Track Tasks', profile: 'My Profile', 'call-log': 'Bonvoice Call Log',
+  dialer: 'Auto Dialer', 'live-calls': 'Live Calls',
 };
 
 function initials(name, email) {
@@ -47,6 +48,8 @@ const PAGE_ORDER = {
   '/pipeline': 5, '/rejected': 6, '/tickets': 7,
   '/report': 8, '/my-report': 8, '/report/detail': 8,
   '/track-tasks': 9, '/users': 10, '/logs': 11,
+  '/dialer': 12, '/dialer/schedule': 12, '/dialer/previous': 13, '/call-log': 14,
+  '/live-calls': 1,
 };
 function pageIndex(path) {
   if (path in PAGE_ORDER) return PAGE_ORDER[path];
@@ -82,6 +85,7 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('di_sidebar_collapsed') === '1');
   const [ticketDot, setTicketDot] = useState(0);
+  const [liveCallsDot, setLiveCallsDot] = useState(0);
 
   // Poll the "needs my action" ticket count for the nav dot: every 15s while
   // the tab is visible (paused when hidden), immediately on focus/return, and
@@ -119,6 +123,29 @@ export default function Layout() {
 
   const isAdmin = user?.role === 'admin';
   const isManager = user?.role === 'manager';
+  const isRm = user?.role === 'rm';
+
+  // RM nav badge: my dialer calls today still awaiting a result. Polled like the
+  // ticket dot (15s, paused when hidden, refresh on focus) so it stays live even
+  // when the Live Calls page isn't open.
+  useEffect(() => {
+    if (!isRm) return undefined;
+    let ok = true;
+    const refresh = () => api.get('/api/live-calls/unmarked-count')
+      .then((r) => { if (ok) setLiveCallsDot(r?.count || 0); }).catch(() => {});
+    refresh();
+    const id = setInterval(() => { if (!document.hidden) refresh(); }, 15000);
+    const onVisible = () => { if (!document.hidden) refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    window.addEventListener('live-calls:changed', refresh);  // in-tab mark → re-poll now
+    return () => {
+      ok = false; clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+      window.removeEventListener('live-calls:changed', refresh);
+    };
+  }, [isRm]);
   const seg = loc.pathname.split('/')[1] || '';
   const title = TITLES[seg] || 'Direct Inventory';
 
@@ -130,7 +157,8 @@ export default function Layout() {
   }
 
   const navItem = ({ to, label, Icon, end, dotKey }) => {
-    const showDot = dotKey === 'tickets' && ticketDot > 0;
+    const dotCount = dotKey === 'tickets' ? ticketDot : dotKey === 'liveCalls' ? liveCallsDot : 0;
+    const showDot = dotCount > 0;
     return (
       <NavLink key={to} to={to} end={end}
         className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
@@ -140,7 +168,7 @@ export default function Layout() {
           {showDot && <span className="nav-dot" aria-label="Needs your action" />}
         </span>
         <span className="nav-label">{label}</span>
-        {showDot && <span className="nav-count">{ticketDot}</span>}
+        {showDot && <span className="nav-count">{dotCount}</span>}
       </NavLink>
     );
   };
@@ -163,6 +191,8 @@ export default function Layout() {
 
         {PRIMARY.map(navItem)}
 
+        {isRm && navItem({ to: '/live-calls', label: 'Live Calls', Icon: IconDialer, dotKey: 'liveCalls' })}
+
         <div className="sidebar-section-label">Insights</div>
         {(isAdmin || isManager)
           ? navItem({ to: '/report', label: 'Report', Icon: IconReport })
@@ -174,6 +204,11 @@ export default function Layout() {
             {navItem({ to: '/track-tasks', label: 'Track Tasks', Icon: IconTasks })}
             {navItem({ to: '/users', label: 'Users', Icon: IconUsers })}
             {navItem({ to: '/logs', label: 'Logs', Icon: IconLogs })}
+
+            <div className="sidebar-section-label">Auto Dialer</div>
+            {navItem({ to: '/dialer/schedule', label: 'Schedule Campaign', Icon: IconDialer })}
+            {navItem({ to: '/dialer/previous', label: 'Previous Campaigns', Icon: IconDialer })}
+            {navItem({ to: '/call-log', label: 'Bonvoice Call Log', Icon: IconPhone })}
           </>
         )}
 

@@ -32,6 +32,9 @@ class _JSONProvider(DefaultJSONProvider):
         return DefaultJSONProvider.default(o)
 from .api import activity as activity_api
 from .api import auth as auth_api
+from .api import bonvoice as bonvoice_api
+from .api import dialer as dialer_api
+from .api import live_calls as live_calls_api
 from .api import geo as geo_api
 from .api import home as home_api
 from .api import post_token as post_token_api
@@ -94,6 +97,9 @@ def create_app() -> Flask:
     app.register_blueprint(activity_api.bp)
     app.register_blueprint(geo_api.bp)
     app.register_blueprint(tickets_api.bp)
+    app.register_blueprint(bonvoice_api.bp)
+    app.register_blueprint(dialer_api.bp)
+    app.register_blueprint(live_calls_api.bp)
     return app
 
 

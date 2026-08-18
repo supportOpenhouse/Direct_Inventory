@@ -2,6 +2,7 @@ import { Fragment, useState } from 'react';
 import ExpandPanel from './ExpandPanel.jsx';
 import OhPrice from './OhPrice.jsx';
 import StarCell from './StarCell.jsx';
+import CallButton from './CallButton.jsx';
 import {
   displayCity, formatDateCompact, formatDateRel, formatDateShort, formatPrice, isCreatedToday, reasonLabelAny, rowFlag, starColor,
   STAGE_DOT_COLOR, stageLabel, variation,
@@ -151,7 +152,7 @@ export default function InventoryTable({
                   )}
                   <td className="inv-td-muted inv-col-followup">{formatDateShort(item.follow_up_at)}</td>
                   <td><span className="inv-clip inv-clip-seller" title={item.seller_name || ''}>{item.seller_name || '—'}</span></td>
-                  <td className="inv-td-muted">{item.seller_phone || '—'}</td>
+                  <td className="inv-td-muted"><span className="phone-cell">{item.seller_phone || '—'}<CallButton ohId={item.oh_id} phone={item.seller_phone} /></span></td>
                   <td className="inv-td-muted inv-col-posted">{formatDateCompact(item.posting_date)}</td>
                   <td className="inv-td-muted">{item.created_at ? formatDateRel(item.created_at) : '—'}</td>
                   {isAdmin && <td className="inv-td-muted" title={assignedRmsTitle(item.assigned_rms)}><span className="inv-clip inv-clip-rm">{formatAssignedRms(item.assigned_rms)}</span></td>}
