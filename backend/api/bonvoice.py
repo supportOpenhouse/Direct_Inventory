@@ -13,6 +13,7 @@ import json
 import logging
 import re
 import secrets
+import time
 from datetime import datetime, timedelta, timezone
 
 import requests
@@ -118,27 +119,58 @@ def _dt(value):
         return None
 
 
-# Only log calls that actually went through our DID. A shared Bonvoice account's
-# pulled records (and possibly its webhook) also carry other numbers' calls, which
-# aren't ours — those are dropped. Checked against every number-ish field on the
-# record (last-10-digit match, since formats vary). An unset DID disables the filter.
-_DID_NUMBER_KEYS = (
-    "sourcenumber", "destinationnumber", "displaynumber", "did", "did_number",
-    "virtualnumber", "customer", "agent", "from", "to", "caller", "callee",
-    "callernumber", "callednumber", "source_number", "destination_number", "display_number",
-)
+# Only log calls that are actually ours. A shared Bonvoice account's records (pulled and
+# possibly via the webhook) carry other numbers' calls too. A call is "ours" if one of its
+# Agent / Destination / Source / Display numbers matches a portal user's mobile OR the DID.
+# Right now Bonvoice returns the RM's own number (not the DID) in these fields, so the
+# user-phone match is what keeps our calls; the DID match covers the later switch to a DID.
+# The number fields we check (last-10-digit match, since formats vary).
+_OURS_NUMBER_KEYS = ("Agent", "DestinationNumber", "SourceNumber", "DisplayNumber")
+_accept_cache = {"nums": None, "at": 0.0}
+_ACCEPT_TTL = 60.0  # seconds — a burst of callbacks shouldn't hit the DB each time
 
 
-def _involves_did(body):
-    """True if BONVOICE_DID appears in any number field of this record (or the DID
-    isn't configured, in which case nothing is filtered)."""
-    did10 = bv.digits(config.BONVOICE_DID)
-    if not did10:
+def accept_numbers(force=False):
+    """Last-10 phone numbers we recognise as ours: every portal user's mobile plus the
+    configured DID. Cached ~60s. Returns None if it couldn't be loaded (→ fail open, don't
+    drop logs)."""
+    now = time.monotonic()
+    if not force and _accept_cache["nums"] is not None and now - _accept_cache["at"] < _ACCEPT_TTL:
+        return _accept_cache["nums"]
+    nums = set()
+    did = bv.digits(config.BONVOICE_DID)
+    if did:
+        nums.add(did)
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT phone FROM users WHERE phone IS NOT NULL AND btrim(phone) <> ''")
+            for r in cur.fetchall():
+                d = bv.digits(r["phone"])
+                if d:
+                    nums.add(d)
+    except Exception:  # noqa: BLE001 — never drop legit logs over a transient DB blip
+        log.exception("bonvoice: couldn't load accept-numbers; not filtering this record")
+        return None
+    finally:
+        conn.close()
+    _accept_cache["nums"] = nums
+    _accept_cache["at"] = now
+    return nums
+
+
+def _is_ours(body, accept=None):
+    """True if this call belongs to us — its Agent/Destination/Source/Display number is a
+    portal user's mobile or the DID. accept=None loads (and caches) the set; an empty or
+    unavailable set keeps everything (fail open, so nothing is dropped before phones/DID
+    are configured)."""
+    if accept is None:
+        accept = accept_numbers()
+    if not accept:  # None (load failed) or empty (no phones/DID yet) → don't filter
         return True
-    lowered = {str(k).lower(): v for k, v in body.items()}
-    for k in _DID_NUMBER_KEYS:
-        v = lowered.get(k)
-        if v and bv.digits(v) == did10:
+    for name in _OURS_NUMBER_KEYS:
+        d = bv.digits(_field(body, name))
+        if d and d in accept:
             return True
     return False
 
@@ -226,8 +258,8 @@ def _persist(body):
     """Upsert one leg with only what this lifecycle event knows. COALESCE precedence
     per column so a late 'initiated' can't blank the hangup's end_at; `answered` is
     OR-ed so it never flips back to false."""
-    if not _involves_did(body):
-        log.info("bonvoice: ignoring call — BONVOICE_DID not among its numbers (call=%s)", body.get("callID"))
+    if not _is_ours(body):
+        log.info("bonvoice: ignoring call — no RM mobile or DID among its numbers (call=%s)", body.get("callID"))
         return
 
     _release_dial_slot(body)   # first + separate, best-effort
@@ -481,10 +513,11 @@ def attach_lead_and_actor(mapped):
 def sync_calls(date_from, date_to, agent=None):
     """Pull Bonvoice's call records for a date range and upsert them."""
     records = fetch_call_records(date_from, date_to, agent)
-    # Keep only calls that went through our DID — the account-wide pull also returns
-    # other numbers' calls. Filter the raw record (its original DisplayNumber/DID
-    # fields), before record_to_callback remaps them.
-    ours = [r for r in records if _involves_did(r)]
+    # Keep only calls that are ours (an RM's mobile or the DID among their numbers) — the
+    # account-wide pull also returns other numbers' calls. Filter the raw record before
+    # record_to_callback remaps its fields. One fresh accept-set for the whole batch.
+    accept = accept_numbers(force=True)
+    ours = [r for r in records if _is_ours(r, accept)]
     mapped = [m for m in (record_to_callback(r) for r in ours) if m["callID"]]
     linked = attach_lead_and_actor(mapped)
     # ponytail: one upsert per record, sequentially. A day is ~30 round trips on the
