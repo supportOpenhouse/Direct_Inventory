@@ -109,7 +109,7 @@ export default function CallLog() {
           <option value="">Placed by</option>
           <option value={BY_LEAD}>By Lead</option>
           <option value={BY_UNKNOWN}>Unknown</option>
-          {actors.map((a) => <option key={a} value={a}>{a}</option>)}
+          {actors.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
         </select>
         <select className="al-filter-select" value={dur} onChange={(e) => reset(() => setDur(e.target.value))}>
           <option value="">Duration</option>
@@ -178,7 +178,7 @@ export default function CallLog() {
                   <td>{c.recording_url ? <RecordingPlayer src={c.recording_url} /> : <span className="muted">—</span>}</td>
                   <td className="muted" style={{ fontSize: 12 }}>
                     {/* Inbound has no placed_by — the lead dialled, so credit them. */}
-                    {c.lead_side === 'from' && c.oh_id ? (c.lead_name || c.oh_id) : (c.placed_by || '—')}
+                    {(c.lead_name || c.oh_id || '—')} → {(c.rm_name || c.placed_by || '—')}
                   </td>
                 </tr>
               ))

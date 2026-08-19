@@ -707,6 +707,53 @@ def _numbers_clause(nums, cols=("c.source_number", "c.destination_number", "c.di
     return cond, [sorted(nums)] * len(cols)
 
 
+def _my_scope_data(user):
+    """(phone_numbers_last10:set, user_ids:list) for this user's call scope. A manager's
+    set spans their whole team (their RMs + themselves)."""
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            if user["role"] == "manager":
+                cur.execute("SELECT id, phone FROM users WHERE id = %s OR manager = %s",
+                            (user["id"], user["id"]))
+            else:
+                cur.execute("SELECT id, phone FROM users WHERE id = %s", (user["id"],))
+            rows = cur.fetchall()
+    finally:
+        conn.close()
+    nums = {d for d in (bv.digits(r["phone"]) for r in rows) if d}
+    return nums, [r["id"] for r in rows]
+
+
+def _role_scope(user):
+    """(sql, params) limiting the call log for a non-admin. A call is theirs if its number
+    matches their (or their team's) mobile, OR it's a call for a lead assigned to them —
+    the latter is what surfaces INCOMING calls, whose number fields hold the DID + lead's
+    number, not the RM's. None = admin (unscoped)."""
+    if user["role"] == "admin":
+        return None, []
+    nums, ids = _my_scope_data(user)
+    conds, params = [], []
+    if nums:
+        ncond, np = _numbers_clause(nums)
+        conds.append(ncond)
+        params += np
+    if ids:
+        conds.append("c.oh_id IN (SELECT oh_id FROM inventory WHERE assigned_rm_ids && %s::int[])")
+        params.append(sorted(ids))
+    return ("(" + " OR ".join(conds) + ")" if conds else "FALSE"), params
+
+
+# lead name → RM name for the "Placed by" column. Prefers the actor who dialled
+# (placed_by / callBackParams.actor, resolved to their name); falls back to the lead's
+# first assigned RM (so an incoming call still credits the RM).
+RM_NAME_SQL = (
+    "COALESCE("
+    f"  (SELECT u.name FROM users u WHERE lower(u.email) = lower({PLACED_BY_SQL})), "
+    "  (SELECT u2.name FROM users u2 WHERE u2.id = l.assigned_rm_ids[1]))"
+)
+
+
 @bp.get("/calls")
 @require_auth()
 def call_log():
@@ -723,14 +770,12 @@ def call_log():
 
     clause, params = call_log_filters(q, answered, campaign_id, placed_by, duration)
 
-    # Restrict to the caller's own / team numbers unless they're an admin.
-    nums = _my_call_numbers(g.user)
-    if nums is not None:
-        if not nums:
-            return jsonify({"items": [], "total": 0})
-        cond, cparams = _numbers_clause(nums)
-        clause = (clause + " AND " + cond) if clause else (" WHERE " + cond)
-        params = [*params, *cparams]
+    # Non-admins: their own/team calls — matched by number OR by the lead's assignment
+    # (the latter surfaces incoming calls, whose numbers are the DID + lead, not the RM).
+    scope_cond, scope_params = _role_scope(g.user)
+    if scope_cond is not None:
+        clause = (clause + " AND " + scope_cond) if clause else (" WHERE " + scope_cond)
+        params = [*params, *scope_params]
 
     conn = get_conn()
     try:
@@ -741,7 +786,7 @@ def call_log():
                 SELECT c.call_id, c.leg, c.event_id, c.oh_id, l.seller_name AS lead_name,
                        c.direction, c.source_number, c.destination_number, c.display_number,
                        c.status, c.agent_status, c.answered, c.start_at, c.end_at, c.recording_url,
-                       {PLACED_BY_SQL} AS placed_by,
+                       {PLACED_BY_SQL} AS placed_by, {RM_NAME_SQL} AS rm_name,
                        {_lead_side_sql()} AS lead_side
                 {CALL_LOG_FROM}{clause}
                  ORDER BY COALESCE(c.start_at, c.created_at) DESC
@@ -757,22 +802,23 @@ def call_log():
 def call_log_actors():
     """Distinct people who placed a call — the "Calls placed by" dropdown. Server-side
     because the page holds only 50 rows; deriving from screen would hide off-page RMs."""
-    nums = _my_call_numbers(g.user)
+    scope_cond, scope_params = _role_scope(g.user)
     extra, eparams = "", []
-    if nums is not None:
-        if not nums:
-            return jsonify({"items": []})
-        cond, cparams = _numbers_clause(nums)
-        extra, eparams = " AND " + cond, cparams
+    if scope_cond is not None:
+        extra, eparams = " AND " + scope_cond, scope_params
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
-            cur.execute(f"SELECT DISTINCT {PLACED_BY_SQL} AS a {CALL_LOG_FROM} "
-                        f"WHERE {PLACED_BY_SQL} IS NOT NULL{extra} ORDER BY 1", eparams)
+            # {value: actor email, label: their name} so the dropdown shows names.
+            cur.execute(
+                f"SELECT DISTINCT {PLACED_BY_SQL} AS email, "
+                f"       (SELECT u.name FROM users u WHERE lower(u.email) = lower({PLACED_BY_SQL})) AS name "
+                f"{CALL_LOG_FROM} WHERE {PLACED_BY_SQL} IS NOT NULL{extra} ORDER BY 2 NULLS LAST, 1",
+                eparams)
             rows = cur.fetchall()
     finally:
         conn.close()
-    return jsonify({"items": [r["a"] for r in rows]})
+    return jsonify({"items": [{"value": r["email"], "label": r["name"] or r["email"]} for r in rows]})
 
 
 # ── incoming-call notifications ──────────────────────────────────────────────

@@ -267,7 +267,7 @@ export default function DialerPrevious() {
                     </td>
                     <td style={{ fontFamily: "'Spline Sans Mono', monospace", fontSize: 12 }}>{callDuration(r.start_at, r.end_at)}</td>
                     <td>{r.recording_url ? <RecordingPlayer src={r.recording_url} /> : <span className="muted">—</span>}</td>
-                    <td className="muted" style={{ fontSize: 12 }}>{r.placed_by || '—'}</td>
+                    <td className="muted" style={{ fontSize: 12 }}>{(r.lead_name || r.oh_id || '—')} → {(r.rm_name || r.placed_by || '—')}</td>
                   </tr>
                 ))}
               </tbody>
