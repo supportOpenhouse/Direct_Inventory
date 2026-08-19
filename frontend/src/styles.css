@@ -578,6 +578,11 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .reason-counts .count-pill { min-width: 72px; padding: 8px 10px; }
 .reason-counts .count-pill .num { font-size: 17px; color: var(--red); }
 .reason-counts .count-pill .lbl { font-size: 9.5px; }
+/* All reason pills on ONE line — each flexes to share the width, and a label too
+   long for its share truncates with "…" (full text on hover via title). */
+.reason-counts .stage-pills { flex-wrap: nowrap; }
+.reason-counts .count-pill { flex: 1 1 0; min-width: 0; }
+.reason-counts .count-pill .lbl { width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .filtered-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 13px; }
 .page-num { display: flex; align-items: center; gap: 10px; color: var(--text-2); white-space: nowrap; }
@@ -781,9 +786,10 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .leads-atable { table-layout: fixed; }
 .leads-atable .inv-th-star, .leads-atable .inv-td-star { width: 44px; }
 .leads-atable th:nth-child(3), .leads-atable td:nth-child(3) { width: 70px; }    /* Link */
-.leads-atable th:nth-child(4), .leads-atable td:nth-child(4) { width: 162px; }   /* Action */
+.leads-atable th:nth-child(4), .leads-atable td:nth-child(4) { width: 212px; }   /* Action */
 .leads-atable .inv-td-society { overflow: hidden; }
-.leads-atable .lead-actions { flex-wrap: wrap; }
+.leads-atable .lead-actions { flex-wrap: nowrap; }
+.leads-atable .lead-act-q, .leads-atable .lead-act-r { white-space: nowrap; }
 .lead-society-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .lead-society-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .lead-society-line .new-badge-img { flex: none; margin-left: 0; }

@@ -329,7 +329,7 @@ export default function InventoryBoard({
             {reasonList.map(([r, n]) => (
               <button key={r} type="button" className={reasonSel.has(r) ? 'count-pill count-pill-active' : 'count-pill'} onClick={() => toggleReasonPill(r)}>
                 <div className="num">{n}</div>
-                <div className="lbl">{reasonLabelAny(r).toUpperCase()}</div>
+                <div className="lbl" title={reasonLabelAny(r).toUpperCase()}>{reasonLabelAny(r).toUpperCase()}</div>
               </button>
             ))}
           </div>
