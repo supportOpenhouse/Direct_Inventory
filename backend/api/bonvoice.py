@@ -675,10 +675,43 @@ def call_log_filters(q, answered, campaign_id=None, placed_by=None, duration=Non
     return clause, params
 
 
+# ── role scoping ───────────────────────────────────────────────────────────
+#
+# The Call Log is visible to RMs and managers too, but scoped by phone number:
+# an RM sees only calls involving their own mobile, a manager sees their whole team's
+# (their RMs + themselves), an admin sees everything.
+
+def _my_call_numbers(user, own=False):
+    """Last-10 phone numbers whose calls this user may see. admin (own=False) → None
+    (unscoped). manager (own=False) → team RMs' + own. everyone else (or own=True) →
+    own only. Empty set = no visible calls."""
+    if user["role"] == "admin" and not own:
+        return None
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            if user["role"] == "manager" and not own:
+                cur.execute(
+                    "SELECT phone FROM users WHERE phone IS NOT NULL AND btrim(phone) <> '' "
+                    "  AND (id = %s OR manager = %s)", (user["id"], user["id"]))
+            else:
+                cur.execute("SELECT phone FROM users WHERE id = %s AND phone IS NOT NULL", (user["id"],))
+            return {d for d in (bv.digits(r["phone"]) for r in cur.fetchall()) if d}
+    finally:
+        conn.close()
+
+
+def _numbers_clause(nums, cols=("c.source_number", "c.destination_number", "c.display_number")):
+    """(sql, params) — rows where any of `cols` (last-10 digits) is one of `nums`."""
+    cond = "(" + " OR ".join(f"{_p10_sql(col)} = ANY(%s)" for col in cols) + ")"
+    return cond, [sorted(nums)] * len(cols)
+
+
 @bp.get("/calls")
-@require_auth("admin")
+@require_auth()
 def call_log():
-    """Every call leg Bonvoice has reported, newest first — backs the Call Log page."""
+    """Every call leg Bonvoice has reported, newest first — backs the Call Log page.
+    Scoped by role: RM = own number, manager = team, admin = all."""
     q = request.args.get("q") or None
     a = request.args.get("answered")
     answered = {"true": True, "false": False}.get(a) if a is not None else None
@@ -689,6 +722,16 @@ def call_log():
     offset = max(request.args.get("offset", default=0, type=int) or 0, 0)
 
     clause, params = call_log_filters(q, answered, campaign_id, placed_by, duration)
+
+    # Restrict to the caller's own / team numbers unless they're an admin.
+    nums = _my_call_numbers(g.user)
+    if nums is not None:
+        if not nums:
+            return jsonify({"items": [], "total": 0})
+        cond, cparams = _numbers_clause(nums)
+        clause = (clause + " AND " + cond) if clause else (" WHERE " + cond)
+        params = [*params, *cparams]
+
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
@@ -710,19 +753,83 @@ def call_log():
 
 
 @bp.get("/calls/actors")
-@require_auth("admin")
+@require_auth()
 def call_log_actors():
     """Distinct people who placed a call — the "Calls placed by" dropdown. Server-side
     because the page holds only 50 rows; deriving from screen would hide off-page RMs."""
+    nums = _my_call_numbers(g.user)
+    extra, eparams = "", []
+    if nums is not None:
+        if not nums:
+            return jsonify({"items": []})
+        cond, cparams = _numbers_clause(nums)
+        extra, eparams = " AND " + cond, cparams
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
             cur.execute(f"SELECT DISTINCT {PLACED_BY_SQL} AS a {CALL_LOG_FROM} "
-                        f"WHERE {PLACED_BY_SQL} IS NOT NULL ORDER BY 1")
+                        f"WHERE {PLACED_BY_SQL} IS NOT NULL{extra} ORDER BY 1", eparams)
             rows = cur.fetchall()
     finally:
         conn.close()
     return jsonify({"items": [r["a"] for r in rows]})
+
+
+# ── incoming-call notifications ──────────────────────────────────────────────
+#
+# An inbound call (a lead ringing the DID → routed to the RM) surfaces as a top-bar
+# bell for the RM whose number it reached, until they acknowledge it. Scoped to the
+# user's OWN number (not the team).
+
+@bp.get("/incoming")
+@require_auth()
+def incoming_calls():
+    """Unacknowledged inbound calls involving the current user's own mobile."""
+    nums = _my_call_numbers(g.user, own=True)
+    if not nums:
+        return jsonify({"items": [], "count": 0})
+    cond, cparams = _numbers_clause(nums)
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            # one row per conversation (call_id), newest first
+            cur.execute(
+                f"SELECT c.call_id, max(c.oh_id) AS oh_id, max(l.seller_name) AS lead_name, "
+                f"       max(c.source_number) AS source_number, max(c.display_number) AS display_number, "
+                f"       max(c.start_at) AS start_at "
+                f"  FROM call_logs c LEFT JOIN inventory l ON l.oh_id = c.oh_id "
+                f" WHERE c.direction ILIKE 'in%%' AND NOT c.acknowledged AND {cond} "
+                f" GROUP BY c.call_id ORDER BY max(c.start_at) DESC NULLS LAST LIMIT 50",
+                cparams)
+            rows = cur.fetchall()
+    finally:
+        conn.close()
+    return jsonify({"items": rows, "count": len(rows)})
+
+
+@bp.post("/incoming/ack")
+@require_auth()
+def ack_incoming():
+    """Acknowledge the user's incoming calls — one call_id in the body, or all if omitted."""
+    nums = _my_call_numbers(g.user, own=True)
+    if not nums:
+        return jsonify({"acknowledged": 0})
+    call_id = (request.get_json(silent=True) or {}).get("call_id")
+    cond, cparams = _numbers_clause(nums)
+    sql = (f"UPDATE call_logs c SET acknowledged = TRUE "
+           f"WHERE c.direction ILIKE 'in%%' AND NOT c.acknowledged AND {cond}")
+    params = list(cparams)
+    if call_id:
+        sql += " AND c.call_id = %s"
+        params.append(str(call_id))
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(sql, params)
+            n = cur.rowcount
+    finally:
+        conn.close()
+    return jsonify({"acknowledged": n})
 
 
 @bp.get("/leads/<oh_id>/calls")

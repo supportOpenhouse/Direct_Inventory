@@ -61,7 +61,7 @@ export default function App() {
           <Route path="/profile" element={<MyProfile />} />
           <Route path="/users" element={<RequireAuth roles={[]}><Users /></RequireAuth>} />
           <Route path="/logs" element={<RequireAuth roles={[]}><Logs /></RequireAuth>} />
-          <Route path="/call-log" element={<RequireAuth roles={[]}><CallLog /></RequireAuth>} />
+          <Route path="/call-log" element={<RequireAuth roles={['rm', 'manager']}><CallLog /></RequireAuth>} />
           <Route path="/dialer/schedule" element={<RequireAuth roles={[]}><Dialer /></RequireAuth>} />
           <Route path="/dialer/previous" element={<RequireAuth roles={[]}><DialerPrevious /></RequireAuth>} />
           <Route path="/dialer" element={<Navigate to="/dialer/schedule" replace />} />

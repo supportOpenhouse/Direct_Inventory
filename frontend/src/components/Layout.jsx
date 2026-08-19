@@ -4,6 +4,7 @@ import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import NotificationBell from './NotificationBell.jsx';
+import IncomingCallBell from './IncomingCallBell.jsx';
 import BusyOverlay from './BusyOverlay.jsx';
 import CpScanButton from './CpScanButton.jsx';
 import ReassignLeadsButton from './ReassignLeadsButton.jsx';
@@ -193,6 +194,8 @@ export default function Layout() {
         {PRIMARY.map(navItem)}
 
         {isRm && navItem({ to: '/live-calls', label: 'Live Calls', Icon: IconDialer, dotKey: 'liveCalls' })}
+        {/* Call log is visible to all roles — scoped server-side (RM: own number, manager: team). */}
+        {navItem({ to: '/call-log', label: 'Bonvoice Call Log', Icon: IconPhone })}
 
         <div className="sidebar-section-label">Insights</div>
         {(isAdmin || isManager)
@@ -209,7 +212,6 @@ export default function Layout() {
             <div className="sidebar-section-label">Auto Dialer</div>
             {navItem({ to: '/dialer/schedule', label: 'Schedule Campaign', Icon: IconDialer })}
             {navItem({ to: '/dialer/previous', label: 'Previous Campaigns', Icon: IconDialer })}
-            {navItem({ to: '/call-log', label: 'Bonvoice Call Log', Icon: IconPhone })}
           </>
         )}
 
@@ -236,6 +238,7 @@ export default function Layout() {
           {(seg === 'qualified-leads' || seg === 'follow-ups') && <AddInventoryButton defaultStage="follow_up" />}
           {seg === 'tickets' && (isAdmin || isManager) && <CreateTicketButton />}
           {seg === 'users' && isAdmin && <ReassignLeadsButton />}
+          <IncomingCallBell />
           <NotificationBell role={user?.role} />
           {/* Theme toggle + logout live only on the profile page. */}
           {seg === 'profile' && (

@@ -118,16 +118,21 @@ export default function CallLog() {
         {anyFilter && (
           <button className="btn-ghost" onClick={() => { setQ(''); setConn(''); setBy(''); setDur(''); setPage(0); }}>Clear</button>
         )}
-        <div className="al-date-range">
-          <span className="al-date-lbl">SYNC</span>
-          <input type="date" className="al-date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} title="Sync from" />
-          <span className="al-date-sep">to</span>
-          <input type="date" className="al-date" value={to} min={from} onChange={(e) => setTo(e.target.value)} title="Sync to" />
-        </div>
-        <button className="btn-primary" onClick={runSync} disabled={syncing}
-          title="Pull Bonvoice's own call records for this date range">
-          {syncing ? 'Syncing…' : 'Sync from Bonvoice'}
-        </button>
+        {/* Backfill from Bonvoice is admin-only (the endpoint requires admin). */}
+        {user?.role === 'admin' && (
+          <>
+            <div className="al-date-range">
+              <span className="al-date-lbl">SYNC</span>
+              <input type="date" className="al-date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} title="Sync from" />
+              <span className="al-date-sep">to</span>
+              <input type="date" className="al-date" value={to} min={from} onChange={(e) => setTo(e.target.value)} title="Sync to" />
+            </div>
+            <button className="btn-primary" onClick={runSync} disabled={syncing}
+              title="Pull Bonvoice's own call records for this date range">
+              {syncing ? 'Syncing…' : 'Sync from Bonvoice'}
+            </button>
+          </>
+        )}
       </div>
 
       <div className="al-table-wrap">
