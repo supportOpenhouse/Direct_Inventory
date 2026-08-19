@@ -40,10 +40,10 @@ export default function InventoryBoard({
   const [page, setPage] = useState(0);
   const [pageInput, setPageInput] = useState('1');
 
-  // Admin-only "Show Delete": reveal soft-deleted rows (normally hidden from all).
+  // Admin-only "Show Archived": one button cycling 0 hide → 1 show all → 2 only archived
+  // (archived = the soft-deleted rows, normally hidden from everyone).
   const canShowDeleted = allowShowDeleted && user?.role === 'admin';
-  const [showDeleted, setShowDeleted] = useState(false);
-  const [deletedFilter, setDeletedFilter] = useState('all'); // all | only | exclude
+  const [archiveMode, setArchiveMode] = useState(0);
   const [filtersApplied, setFiltersApplied] = useState({});
   const [filterFormState, setFilterFormState] = useState({});
   const [showFilters, setShowFilters] = useState(false);
@@ -79,7 +79,7 @@ export default function InventoryBoard({
     if (effectiveStages.length) p.set('stage', effectiveStages.join(','));
     if (sort.field) { p.set('sort', sort.field); p.set('dir', sort.dir); }
     for (const [k, v] of Object.entries(filtersApplied)) p.set(k, String(v));
-    if (canShowDeleted && showDeleted) p.set('deleted', deletedFilter);
+    if (canShowDeleted && archiveMode) p.set('deleted', archiveMode === 2 ? 'only' : 'all');
     return p;
   }
 
@@ -143,7 +143,7 @@ export default function InventoryBoard({
     // longer waits behind the stage-pill counts before any rows can render.
     Promise.all([refreshCounts(), refresh(0)]);
     /* eslint-disable-next-line */
-  }, [city, qApplied, stageSel, filtersApplied, sort.field, sort.dir, showDeleted, deletedFilter]);
+  }, [city, qApplied, stageSel, filtersApplied, sort.field, sort.dir, archiveMode]);
   // Page-only change (Prev/Next/jump) → fetch just that rows page. Skipped when
   // the effect above already fetched page 0 (mount or a filter-driven reset).
   useEffect(() => {
@@ -287,18 +287,12 @@ export default function InventoryBoard({
         </form>
         <button className="btn-ghost" onClick={() => setShowFilters(true)}><IconFilter size={16} /> Filters{filterCount ? ` (${filterCount})` : ''}</button>
         {canShowDeleted && (
-          <button className={showDeleted ? 'btn-primary' : 'btn-ghost'} onClick={() => setShowDeleted((v) => !v)}
-            title="Reveal soft-deleted leads (admin only)">Show Delete</button>
+          <button className={archiveMode ? 'btn-primary' : 'btn-ghost'} onClick={() => setArchiveMode((m) => (m + 1) % 3)}
+            title="Cycle archived leads: hide → show → only (admin)">
+            {['No Archived', 'Showing Archived', 'Showing Only Archived'][archiveMode]}
+          </button>
         )}
         {filterCount > 0 && <button className="btn-link" onClick={() => { setFiltersApplied({}); setFilterFormState({}); }}>Reset</button>}
-        {canShowDeleted && showDeleted && (
-          <select className="al-filter-select" value={deletedFilter} onChange={(e) => setDeletedFilter(e.target.value)}
-            title="Deleted filter" style={{ marginLeft: 'auto' }}>
-            <option value="all">Deleted: All</option>
-            <option value="only">Only deleted</option>
-            <option value="exclude">Exclude deleted</option>
-          </select>
-        )}
       </div>
 
       {/* Floats to the top-right of the page (see .bulk-bar) while selecting. */}
