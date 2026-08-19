@@ -72,7 +72,7 @@ export default function NoteThread({ ohId, initial = [], canPost = true, onChang
         <span className="note-thread-count">{ordered.length}</span>
       </div>
       <ul className="note-list">
-        {ordered.length === 0 && !canPost && <li className="note-empty muted">No notes yet.</li>}
+        {ordered.length === 0 && <li className="note-empty muted">No notes yet.</li>}
         {ordered.map((n) => (
           <li key={n.id} className="note-item">
             <Avatar name={n.author_name} email={n.author_email} />
@@ -85,25 +85,26 @@ export default function NoteThread({ ohId, initial = [], canPost = true, onChang
             </div>
           </li>
         ))}
-        {canPost && (
-          <li className="note-item">
-            <Avatar name={user?.name} email={user?.email} />
-            <div className="note-body">
-              <div className="note-input-row">
-                <input
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-                  placeholder="Add a note…"
-                  disabled={posting}
-                />
-                <button type="button" className="note-send" onClick={send} disabled={posting || !draft.trim()} title="Send"><IconSend size={13} /></button>
-              </div>
-              {error && <div className="note-error">{error}</div>}
-            </div>
-          </li>
-        )}
       </ul>
+      {/* Composer stays fixed below the scrolling list, not part of the scroll. */}
+      {canPost && (
+        <div className="note-composer">
+          <Avatar name={user?.name} email={user?.email} />
+          <div className="note-body">
+            <div className="note-input-row">
+              <input
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+                placeholder="Add a note…"
+                disabled={posting}
+              />
+              <button type="button" className="note-send" onClick={send} disabled={posting || !draft.trim()} title="Send"><IconSend size={13} /></button>
+            </div>
+            {error && <div className="note-error">{error}</div>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

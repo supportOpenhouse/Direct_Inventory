@@ -23,7 +23,7 @@ export default function InventoryBoard({
   fixedStages = null, showAdd = true, stageFilterable = true, toolbarExtra = null,
   allowStatusEdit = true, reasonFilter = false, hideFollowUpFilter = false, reasonOptions = undefined,
   reloadSignal = 0, onReload = null, extraStageGroups = [], annotateVisitOverdue = false,
-  showReasonCol = false, showExport = false,
+  showReasonCol = false, showExport = false, allowShowDeleted = false,
   // Optional external control of select mode (Home renders the Select button up
   // in its view-toggle bar). When uncontrolled, the toolbar shows its own button.
   controlledSelectMode = undefined, onSelectModeChange = undefined, hideSelectButton = false,
@@ -40,6 +40,10 @@ export default function InventoryBoard({
   const [page, setPage] = useState(0);
   const [pageInput, setPageInput] = useState('1');
 
+  // Admin-only "Show Delete": reveal soft-deleted rows (normally hidden from all).
+  const canShowDeleted = allowShowDeleted && user?.role === 'admin';
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [deletedFilter, setDeletedFilter] = useState('all'); // all | only | exclude
   const [filtersApplied, setFiltersApplied] = useState({});
   const [filterFormState, setFilterFormState] = useState({});
   const [showFilters, setShowFilters] = useState(false);
@@ -75,6 +79,7 @@ export default function InventoryBoard({
     if (effectiveStages.length) p.set('stage', effectiveStages.join(','));
     if (sort.field) { p.set('sort', sort.field); p.set('dir', sort.dir); }
     for (const [k, v] of Object.entries(filtersApplied)) p.set(k, String(v));
+    if (canShowDeleted && showDeleted) p.set('deleted', deletedFilter);
     return p;
   }
 
@@ -138,7 +143,7 @@ export default function InventoryBoard({
     // longer waits behind the stage-pill counts before any rows can render.
     Promise.all([refreshCounts(), refresh(0)]);
     /* eslint-disable-next-line */
-  }, [city, qApplied, stageSel, filtersApplied, sort.field, sort.dir]);
+  }, [city, qApplied, stageSel, filtersApplied, sort.field, sort.dir, showDeleted, deletedFilter]);
   // Page-only change (Prev/Next/jump) → fetch just that rows page. Skipped when
   // the effect above already fetched page 0 (mount or a filter-driven reset).
   useEffect(() => {
@@ -281,7 +286,19 @@ export default function InventoryBoard({
           {qApplied && <button type="button" className="btn-ghost" onClick={() => { setQInput(''); setQApplied(''); }}>Clear</button>}
         </form>
         <button className="btn-ghost" onClick={() => setShowFilters(true)}><IconFilter size={16} /> Filters{filterCount ? ` (${filterCount})` : ''}</button>
+        {canShowDeleted && (
+          <button className={showDeleted ? 'btn-primary' : 'btn-ghost'} onClick={() => setShowDeleted((v) => !v)}
+            title="Reveal soft-deleted leads (admin only)">Show Delete</button>
+        )}
         {filterCount > 0 && <button className="btn-link" onClick={() => { setFiltersApplied({}); setFilterFormState({}); }}>Reset</button>}
+        {canShowDeleted && showDeleted && (
+          <select className="al-filter-select" value={deletedFilter} onChange={(e) => setDeletedFilter(e.target.value)}
+            title="Deleted filter" style={{ marginLeft: 'auto' }}>
+            <option value="all">Deleted: All</option>
+            <option value="only">Only deleted</option>
+            <option value="exclude">Exclude deleted</option>
+          </select>
+        )}
       </div>
 
       {/* Floats to the top-right of the page (see .bulk-bar) while selecting. */}

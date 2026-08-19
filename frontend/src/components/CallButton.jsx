@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api/client.js';
 import { toast } from '../utils/toast.js';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { IconPhone, IconPhoneOff } from './icons.jsx';
 
 /**
@@ -12,6 +13,7 @@ import { IconPhone, IconPhoneOff } from './icons.jsx';
  */
 export default function CallButton({ ohId, phone, className = '' }) {
   const [busy, setBusy] = useState(false);
+  const { user } = useAuth();
 
   if (!phone) {
     return (
@@ -26,6 +28,9 @@ export default function CallButton({ ohId, phone, className = '' }) {
   async function call(e) {
     e.stopPropagation();
     if (busy) return;
+    // The call rings the caller's own phone — a non-RM dialling someone else's lead
+    // should confirm they mean to.
+    if (user?.role !== 'rm' && !window.confirm('You are not the RM. Still want to call?')) return;
     setBusy(true);
     try {
       const r = await api.post('/api/bonvoice/call', { oh_id: ohId }, { silent: true });

@@ -31,15 +31,19 @@ _LIST_COLS = ", ".join(f"j.{c}" for c in (
     # inventory columns (001_init + later migrations), minus note_thread/search_tsv
     "id", "oh_id", "source", "city", "locality", "society", "bedrooms",
     "area_sqft", "floor", "tower", "unit_no", "price", "seller_name",
-    "seller_phone", "posting_date", "listing_link", "stage", "stage_reason",
+    "seller_phone", "posting_date", "listing_link", "stage_reason",
     "notes", "assigned_rm_id", "assigned_rm_ids", "assigned_mgr_id",
     "forms_visit_id", "visit_at", "visit_exec", "follow_up_at", "priority",
     "cp_match", "star_color", "reassigned", "reassigned_by_id",
     "created_at", "updated_at", "last_synced_at", "assigned_at",
+    "consider_deleted",   # so the admin "Show Delete" view can flag these rows
     # derived by INVENTORY_WITH_PRICING_SQL
     "oh_price", "oh_price_area", "oh_price_bhk", "oh_price_match",
     "oh_price_reason", "oh_near_diff", "assigned_rms", "reassigned_by_role",
 )) + (
+    # A soft-deleted row reports stage='deleted' (matches the detail endpoint + the
+    # frontend's red 'deleted' styling); the raw stage stays intact in the DB.
+    ", CASE WHEN j.consider_deleted THEN 'deleted' ELSE j.stage END AS stage"
     ", CASE WHEN jsonb_typeof(j.note_thread) = 'array' "
     "THEN jsonb_array_length(j.note_thread) ELSE 0 END AS note_count"
 )

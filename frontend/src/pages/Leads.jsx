@@ -61,7 +61,7 @@ function ActionTable({ items, loading, role, onUpdated, primaryLabel, primaryMod
 
   return (
     <div className="inv-table-wrap">
-      <table className="inv-table">
+      <table className="inv-table leads-atable">
         <thead>
           <tr>
             <th className="inv-th inv-th-star" />
@@ -82,9 +82,11 @@ function ActionTable({ items, loading, role, onUpdated, primaryLabel, primaryMod
                 <tr className={`inv-row ${isOpen ? 'inv-row-open' : ''}`} onClick={() => setOpenId(isOpen ? null : it.oh_id)}>
                   <StarCell item={it} canSet={canSet} onUpdated={onUpdated} />
                   <td className="inv-td-society">
-                    {it.society || '—'}
-                    {isNew(it) && <NewBadge />}
-                    <div className="inv-td-muted" style={{ fontWeight: 400, fontSize: 12 }}>{displayCity(it.city)} · {it.oh_id}</div>
+                    <div className="lead-society-line">
+                      <span className="lead-society-name">{it.society || '—'}</span>
+                      {isNew(it) && <NewBadge />}
+                    </div>
+                    <div className="inv-td-muted lead-society-sub" style={{ fontWeight: 400, fontSize: 12 }}>{displayCity(it.city)} · {it.oh_id}</div>
                   </td>
                   <td>
                     {link(it)

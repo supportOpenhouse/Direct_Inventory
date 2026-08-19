@@ -768,7 +768,7 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 
 /* ── leads split view ────────────────────────────────────────────────── */
 .leads-page { display: flex; flex-direction: column; height: 100%; }
-.leads-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-bottom: 16px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.leads-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
 .leads-split { display: flex; flex: 1; min-height: 0; gap: 0; }
 .leads-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .leads-pane-head { display: flex; align-items: center; gap: 10px; padding: 0 4px 12px; }
@@ -776,6 +776,18 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .leads-pane-head .lph-count { background: var(--surface-3); color: var(--text-2); border-radius: var(--r-pill); padding: 2px 10px; font-size: 12px; font-weight: 700; }
 .leads-pane-head .lph-count.accent { background: var(--brand-soft); color: var(--brand-strong); }
 .leads-pane .inv-table-wrap { flex: 1; min-height: 0; }
+/* Fixed layout so the Society name truncates to the LIVE pane width and re-reveals as
+   the divider ratio changes (pure CSS — no JS width math). */
+.leads-atable { table-layout: fixed; }
+.leads-atable .inv-th-star, .leads-atable .inv-td-star { width: 44px; }
+.leads-atable th:nth-child(3), .leads-atable td:nth-child(3) { width: 70px; }    /* Link */
+.leads-atable th:nth-child(4), .leads-atable td:nth-child(4) { width: 162px; }   /* Action */
+.leads-atable .inv-td-society { overflow: hidden; }
+.leads-atable .lead-actions { flex-wrap: wrap; }
+.lead-society-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.lead-society-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.lead-society-line .new-badge-img { flex: none; margin-left: 0; }
+.lead-society-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .split-divider { width: 14px; flex-shrink: 0; cursor: col-resize; display: grid; place-items: center; }
 .split-divider .sd-grip { width: 4px; height: 46px; border-radius: 999px; background: var(--border); transition: background var(--t); }
 .split-divider:hover .sd-grip, .split-divider.dragging .sd-grip { background: var(--brand); }
@@ -871,6 +883,8 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .note-thread-count { background: var(--surface-3); border-radius: 999px; padding: 1px 8px; font-size: 11px; font-weight: 700; }
 .note-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; max-height: 240px; overflow: auto; }
 .note-item { display: flex; gap: 10px; }
+/* Composer pinned below the scrolling list (not part of the scroll). */
+.note-composer { display: flex; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hairline); }
 .note-body { flex: 1; min-width: 0; }
 .note-meta { display: flex; align-items: baseline; gap: 8px; }
 .note-meta strong { font-size: 12.5px; }

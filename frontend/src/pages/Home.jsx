@@ -300,7 +300,7 @@ export default function Home() {
           <BoardView s={summary} loading={stagesLoading} visitsLoading={visitsLoading} />
         </>
       ) : (
-        <InventoryBoard showReasonCol showExport hideSelectButton showAdd={false}
+        <InventoryBoard showReasonCol showExport hideSelectButton showAdd={false} allowShowDeleted
           controlledSelectMode={tableSelect} onSelectModeChange={setTableSelect}
           extraStageGroups={[
             { key: 'post_visit', label: 'Post Visit', stages: SUPPLY_STAGES, color: '#6366f1', before: 'rejected' },
