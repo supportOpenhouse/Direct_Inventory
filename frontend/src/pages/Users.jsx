@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
 import { CITIES } from '../utils/format.js';
 import UserEditModal from '../components/UserEditModal.jsx';
+import { IconEdit } from '../components/icons.jsx';
 
 const ROLES = ['admin', 'manager', 'rm'];
 const ROLE_LABELS = { admin: 'Admin', manager: 'Manager', rm: 'RM' };
@@ -116,7 +117,7 @@ export default function Users() {
                   <td><select className="role-select" value={u.role} onChange={(e) => patch(u.id, { role: e.target.value })}>{ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}</select></td>
                   <td>{u.manager_name || u.manager_email || <em className="muted">—</em>}</td>
                   <td><span className="usr-scope" title={scopeSummary(u)}>{scopeSummary(u)}</span></td>
-                  <td><button className="btn-edit" onClick={() => setEditUser(u)}>✎ Edit</button></td>
+                  <td><button className="btn-edit" onClick={() => setEditUser(u)}><IconEdit size={13} /> Edit</button></td>
                 </tr>
               ))
             )}

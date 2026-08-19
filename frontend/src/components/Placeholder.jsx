@@ -1,6 +1,8 @@
 // Polished "coming soon" page for sidebar entries whose flow isn't specified
 // yet. Keeps the nav complete and signals intent.
-export default function Placeholder({ icon = '🚧', title, children }) {
+import { IconLock } from './icons.jsx';
+
+export default function Placeholder({ icon = <IconLock />, title, children }) {
   return (
     <div className="placeholder">
       <div>

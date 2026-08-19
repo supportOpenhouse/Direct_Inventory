@@ -10,6 +10,7 @@ import OhPrice from './OhPrice.jsx';
 import CallActivityCard from './CallActivityCard.jsx';
 import TicketModal, { emitTicketsChanged, ticketStatusClass, ticketStatusLabel } from './TicketModal.jsx';
 import { formatDateShort, formatPrice, STAGE_DOT_COLOR, stageLabel, supplyReasonLabel, SUPPLY_STAGES, variation } from '../utils/format.js';
+import { IconTicket, IconHome, IconMoney, IconUser, IconCalendar, IconClose, IconEdit, IconReload } from './icons.jsx';
 
 function Field({ label, children }) {
   return (
@@ -145,7 +146,7 @@ function TicketsSection({ item, role }) {
 
   return (
     <div className="expand-sec">
-      <h4>🎫 Tickets
+      <h4><IconTicket size={14} /> Tickets
         {canCreate && !creating && (
           <button type="button" className="btn-edit-details" onClick={() => setCreating(true)}>+ New Ticket</button>
         )}
@@ -250,9 +251,9 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
     <div className="expand-inner">
       {show.includes('property') && (
         <div className="expand-sec expand-sec-wide">
-          <h4>🏠 Property Details
+          <h4><IconHome size={14} /> Property Details
             {canEditDetails && (
-              <button type="button" className="btn-edit-details" onClick={() => setShowEdit(true)}>✎ Edit Details</button>
+              <button type="button" className="btn-edit-details" onClick={() => setShowEdit(true)}><IconEdit size={13} /> Edit Details</button>
             )}
           </h4>
           <div className="field-grid-2">
@@ -268,7 +269,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
 
       {show.includes('pricing') && (
         <div className="expand-sec">
-          <h4>💰 Pricing &amp; Source</h4>
+          <h4><IconMoney size={14} /> Pricing &amp; Source</h4>
           <div className="field-grid-2">
             <Field label="Asking"><span className="val-orange">{formatPrice(full.price)}</span></Field>
             <Field label="OH Price"><OhPrice item={full} /></Field>
@@ -286,7 +287,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
 
       {show.includes('seller') && (
         <div className="expand-sec expand-sec-narrow">
-          <h4>👤 Seller Details</h4>
+          <h4><IconUser size={14} /> Seller Details</h4>
           <Field label="Seller name">{full.seller_name || '—'}</Field>
           <Field label="Phone no.">
             {full.seller_phone
@@ -310,7 +311,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
               {item.stage_reason && item.stage !== 'visit_cancelled' && <span className="muted"> · {supplyReasonLabel(item.stage_reason)}</span>}
             </span>
             {canScheduleRevisit && (
-              <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowSchedule(true)}>📅 Schedule Revisit</button>
+              <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowSchedule(true)}><IconCalendar size={13} /> Schedule Revisit</button>
             )}
             {canCancelVisit && (
               <span className="visit-change-wrap">
@@ -318,13 +319,13 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
                 {showVisitMenu && (
                   <div className="reject-menu visit-change-menu" onMouseLeave={() => setShowVisitMenu(false)}>
                     <button type="button" onClick={() => { setShowVisitMenu(false); setShowReschedule(true); }}>Reassign / Reschedule</button>
-                    <button type="button" onClick={() => { setShowVisitMenu(false); setShowCancel(true); }}>✕ Cancel</button>
+                    <button type="button" onClick={() => { setShowVisitMenu(false); setShowCancel(true); }}><IconClose size={13} /> Cancel</button>
                   </div>
                 )}
               </span>
             )}
             {canEditStage && (
-              <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowStatus(true)}>✎ Edit Status</button>
+              <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowStatus(true)}><IconEdit size={13} /> Edit Status</button>
             )}
           </div>
           {detail === null ? (
@@ -345,7 +346,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
 
       {show.includes('rm_history') && (
         <div className="expand-sec expand-sec-narrow">
-          <h4>🔄 RM History</h4>
+          <h4><IconReload size={14} /> RM History</h4>
           {detail === null ? (
             <div className="muted" style={{ fontSize: 13 }}>Loading…</div>
           ) : rmHistory.length === 0 ? (

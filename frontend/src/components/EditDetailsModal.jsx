@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { IconClose } from './icons.jsx';
+import { IconClose, IconHome, IconUser } from './icons.jsx';
 import { useModalExit } from '../utils/useModalExit.js';
 
 // Floors offered in the picker (mirrors AddInventoryModal): Top, Ground, 1–50.
@@ -110,7 +110,7 @@ export default function EditDetailsModal({ item, onUpdated, onClose: rawClose })
         </div>
         <p className="modal-sub">{item.society || '—'}</p>
 
-        <h4 className="edit-sec-h">🏠 Property Details</h4>
+        <h4 className="edit-sec-h"><IconHome size={14} /> Property Details</h4>
         <div className="form-grid">
           <div><label>Area (sqft)</label><input type="number" value={f.area_sqft} onChange={(e) => set('area_sqft', e.target.value)} /></div>
           <div><label>BHK</label>
@@ -130,7 +130,7 @@ export default function EditDetailsModal({ item, onUpdated, onClose: rawClose })
           <div><label>Locality</label><input type="text" value={f.locality} onChange={(e) => set('locality', e.target.value)} /></div>
         </div>
 
-        <h4 className="edit-sec-h">👤 Seller Details</h4>
+        <h4 className="edit-sec-h"><IconUser size={14} /> Seller Details</h4>
         <div className="form-grid">
           <div><label>Seller Name</label><input type="text" value={f.seller_name} onChange={(e) => set('seller_name', e.target.value)} /></div>
           <div><label>Phone No.</label><input type="tel" maxLength={10} value={f.seller_phone} onChange={(e) => set('seller_phone', e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit" /></div>
@@ -138,7 +138,7 @@ export default function EditDetailsModal({ item, onUpdated, onClose: rawClose })
 
         {isAdmin && (
           <>
-            <h4 className="edit-sec-h">🧑‍💼 Assigned RM &amp; Pricing</h4>
+            <h4 className="edit-sec-h"><IconUser size={14} /> Assigned RM &amp; Pricing</h4>
             <div className="form-grid">
               <div>
                 <label>Assigned RM <span className="muted">(currently: {currentRm?.name || currentRm?.email || rms.find((u) => u.id === currentRmId)?.name || (currentRmId != null ? `#${currentRmId}` : 'Unassigned')})</span></label>

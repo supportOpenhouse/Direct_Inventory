@@ -128,12 +128,15 @@ export default function InventoryTable({
                       <input type="checkbox" readOnly checked={!!isSel} />
                     </td>
                   )}
-                  <StarCell item={item} canSet={canSetPriority} onUpdated={onUpdated} />
+                  <StarCell item={item} canSet={canSetPriority} onUpdated={onUpdated}
+                    after={<CallButton ohId={item.oh_id} phone={item.seller_phone} />} />
                   {isAdmin && <td className="inv-td-id">{item.oh_id}</td>}
-                  <td><span className="city-cell"><CallButton ohId={item.oh_id} phone={item.seller_phone} /><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></span></td>
+                  <td><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></td>
                   <td className={`inv-td-society ${flag ? `inv-society-${flag}` : ''}`}>
-                    <span className="inv-clip inv-clip-society" title={item.society || ''}>{item.society || '—'}</span>
-                    {isCreatedToday(item.created_at) && <img className="new-badge-img" src="/new.png" alt="NEW" />}
+                    <span className="society-cell">
+                      <span className="inv-clip inv-clip-society" title={item.society || ''}>{item.society || '—'}</span>
+                      {isCreatedToday(item.created_at) && <img className="new-badge-img" src="/new.png" alt="NEW" />}
+                    </span>
                   </td>
                   <td className="inv-col-bhk">{item.bedrooms != null ? `${item.bedrooms} BHK` : '—'}</td>
                   <td>{item.floor || '—'}</td>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { TOAST_EVENT } from '../utils/toast.js';
+import { IconWarning, IconCheck, IconInfo } from './icons.jsx';
 
 let idSeq = 0;
 
@@ -28,7 +29,7 @@ export default function Toaster() {
     <div className="toaster">
       {toasts.map((t) => (
         <div key={t.id} className={`toast toast-${t.type}`} role="status" onClick={() => dismiss(t.id)}>
-          <span className="toast-ic">{t.type === 'error' ? '⚠' : t.type === 'success' ? '✓' : 'ℹ'}</span>
+          <span className="toast-ic">{t.type === 'error' ? <IconWarning /> : t.type === 'success' ? <IconCheck /> : <IconInfo />}</span>
           <span className="toast-msg">{t.message}</span>
           <button className="toast-x" aria-label="Dismiss" onClick={(e) => { e.stopPropagation(); dismiss(t.id); }}>×</button>
         </div>

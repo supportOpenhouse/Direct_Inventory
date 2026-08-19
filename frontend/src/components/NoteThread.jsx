@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { IconSend } from './icons.jsx';
 
 // Deterministic avatar tint per identity.
 function initialsOf(name, email) {
@@ -96,7 +97,7 @@ export default function NoteThread({ ohId, initial = [], canPost = true, onChang
                   placeholder="Add a note…"
                   disabled={posting}
                 />
-                <button type="button" className="note-send" onClick={send} disabled={posting || !draft.trim()} title="Send">➤</button>
+                <button type="button" className="note-send" onClick={send} disabled={posting || !draft.trim()} title="Send"><IconSend size={13} /></button>
               </div>
               {error && <div className="note-error">{error}</div>}
             </div>

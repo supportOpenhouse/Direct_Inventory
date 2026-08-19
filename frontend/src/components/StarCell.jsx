@@ -19,7 +19,7 @@ const SWATCHES = [
  * it (clears the reassigned flag). Shared by InventoryTable / Leads /
  * QualifiedLeads so the star behaves identically everywhere.
  */
-export default function StarCell({ item, canSet, onUpdated }) {
+export default function StarCell({ item, canSet, onUpdated, after = null }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const color = starColor(item);
@@ -42,12 +42,15 @@ export default function StarCell({ item, canSet, onUpdated }) {
     catch { onUpdated(item); }
   }
 
-  if (!color && !canSet) return <td className="inv-td-star" />;
+  if (!color && !canSet && !after) return <td className="inv-td-star" />;
   return (
     <td className="inv-td-star" ref={ref} style={{ position: 'relative', overflow: 'visible' }}>
-      <button type="button" disabled={!canSet} title="Star"
-        className={`prio-star ${starClass(color)}`}
-        onClick={(e) => { e.stopPropagation(); if (canSet) setOpen((o) => !o); }}>★</button>
+      <span className="star-call-wrap">
+        <button type="button" disabled={!canSet} title="Star"
+          className={`prio-star ${starClass(color)}`}
+          onClick={(e) => { e.stopPropagation(); if (canSet) setOpen((o) => !o); }}>★</button>
+        {after}
+      </span>
       {open && (
         <div className="star-picker" onClick={(e) => e.stopPropagation()}>
           {SWATCHES.map((s) => (

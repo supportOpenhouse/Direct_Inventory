@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import CardDetailModal from '../components/CardDetailModal.jsx';
+import { IconCalendar, IconClose, IconTicket, IconUser } from '../components/icons.jsx';
 import { stageLabel } from '../utils/format.js';
 
 function formatTs(iso) {
@@ -54,18 +55,18 @@ function Details({ row }) {
   if (action === 'visit_scheduled') {
     const when = [metadata?.schedule_date, metadata?.schedule_time].filter(Boolean).join(' ');
     const sub = [metadata?.field_exec_name && `Exec: ${metadata.field_exec_name}`, metadata?.assigned_by_name && `By: ${metadata.assigned_by_name}`].filter(Boolean).join(' · ');
-    return <div><div className="det-change"><strong>📅 Visit scheduled</strong>{when ? ` · ${when}` : ''}</div>{sub && <div className="det-sub">{sub}</div>}</div>;
+    return <div><div className="det-change"><strong><IconCalendar size={13} /> Visit scheduled</strong>{when ? ` · ${when}` : ''}</div>{sub && <div className="det-sub">{sub}</div>}</div>;
   }
   if (action === 'visit_cancelled') {
-    return <div><div className="det-change"><strong>✕ Visit cancelled</strong>{metadata?.target_stage ? ` → ${stageLabel(metadata.target_stage)}` : ''}</div>{metadata?.reason && <div className="det-sub">{metadata.reason}</div>}</div>;
+    return <div><div className="det-change"><strong><IconClose size={13} /> Visit cancelled</strong>{metadata?.target_stage ? ` → ${stageLabel(metadata.target_stage)}` : ''}</div>{metadata?.reason && <div className="det-sub">{metadata.reason}</div>}</div>;
   }
-  if (action === 'ticket_created') return <div className="det-change"><strong>🎫 Ticket created</strong></div>;
-  if (action === 'ticket_reply') return <div className="det-change"><strong>🎫 Ticket reply</strong></div>;
-  if (action === 'ticket_closed') return <div className="det-change"><strong>🎫 Ticket closed</strong></div>;
+  if (action === 'ticket_created') return <div className="det-change"><strong><IconTicket size={13} /> Ticket created</strong></div>;
+  if (action === 'ticket_reply') return <div className="det-change"><strong><IconTicket size={13} /> Ticket reply</strong></div>;
+  if (action === 'ticket_closed') return <div className="det-change"><strong><IconTicket size={13} /> Ticket closed</strong></div>;
   if (action === 'assign_missing') return <div><div className="det-change"><strong>Auto-assign run</strong></div><div className="det-sub">{metadata?.updated ?? 0} assigned · {metadata?.remaining ?? 0} remaining</div></div>;
   if (action === 'sync_run') return <div><div className="det-change"><strong>Sheet sync</strong></div><div className="det-sub">{metadata?.inserted ?? 0} new · {metadata?.updated ?? 0} updated · {metadata?.skipped ?? 0} skipped</div></div>;
   if (action === 'pricing_sync_run') return <div><div className="det-change"><strong>Pricing sync</strong>{metadata?.source_sheet ? ` · ${metadata.source_sheet}` : ''}</div><div className="det-sub">{metadata?.inserted ?? 0} new · {metadata?.fetched ?? 0} fetched</div></div>;
-  if (action === 'auto_provision') return <div><div className="det-change"><strong>👤 Account auto-provisioned</strong></div>{metadata?.name && <div className="det-sub">{metadata.name}</div>}</div>;
+  if (action === 'auto_provision') return <div><div className="det-change"><strong><IconUser size={13} /> Account auto-provisioned</strong></div>{metadata?.name && <div className="det-sub">{metadata.name}</div>}</div>;
   if (action === 'bulk_stage_cleanup') {
     return <div><div className="det-change"><strong>Bulk stage cleanup</strong>{metadata?.from_stage && metadata?.to_stage ? ` · ${stageLabel(metadata.from_stage)} → ${stageLabel(metadata.to_stage)}` : ''}</div><div className="det-sub">{metadata?.updated ?? 0} updated{metadata?.csv ? ` · ${metadata.csv}` : ''}</div></div>;
   }

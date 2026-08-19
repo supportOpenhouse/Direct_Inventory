@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { toast } from '../utils/toast.js';
+import { IconWarning } from '../components/icons.jsx';
 
 /* Auto Dialer · Schedule Campaign — build an AND/OR rule tree, pick the RM pool and
    pacing, and start dialling. The tree is untrusted input; the server re-compiles it
@@ -286,7 +287,7 @@ export default function Dialer() {
                 <input type="time" className="dl-input" value={win.end} onChange={(e) => setWin({ ...win, end: e.target.value })} />
               </div>
               {windowHasPassed(win.start, win.end) && (
-                <em className="dl-hint" style={{ color: 'var(--red)' }}>⏰ Already ended today — this campaign would dial nobody until tomorrow.</em>
+                <em className="dl-hint" style={{ color: 'var(--red)' }}><IconWarning size={13} /> Already ended today — this campaign would dial nobody until tomorrow.</em>
               )}
             </label>
             <label className="dl-field"><span>Max attempts / lead</span>

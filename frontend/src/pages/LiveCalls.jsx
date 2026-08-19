@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { formatCallTime } from '../utils/format.js';
 import MissReasonModal from '../components/MissReasonModal.jsx';
 import StatusEditModal from '../components/StatusEditModal.jsx';
+import { IconCheck, IconClose, IconWarning } from '../components/icons.jsx';
 
 /* Live Calls (RM) — who the dialer is ringing you right now, what's queued, and the
    disposition worklist for today's calls. Polls /my-calls every 4s (no SSE); marking a
@@ -29,7 +30,7 @@ function NowCalling({ lead }) {
   }
   return (
     <div className="lc-card lc-live">
-      <div className="lc-eyebrow lc-pulse">● Now calling</div>
+      <div className="lc-eyebrow lc-pulse"><span style={{display:"inline-block",width:7,height:7,borderRadius:"50%",background:"currentColor"}} /> Now calling</div>
       <h2 className="lc-name">{lead.name || 'Unnamed lead'}</h2>
       {lead.phone && <div className="lc-phone">{lead.phone}</div>}
       <div className="lc-details">{details(lead)}</div>
@@ -87,7 +88,7 @@ function CompletedRow({ lead, onMark }) {
       <li className="lc-done">
         <span className="lc-qname">{lead.name || 'Unnamed lead'}</span>
         <span className="lc-muted">{formatCallTime(lead.dialed_at)}</span>
-        <span className={ok ? 'lc-ok' : 'lc-miss'}>{ok ? '✓ connected' : '✕ not reached'}</span>
+        <span className={ok ? 'lc-ok' : 'lc-miss'}>{ok ? <><IconCheck size={13} /> connected</> : <><IconClose size={13} /> not reached</>}</span>
         {!ok && retriesLeft > 0 && (
           <span className="lc-muted" style={{ fontSize: 11.5 }}>{retriesLeft} retr{retriesLeft === 1 ? 'y' : 'ies'} left</span>
         )}
@@ -119,7 +120,7 @@ function CompletedRow({ lead, onMark }) {
     <li className="lc-pending">
       <span className="lc-qname">{lead.name || 'Unnamed lead'}</span>
       <span className="lc-muted">{formatCallTime(lead.dialed_at)}</span>
-      <span className="lc-badge">⚠ needs result</span>
+      <span className="lc-badge"><IconWarning size={13} /> needs result</span>
       <span className="cc">
         <span className="cc-q">Connected?</span>
         <button className="cc-btn yes" onClick={yes} disabled={busy}>Yes</button>

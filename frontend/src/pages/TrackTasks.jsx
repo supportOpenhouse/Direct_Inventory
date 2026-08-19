@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { STAGES, SUPPLY_STAGES, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
 import { todayIST } from '../utils/reportFilters.js';
 import AssignNewLeadsButton from '../components/AssignNewLeadsButton.jsx';
+import { IconCheck } from '../components/icons.jsx';
 
 // Two-line column headers to keep columns narrow. 2-word labels split one word
 // per line; these 3-word labels split at a custom point.
@@ -30,7 +31,7 @@ function ProgressCell({ worked, total }) {
       <span className="tt-prog-num">
         <strong>{worked}</strong> / {total}
         <span className="muted"> · {pct}%</span>
-        {done && <span className="tt-done">✓</span>}
+        {done && <span className="tt-done"><IconCheck size={13} /></span>}
       </span>
     </div>
   );
