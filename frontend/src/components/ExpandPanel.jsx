@@ -95,7 +95,7 @@ function AssignedRmField({ item, role, onUpdated }) {
       <span className="field-lbl">Assigned RM</span>
       <span className="field-val">
         {currentLabel}
-        {isAdmin && <button type="button" className="btn-link" style={{ marginLeft: 8 }} onClick={startEdit}>Change</button>}
+        {isAdmin && !item.consider_deleted && <button type="button" className="btn-link" style={{ marginLeft: 8 }} onClick={startEdit}>Change</button>}
       </span>
     </div>
   );
@@ -104,7 +104,8 @@ function AssignedRmField({ item, role, onUpdated }) {
 // 5th column: tickets raised on this property. Lazy-loads on mount, shows the
 // latest on top with a "+N more" toggle, and lets admin/manager raise a new one.
 function TicketsSection({ item, role }) {
-  const canCreate = role === 'admin' || role === 'manager';
+  // No new tickets on an archived (soft-deleted) lead — it's read-only.
+  const canCreate = (role === 'admin' || role === 'manager') && !item.consider_deleted;
   const [tickets, setTickets] = useState(null); // null = loading
   const [expanded, setExpanded] = useState(false);
   const [open, setOpen] = useState(null);

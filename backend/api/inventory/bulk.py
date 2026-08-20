@@ -45,12 +45,16 @@ def set_assigned_rms(oh_id: str):
     try:
         with conn, conn.cursor() as cur:
             cur.execute(
-                "SELECT oh_id, assigned_rm_ids FROM inventory WHERE oh_id = %s FOR UPDATE",
+                "SELECT oh_id, assigned_rm_ids, consider_deleted FROM inventory "
+                "WHERE oh_id = %s FOR UPDATE",
                 (oh_id,),
             )
             existing = cur.fetchone()
             if not existing:
                 return jsonify({"error": "not found"}), 404
+            # An archived (soft-deleted) lead is read-only — restore it first.
+            if existing.get("consider_deleted"):
+                return jsonify({"error": "This lead is archived — restore it before changing its RM."}), 409
             before_ids = existing.get("assigned_rm_ids") or []
 
             if rm_ids:

@@ -316,8 +316,9 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .unarchive-btn .ua-x { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; color: var(--red); }
 .unarchive-btn:hover > svg { opacity: .3; }
 .unarchive-btn:hover .ua-x { display: inline-flex; }
-/* Archived lead's expand drawer — same red dashed border as the detail popup. */
-.expand-archived { border: 2px dashed #ff1f1f; border-radius: var(--r-lg); }
+/* Archived lead's expand drawer — same red dashed border as the detail popup. Inset a
+   little so the TOP edge isn't hidden flush under the row above. */
+.expand-archived { border: 2px dashed #ff1f1f; border-radius: var(--r-lg); margin: 5px; }
 /* Toasts — top-right, above modals (backdrop z 1000). Errors get a red accent
    and linger; success/info are brief. */
 .toaster { position: fixed; top: 16px; right: 16px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; max-width: min(400px, calc(100vw - 32px)); }
