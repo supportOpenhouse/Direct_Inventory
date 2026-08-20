@@ -7,8 +7,8 @@ from typing import Any
 # User-id fields whose before/after we render as NAMES instead of raw ids, so the
 # log reads "[Animesh Singh]" / "Aman Dixit" instead of "[38]" / "16". Raw ids are
 # kept in metadata (before_ids / after_ids) so entries stay traceable.
-_NAME_ARRAY_FIELDS = {"assigned_rm_ids"}                 # int[] → "[Name, Name]"
-_NAME_SCALAR_FIELDS = {"assigned_mgr_id", "manager"}     # int   → "Name"
+_NAME_ARRAY_FIELDS = {"assigned_rm_ids", "manager_ids"}  # int[] → "[Name, Name]"
+_NAME_SCALAR_FIELDS = {"assigned_mgr_id"}                # int   → "Name"
 
 
 def _coerce_ids(value: Any) -> list[int]:

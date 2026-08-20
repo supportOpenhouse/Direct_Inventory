@@ -124,9 +124,9 @@ def main():
             first_rms = sorted({tup[2][0] for tup in survivors_by_row.values()})
             mgr_of = {}
             if first_rms:
-                cur.execute("SELECT id, manager FROM users WHERE id = ANY(%s)", (first_rms,))
+                cur.execute("SELECT id, manager_ids FROM users WHERE id = ANY(%s)", (first_rms,))
                 for u in cur.fetchall():
-                    mgr_of[u["id"]] = u["manager"]
+                    mgr_of[u["id"]] = (u["manager_ids"] or [None])[0]
 
             for rid, (r, before, after) in survivors_by_row.items():
                 # Convention: first RM's manager wins. For a row that fell back

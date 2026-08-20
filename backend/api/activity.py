@@ -424,7 +424,7 @@ def _parse_users_param():
 
 def _manager_rm_emails(cur, manager_id):
     """Lowercased emails of the RMs that report to this manager."""
-    cur.execute("SELECT LOWER(email) AS email FROM users WHERE manager = %s", (manager_id,))
+    cur.execute("SELECT LOWER(email) AS email FROM users WHERE %s = ANY(manager_ids)", (manager_id,))
     return {r["email"] for r in cur.fetchall() if r.get("email")}
 
 
@@ -446,7 +446,7 @@ def _resolve_report_email(cur):
         if not requested or requested == own:
             return (own, None)
         cur.execute(
-            "SELECT 1 FROM users WHERE LOWER(email) = %s AND manager = %s",
+            "SELECT 1 FROM users WHERE LOWER(email) = %s AND %s = ANY(manager_ids)",
             (requested, g.user["id"]),
         )
         if not cur.fetchone():

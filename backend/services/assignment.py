@@ -74,7 +74,7 @@ def _resolve_rm_for_lead(
     # 1. Direct society overlap.
     if s_norm:
         cur.execute(
-            """SELECT id, manager FROM users
+            """SELECT id, manager_ids FROM users
                WHERE role = 'rm' AND is_active = TRUE
                  AND EXISTS (
                    SELECT 1 FROM unnest(society) AS s
@@ -85,7 +85,7 @@ def _resolve_rm_for_lead(
         )
         row = cur.fetchone()
         if row:
-            return (row["id"], row["manager"])
+            return (row["id"], (row["manager_ids"] or [None])[0])
 
         # 2. Micro-market overlap, resolved via master_societies.
         try:
@@ -107,7 +107,7 @@ def _resolve_rm_for_lead(
 
         if micros:
             cur.execute(
-                """SELECT id, manager FROM users
+                """SELECT id, manager_ids FROM users
                    WHERE role = 'rm' AND is_active = TRUE
                      AND micro_market && %s
                    ORDER BY id LIMIT 1""",
@@ -115,14 +115,14 @@ def _resolve_rm_for_lead(
             )
             row = cur.fetchone()
             if row:
-                return (row["id"], row["manager"])
+                return (row["id"], (row["manager_ids"] or [None])[0])
 
     # 3. City overlap — broadest fallback. Property's city must be in some
     # active RM's cities[] (with 'Noida' expanded to include 'Greater Noida').
     if city:
         city_targets = list(_expand_cities([city]))
         cur.execute(
-            """SELECT id, manager FROM users
+            """SELECT id, manager_ids FROM users
                WHERE role = 'rm' AND is_active = TRUE
                  AND cities && %s
                ORDER BY id LIMIT 1""",
@@ -130,7 +130,7 @@ def _resolve_rm_for_lead(
         )
         row = cur.fetchone()
         if row:
-            return (row["id"], row["manager"])
+            return (row["id"], (row["manager_ids"] or [None])[0])
 
     return (None, None)
 
@@ -209,7 +209,7 @@ def assign_missing_batch(
     # per-row matching is O(rms) of cheap set membership checks.
     with conn.cursor() as cur:
         cur.execute(
-            """SELECT id, manager, society, micro_market, cities FROM users
+            """SELECT id, manager_ids, society, micro_market, cities FROM users
                WHERE role = 'rm' AND is_active = TRUE
                ORDER BY id"""
         )
@@ -220,7 +220,7 @@ def assign_missing_batch(
     # explicit fallback below — so drop it from the matchable set.
     rm_scope = [{
         "id":      rm["id"],
-        "manager": rm.get("manager"),
+        "manager": (rm.get("manager_ids") or [None])[0],
         "soc_lc":  {(s or "").strip().lower() for s in (rm.get("society") or []) if s},
         "micro":   set(rm.get("micro_market") or []),
         "cities":  set(_expand_cities(rm.get("cities") or [])),

@@ -100,8 +100,8 @@ export default function MyProfile() {
     const byName = (a, b) => (a.name || a.email).localeCompare(b.name || b.email);
     const managers = people.filter((u) => u.role === 'manager').sort(byName);
     const rms = people.filter((u) => u.role === 'rm');
-    const groups = managers.map((mgr) => ({ manager: mgr, team: rms.filter((r) => r.manager === mgr.id).sort(byName) }));
-    const unassigned = rms.filter((r) => !managers.some((m) => m.id === r.manager)).sort(byName);
+    const groups = managers.map((mgr) => ({ manager: mgr, team: rms.filter((r) => (r.manager_ids || []).includes(mgr.id)).sort(byName) }));
+    const unassigned = rms.filter((r) => !(r.manager_ids || []).some((id) => managers.some((m) => m.id === id))).sort(byName);
     return { groups, unassigned };
   }, [people]);
 
@@ -190,8 +190,8 @@ export default function MyProfile() {
         <div className="pf-field"><label>Phone</label><div>{p.phone || '—'}</div></div>
         <div className="pf-field"><label>Role</label><div style={{ textTransform: 'capitalize' }}>{role}</div></div>
         {(role === 'manager' || role === 'rm') && (
-          <div className="pf-field"><label>My Manager</label>
-            <div>{p.manager ? (p.manager.name || p.manager.email) : <span className="muted">—</span>}</div>
+          <div className="pf-field"><label>My Managers</label>
+            <div>{p.managers?.length ? p.managers.map((m) => m.name || m.email).join(', ') : <span className="muted">—</span>}</div>
           </div>
         )}
       </div>

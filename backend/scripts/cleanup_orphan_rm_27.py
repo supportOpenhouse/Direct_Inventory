@@ -104,9 +104,9 @@ def main():
             first_ids = sorted({m[3][0] for m in mixed})
             mgr_of = {}
             if first_ids:
-                cur.execute("SELECT id, manager FROM users WHERE id = ANY(%s)", (first_ids,))
+                cur.execute("SELECT id, manager_ids FROM users WHERE id = ANY(%s)", (first_ids,))
                 for u in cur.fetchall():
-                    mgr_of[u["id"]] = u["manager"]
+                    mgr_of[u["id"]] = (u["manager_ids"] or [None])[0]
 
             print()
             print("=" * 70)

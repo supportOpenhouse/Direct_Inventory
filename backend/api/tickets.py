@@ -73,7 +73,7 @@ def _visibility(user: dict) -> tuple[str, list]:
         # assigned RM reports to them — even ones an admin raised.
         return (
             "(t.created_by_id = %s OR EXISTS ("
-            "  SELECT 1 FROM users u WHERE u.id = t.assigned_rm_id AND u.manager = %s))",
+            "  SELECT 1 FROM users u WHERE u.id = t.assigned_rm_id AND %s = ANY(u.manager_ids)))",
             [user["id"], user["id"]],
         )
     return ("t.assigned_rm_id = %s", [user["id"]])  # rm
@@ -229,9 +229,9 @@ def create_ticket():
 
             # Manager may only raise tickets for RMs who report to them.
             if user["role"] == "manager":
-                cur.execute("SELECT manager FROM users WHERE id = %s", (assigned_rm_id,))
+                cur.execute("SELECT manager_ids FROM users WHERE id = %s", (assigned_rm_id,))
                 rm = cur.fetchone()
-                if not rm or rm["manager"] != user["id"]:
+                if not rm or user["id"] not in (rm["manager_ids"] or []):
                     return jsonify({"error": "that RM is not in your team"}), 403
 
             cur.execute(

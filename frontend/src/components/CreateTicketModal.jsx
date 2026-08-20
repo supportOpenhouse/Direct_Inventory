@@ -48,7 +48,7 @@ export default function CreateTicketModal({ onClose: rawClose, onCreated }) {
     api.get('/api/users?role=rm')
       .then((r) => {
         let items = (r.items || []).filter((u) => u.is_active !== false);
-        if (!isAdmin) items = items.filter((u) => u.manager === user?.id);
+        if (!isAdmin) items = items.filter((u) => (u.manager_ids || []).includes(user?.id));
         if (alive) setRms(items);
       })
       .catch(() => {});

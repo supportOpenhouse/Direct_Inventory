@@ -165,10 +165,10 @@ def create_one():
             #             their own RMs; else auto-resolve.
             requested_rm = body.get("assigned_rm_id")
             if user["role"] == "rm":
-                cur.execute("SELECT manager FROM users WHERE id = %s", (user["id"],))
+                cur.execute("SELECT manager_ids FROM users WHERE id = %s", (user["id"],))
                 me = cur.fetchone()
                 rm_id = user["id"]
-                mgr_id = me["manager"] if me else None
+                mgr_id = (me["manager_ids"] or [None])[0] if me else None
                 assign_source = "self"
             elif requested_rm not in (None, "", 0):
                 try:
@@ -176,16 +176,16 @@ def create_one():
                 except (TypeError, ValueError):
                     return jsonify({"error": "invalid assigned_rm_id"}), 400
                 cur.execute(
-                    "SELECT id, manager FROM users "
+                    "SELECT id, manager_ids FROM users "
                     "WHERE id = %s AND role = 'rm' AND is_active = TRUE",
                     (requested_rm,),
                 )
                 rm = cur.fetchone()
                 if not rm:
                     return jsonify({"error": "invalid assigned_rm_id"}), 400
-                if user["role"] == "manager" and rm["manager"] != user["id"]:
+                if user["role"] == "manager" and user["id"] not in (rm["manager_ids"] or []):
                     return jsonify({"error": "managers can only assign their own RMs"}), 403
-                rm_id, mgr_id = rm["id"], rm["manager"]
+                rm_id, mgr_id = rm["id"], (rm["manager_ids"] or [None])[0]
                 assign_source = "manual"
             else:
                 rm_id, mgr_id = resolve_assignment(
@@ -473,9 +473,9 @@ def update_one(oh_id: str):
             if "assigned_rm_ids" in body and "assigned_mgr_id" not in body:
                 new_ids = body.get("assigned_rm_ids") or []
                 if new_ids:
-                    cur.execute("SELECT manager FROM users WHERE id = %s", (new_ids[0],))
+                    cur.execute("SELECT manager_ids FROM users WHERE id = %s", (new_ids[0],))
                     row = cur.fetchone()
-                    new_mgr = row["manager"] if row else None
+                    new_mgr = (row["manager_ids"] or [None])[0] if row else None
                 else:
                     new_mgr = None
                 if existing.get("assigned_mgr_id") != new_mgr:

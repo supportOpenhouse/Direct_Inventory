@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
 import { CITIES } from '../utils/format.js';
 import UserEditModal from '../components/UserEditModal.jsx';
+import SearchableMultiSelect from '../components/SearchableMultiSelect.jsx';
 import { IconEdit } from '../components/icons.jsx';
 
 const ROLES = ['admin', 'manager', 'rm'];
@@ -26,7 +27,7 @@ export default function Users() {
   const [users, setUsers] = useState([]);
   const [areas, setAreas] = useState({ cities: [], micro_markets: [], societies: [] });
   const [loading, setLoading] = useState(true);
-  const [draft, setDraft] = useState({ email: '', name: '', phone: '', role: 'rm', manager: '', cities: [] });
+  const [draft, setDraft] = useState({ email: '', name: '', phone: '', role: 'rm', manager_ids: [], cities: [] });
   const [error, setError] = useState(null);
   const [editUser, setEditUser] = useState(null);
   const [sort, setSort] = useState({ field: null, dir: 'asc' });
@@ -35,7 +36,7 @@ export default function Users() {
   const [recomputing, setRecomputing] = useState(false);
 
   // Manager applies only to RMs; admin auto-gets all cities.
-  function setRole(role) { setDraft((p) => ({ ...p, role, cities: role === 'admin' ? [...CITIES] : p.cities, manager: role === 'rm' ? p.manager : '' })); }
+  function setRole(role) { setDraft((p) => ({ ...p, role, cities: role === 'admin' ? [...CITIES] : p.cities, manager_ids: role === 'rm' ? p.manager_ids : [] })); }
 
   async function refresh() { setLoading(true); try { setUsers((await api.get('/api/users')).items); } finally { setLoading(false); } }
   async function loadAreas() { try { setAreas(await api.get('/api/users/master-areas')); } catch { /* non-blocking */ } }
@@ -48,14 +49,14 @@ export default function Users() {
   const managers = useMemo(() => users.filter((u) => u.role === 'manager').map((u) => ({ id: u.id, name: u.name, email: u.email })), [users]);
   const sortedUsers = useMemo(() => {
     if (!sort.field) return users;
-    const keyOf = (u) => (sort.field === 'manager' ? (u.manager_name || u.manager_email || '') : (u[sort.field] ?? '')).toString().toLowerCase();
+    const keyOf = (u) => (sort.field === 'manager' ? (u.manager_names || '') : (u[sort.field] ?? '')).toString().toLowerCase();
     return [...users].sort((a, b) => { const av = keyOf(a), bv = keyOf(b); if (av < bv) return sort.dir === 'asc' ? -1 : 1; if (av > bv) return sort.dir === 'asc' ? 1 : -1; return 0; });
   }, [users, sort]);
 
   function toggleCity(c) { setDraft((p) => ({ ...p, cities: p.cities.includes(c) ? p.cities.filter((x) => x !== c) : [...p.cities, c] })); }
   async function add() {
     setError(null);
-    try { await api.post('/api/users', draft); setDraft({ email: '', name: '', phone: '', role: 'rm', manager: '', cities: [] }); refresh(); }
+    try { await api.post('/api/users', draft); setDraft({ email: '', name: '', phone: '', role: 'rm', manager_ids: [], cities: [] }); refresh(); }
     catch (e) { setError(e.data?.error || e.message); }
   }
   async function patch(id, body) { try { await api.patch(`/api/users/${id}`, body); refresh(); } catch (e) { alert(e.data?.error || e.message); } }
@@ -72,15 +73,15 @@ export default function Users() {
         <div className="adduser-row">
           <div className="au-role"><label>Role</label><select className="role-select" value={draft.role} onChange={(e) => setRole(e.target.value)}>{ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}</select></div>
           {draft.role === 'rm' && (
-            <div className="au-role"><label>Manager</label>
-              <select className="role-select" value={draft.manager} onChange={(e) => setDraft({ ...draft, manager: e.target.value })}>
-                <option value="">— select manager —</option>
-                {managers.map((m) => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}
-              </select>
+            <div className="au-role"><label>Managers</label>
+              <SearchableMultiSelect chips={false}
+                options={managers.map((m) => ({ value: m.id, label: m.name || m.email }))}
+                value={draft.manager_ids} onChange={(v) => setDraft({ ...draft, manager_ids: v.map(Number) })}
+                placeholder="Select managers…" />
             </div>
           )}
           {/* Cities show once a manager is chosen (RM); for admin/manager they show as before. */}
-          {(draft.role !== 'rm' || draft.manager) && (
+          {(draft.role !== 'rm' || draft.manager_ids.length > 0) && (
             <div className="au-field"><label>Cities</label><div className="city-pills">{CITIES.map((c) => <button key={c} type="button" className={draft.cities.includes(c) ? 'pill pill-on' : 'pill'} onClick={() => toggleCity(c)}>{c}</button>)}</div></div>
           )}
           <div className="au-actions"><button className="btn-primary" onClick={add}>Add user</button></div>
@@ -115,7 +116,7 @@ export default function Users() {
                   <td>{u.name || '—'}</td>
                   <td>{u.phone || '—'}</td>
                   <td><select className="role-select" value={u.role} onChange={(e) => patch(u.id, { role: e.target.value })}>{ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}</select></td>
-                  <td>{u.manager_name || u.manager_email || <em className="muted">—</em>}</td>
+                  <td>{u.manager_names || <em className="muted">—</em>}</td>
                   <td><span className="usr-scope" title={scopeSummary(u)}>{scopeSummary(u)}</span></td>
                   <td><button className="btn-edit" onClick={() => setEditUser(u)}><IconEdit size={13} /> Edit</button></td>
                 </tr>

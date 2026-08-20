@@ -52,7 +52,7 @@ def main():
         with conn.cursor() as cur:
             # Look up keeper users (id, name, manager) so we can re-derive
             # assigned_mgr_id and label the report.
-            cur.execute("SELECT id, name, manager FROM users WHERE id = ANY(%s)", (KEEPERS,))
+            cur.execute("SELECT id, name, manager_ids FROM users WHERE id = ANY(%s)", (KEEPERS,))
             users = {u["id"]: u for u in cur.fetchall()}
             missing = [k for k in KEEPERS if k not in users]
             if missing:
@@ -60,7 +60,7 @@ def main():
                 sys.exit(3)
             for k in KEEPERS:
                 u = users[k]
-                print(f"keeper #{k:>2} {u['name']:<20}  manager={u['manager']}")
+                print(f"keeper #{k:>2} {u['name']:<20}  manager={(u['manager_ids'] or [None])[0]}")
 
             # Candidate rows: multi-RM AND contain at least one keeper.
             cur.execute(
@@ -81,7 +81,7 @@ def main():
                 if keeper is None:  # shouldn't hit thanks to the && filter
                     continue
                 after = [keeper]
-                new_mgr = users[keeper]["manager"]
+                new_mgr = (users[keeper]["manager_ids"] or [None])[0]
                 to_update.append((
                     r["id"], r["oh_id"],
                     before, after,

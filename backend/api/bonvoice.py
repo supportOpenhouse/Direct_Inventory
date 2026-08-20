@@ -693,7 +693,7 @@ def _my_call_numbers(user, own=False):
             if user["role"] == "manager" and not own:
                 cur.execute(
                     "SELECT phone FROM users WHERE phone IS NOT NULL AND btrim(phone) <> '' "
-                    "  AND (id = %s OR manager = %s)", (user["id"], user["id"]))
+                    "  AND (id = %s OR %s = ANY(manager_ids))", (user["id"], user["id"]))
             else:
                 cur.execute("SELECT phone FROM users WHERE id = %s AND phone IS NOT NULL", (user["id"],))
             return {d for d in (bv.digits(r["phone"]) for r in cur.fetchall()) if d}
@@ -714,7 +714,7 @@ def _my_scope_data(user):
     try:
         with conn, conn.cursor() as cur:
             if user["role"] == "manager":
-                cur.execute("SELECT id, phone FROM users WHERE id = %s OR manager = %s",
+                cur.execute("SELECT id, phone FROM users WHERE id = %s OR %s = ANY(manager_ids)",
                             (user["id"], user["id"]))
             else:
                 cur.execute("SELECT id, phone FROM users WHERE id = %s", (user["id"],))

@@ -71,7 +71,7 @@ export default function Report() {
     try {
       const r = await api.get('/api/users');
       let items = (r.items || []).filter((u) => u.is_active);
-      if (isManager) items = items.filter((u) => u.manager === user?.id);
+      if (isManager) items = items.filter((u) => (u.manager_ids || []).includes(user?.id));
       setAllUsers(items.map((u) => ({ email: u.email, name: u.name, role: u.role })));
     } catch { /* non-blocking */ }
   }

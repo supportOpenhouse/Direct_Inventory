@@ -10,7 +10,7 @@ const LIST_CAP = 200;
  * fields like society on Add Inventory).
  */
 export default function SearchableMultiSelect({
-  options, value, onChange, placeholder = 'Select…', disabled = false, single = false,
+  options, value, onChange, placeholder = 'Select…', disabled = false, single = false, chips = true,
 }) {
   // Options may be plain strings or { value, label } objects. Normalize to
   // objects internally; `value`/`onChange` always speak in `value`s (the string
@@ -84,7 +84,11 @@ export default function SearchableMultiSelect({
     else onChange([...selected, v]);
   }
 
-  const label = single ? (selected ? labelOf(selected) : placeholder) : (selectedCount === 0 ? placeholder : `${selectedCount} selected`);
+  // chips=false reads the selection out inside the control ("A, B") instead of
+  // counting it ("2 selected") and drops the chips row below — for one-line/table forms.
+  const multiLabel = selectedCount === 0 ? placeholder
+    : (chips ? `${selectedCount} selected` : selected.map(labelOf).join(', '));
+  const label = single ? (selected ? labelOf(selected) : placeholder) : multiLabel;
 
   const menu = open && !disabled && pos
     ? createPortal(
@@ -139,7 +143,7 @@ export default function SearchableMultiSelect({
         <span className="sms-caret" role="button" tabIndex={-1} onMouseDown={(e) => { e.preventDefault(); if (!disabled) toggle(); }}>▾</span>
       </div>
       {menu}
-      {!single && selectedCount > 0 && (
+      {!single && chips && selectedCount > 0 && (
         <div className="sms-chips">
           {selected.map((vv) => (
             <span key={vv} className="sms-chip">{labelOf(vv)}{!disabled && <button type="button" onClick={() => pick(vv)} aria-label={`Remove ${labelOf(vv)}`}>×</button>}</span>

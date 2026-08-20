@@ -39,29 +39,33 @@ def my_profile():
             cur.execute(
                 "SELECT u.id, u.email, u.name, u.phone, u.role, u.cities, u.society, "
                 "       u.micro_market, u.is_active, "
-                "       m.id AS manager_id, m.name AS manager_name, m.email AS manager_email "
-                "FROM users u LEFT JOIN users m ON m.id = u.manager "
-                "WHERE u.id = %s",
+                "       COALESCE(u.manager_ids, '{}'::int[]) AS manager_ids "
+                "FROM users u WHERE u.id = %s",
                 (uid,),
             )
             row = cur.fetchone()
             if not row:
                 return jsonify({"error": "user not found"}), 404
+            # An RM can report to several managers now — resolve them all.
+            managers = []
+            if row["manager_ids"]:
+                cur.execute(
+                    "SELECT id, name, email FROM users WHERE id = ANY(%s) ORDER BY name, email",
+                    (row["manager_ids"],),
+                )
+                managers = cur.fetchall()
             cur.execute(
                 "SELECT id, name, email, role, is_active FROM users "
-                "WHERE manager = %s ORDER BY role, name, email",
+                "WHERE %s = ANY(manager_ids) ORDER BY role, name, email",
                 (uid,),
             )
             team = cur.fetchall()
-        manager = None
-        if row.get("manager_id"):
-            manager = {"id": row["manager_id"], "name": row["manager_name"], "email": row["manager_email"]}
         return jsonify({
             "id": row["id"], "email": row["email"], "name": row["name"],
             "phone": row["phone"], "role": row["role"],
             "cities": row["cities"] or [], "society": row["society"] or [],
             "micro_market": row["micro_market"] or [],
-            "manager": manager, "team": team,
+            "manager_ids": row["manager_ids"], "managers": managers, "team": team,
         })
     finally:
         conn.close()
@@ -75,11 +79,12 @@ def list_users():
 
     sql = """
         SELECT u.id, u.email, u.name, u.phone, u.role,
-               u.cities, u.society, u.micro_market, u.manager,
+               u.cities, u.society, u.micro_market,
+               COALESCE(u.manager_ids, '{}'::int[]) AS manager_ids,
                u.is_active, u.created_at,
-               m.name AS manager_name, m.email AS manager_email
+               (SELECT string_agg(m.name, ', ' ORDER BY m.name)
+                  FROM users m WHERE m.id = ANY(u.manager_ids)) AS manager_names
         FROM users u
-        LEFT JOIN users m ON m.id = u.manager
         WHERE TRUE
     """
     params: list = []
@@ -138,6 +143,49 @@ def master_areas():
         conn.close()
 
 
+# ── multi-manager helpers ────────────────────────────────────────────────────
+# An RM can report to several managers: users.manager_ids is an INT[]. The array has
+# no per-element FK, so the app validates the ids here (migration 043).
+
+def _coerce_manager_ids(body, role):
+    """(mids:list|None, error:str|None). Reads `manager_ids` (list) or the legacy single
+    `manager` key. Only meaningful for RMs. Not provided → (None, None) (leave unchanged);
+    empty → ([]) which the caller stores as NULL."""
+    if role != "rm":
+        return None, None
+    if "manager_ids" in body:
+        raw = body.get("manager_ids") or []
+    elif "manager" in body:  # legacy single-value alias — normalise to a one-element list
+        legacy = body.get("manager")
+        raw = [] if legacy in (None, "", 0, "0") else [legacy]
+    else:
+        return None, None
+    if not isinstance(raw, list):
+        return None, "manager_ids must be a list of integers or null"
+    mids = []
+    for mid in raw:
+        try:
+            mid = int(mid)
+        except (TypeError, ValueError):
+            return None, "manager_ids must be a list of integers"
+        if mid not in mids:  # dedupe, preserve order
+            mids.append(mid)
+    return mids, None
+
+
+def _validate_managers_exist(cur, mids):
+    """None if every id is an active manager, else an error string. One round-trip."""
+    if not mids:
+        return None
+    cur.execute("SELECT id FROM users WHERE id = ANY(%s) AND role = 'manager' AND is_active",
+                (mids,))
+    found = {r["id"] for r in cur.fetchall()}
+    bad = [m for m in mids if m not in found]
+    if bad:
+        return "not a manager (or not found): " + ", ".join(str(m) for m in bad)
+    return None
+
+
 @bp.post("")
 @require_auth("admin")
 def create_user():
@@ -147,9 +195,9 @@ def create_user():
     name = body.get("name")
     phone = body.get("phone")
     cities = body.get("cities") or []
-    # Manager is only meaningful for an RM; ignore it for other roles.
-    mv = body.get("manager")
-    manager = int(mv) if str(mv or "").strip().isdigit() and role == "rm" else None
+    mids, merr = _coerce_manager_ids(body, role)
+    if merr:
+        return jsonify({"error": merr}), 400
 
     if not email or role not in VALID_ROLES:
         return jsonify({"error": "email and valid role required"}), 400
@@ -157,18 +205,21 @@ def create_user():
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
+            verr = _validate_managers_exist(cur, mids)
+            if verr:
+                return jsonify({"error": verr}), 400
             cur.execute(
-                """INSERT INTO users (email, name, phone, role, cities, manager, is_active)
+                """INSERT INTO users (email, name, phone, role, cities, manager_ids, is_active)
                    VALUES (%s, %s, %s, %s, %s, %s, TRUE)
                    ON CONFLICT (email) DO UPDATE
                      SET role = EXCLUDED.role,
                          name = COALESCE(EXCLUDED.name, users.name),
                          phone = COALESCE(EXCLUDED.phone, users.phone),
                          cities = EXCLUDED.cities,
-                         manager = EXCLUDED.manager,
+                         manager_ids = EXCLUDED.manager_ids,
                          is_active = TRUE
                    RETURNING *""",
-                (email, name, phone, role, cities, manager),
+                (email, name, phone, role, cities, mids or None),
             )
             row = cur.fetchone()
             log_activity(
@@ -185,23 +236,15 @@ def create_user():
 @require_auth("admin")
 def update_user(user_id: int):
     body = request.get_json(silent=True) or {}
-    allowed = {"name", "phone", "role", "cities", "is_active",
-               "society", "micro_market", "manager"}
+    allowed = {"name", "phone", "role", "cities", "is_active", "society", "micro_market"}
     updates = {k: v for k, v in body.items() if k in allowed}
     if "role" in updates and updates["role"] not in VALID_ROLES:
         return jsonify({"error": "invalid role"}), 400
-    # manager: coerce to int or NULL; a user can't be their own manager.
-    if "manager" in updates:
-        mv = updates["manager"]
-        updates["manager"] = int(mv) if mv not in (None, "", 0) else None
-        if updates["manager"] == user_id:
-            return jsonify({"error": "a user cannot be their own manager"}), 400
     # Array scope fields — normalise null -> empty array.
     for arr_field in ("cities", "society", "micro_market"):
         if arr_field in updates and updates[arr_field] is None:
             updates[arr_field] = []
-    if not updates:
-        return jsonify({"error": "no editable fields"}), 400
+    wants_manager = "manager_ids" in body or "manager" in body
 
     conn = get_conn()
     try:
@@ -210,6 +253,22 @@ def update_user(user_id: int):
             existing = cur.fetchone()
             if not existing:
                 return jsonify({"error": "not found"}), 404
+            # Manager(s): only RMs have them; a role change away from rm clears them.
+            eff_role = updates.get("role", existing["role"])
+            if eff_role != "rm" and (wants_manager or "role" in updates):
+                updates["manager_ids"] = None
+            elif eff_role == "rm" and wants_manager:
+                mids, merr = _coerce_manager_ids(body, "rm")
+                if merr:
+                    return jsonify({"error": merr}), 400
+                if user_id in (mids or []):
+                    return jsonify({"error": "a user cannot be their own manager"}), 400
+                verr = _validate_managers_exist(cur, mids)
+                if verr:
+                    return jsonify({"error": verr}), 400
+                updates["manager_ids"] = mids or None
+            if not updates:
+                return jsonify({"error": "no editable fields"}), 400
             for k, v in updates.items():
                 log_activity(
                     cur, actor_user_id=g.user["id"], actor_email=g.user["email"],

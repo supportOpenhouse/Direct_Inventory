@@ -404,7 +404,7 @@ def cancel_visit():
             elif user["role"] == "manager" and assigned_rm_ids:
                 # Manager may cancel iff one of the assigned RMs reports to them.
                 cur.execute(
-                    "SELECT 1 FROM users WHERE id = ANY(%s) AND manager = %s LIMIT 1",
+                    "SELECT 1 FROM users WHERE id = ANY(%s) AND %s = ANY(manager_ids) LIMIT 1",
                     (assigned_rm_ids, user["id"]),
                 )
                 allowed = cur.fetchone() is not None
@@ -537,7 +537,7 @@ def reschedule_visit():
                 allowed = True
             elif user["role"] == "manager" and assigned_rm_ids:
                 cur.execute(
-                    "SELECT 1 FROM users WHERE id = ANY(%s) AND manager = %s LIMIT 1",
+                    "SELECT 1 FROM users WHERE id = ANY(%s) AND %s = ANY(manager_ids) LIMIT 1",
                     (assigned_rm_ids, user["id"]),
                 )
                 allowed = cur.fetchone() is not None

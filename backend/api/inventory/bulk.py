@@ -59,12 +59,13 @@ def set_assigned_rms(oh_id: str):
 
             if rm_ids:
                 cur.execute(
-                    "SELECT id, manager FROM users "
+                    "SELECT id, manager_ids FROM users "
                     "WHERE id = ANY(%s) AND role = 'rm' AND is_active = TRUE",
                     (rm_ids,),
                 )
                 rows = cur.fetchall()
-                found = {r["id"]: r["manager"] for r in rows}
+                # assigned_mgr_id is a single id — take each RM's primary (first) manager.
+                found = {r["id"]: (r["manager_ids"] or [None])[0] for r in rows}
                 bad = [x for x in rm_ids if x not in found]
                 if bad:
                     return jsonify({"error": f"invalid or inactive rm ids: {bad}"}), 400
@@ -190,11 +191,11 @@ def bulk_update():
                 new_rm_ids = updates["assigned_rm_ids"] or []
                 if new_rm_ids:
                     cur.execute(
-                        "SELECT manager FROM users WHERE id = %s",
+                        "SELECT manager_ids FROM users WHERE id = %s",
                         (new_rm_ids[0],),
                     )
                     row = cur.fetchone()
-                    updates["assigned_mgr_id"] = row["manager"] if row else None
+                    updates["assigned_mgr_id"] = (row["manager_ids"] or [None])[0] if row else None
                 else:
                     # Empty array (RM cleared) -> mgr also cleared.
                     updates["assigned_mgr_id"] = None

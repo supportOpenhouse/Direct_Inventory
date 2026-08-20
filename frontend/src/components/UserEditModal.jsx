@@ -16,7 +16,7 @@ export default function UserEditModal({ user, managers, areas, onClose: rawClose
   const [cities, setCities] = useState(foldCities(user.cities));
   const [microMarkets, setMicroMarkets] = useState(user.micro_market || []);
   const [societies, setSocieties] = useState(user.society || []);
-  const [manager, setManager] = useState(user.manager || '');
+  const [managerIds, setManagerIds] = useState(Array.isArray(user.manager_ids) ? user.manager_ids.map(Number) : []);
   const [phone, setPhone] = useState(user.phone || '');
   const [isActive, setIsActive] = useState(!!user.is_active);
   const [saving, setSaving] = useState(false);
@@ -29,7 +29,7 @@ export default function UserEditModal({ user, managers, areas, onClose: rawClose
   async function save() {
     setError(null); setSaving(true);
     try {
-      const body = { is_active: isActive, manager: manager ? Number(manager) : null, phone: phone.trim() || null, cities, micro_market: microMarkets, society: societies };
+      const body = { is_active: isActive, manager_ids: managerIds, phone: phone.trim() || null, cities, micro_market: microMarkets, society: societies };
       onSaved(await api.patch(`/api/users/${user.id}`, body));
     } catch (e) { setError(e.data?.error || e.message); } finally { setSaving(false); }
   }
@@ -46,11 +46,11 @@ export default function UserEditModal({ user, managers, areas, onClose: rawClose
               placeholder="e.g. 98765 43210" inputMode="tel" />
           </div>
           <div>
-            <label>Manager</label>
-            <select className="role-select" value={manager} onChange={(e) => setManager(e.target.value)}>
-              <option value="">— none —</option>
-              {managers.filter((m) => m.id !== user.id).map((m) => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}
-            </select>
+            <label>Managers</label>
+            <SearchableMultiSelect chips={false}
+              options={managers.filter((m) => m.id !== user.id).map((m) => ({ value: m.id, label: m.name || m.email }))}
+              value={managerIds} onChange={(v) => setManagerIds(v.map(Number))}
+              placeholder="Select managers…" />
           </div>
           <div>
             <label>Status</label>

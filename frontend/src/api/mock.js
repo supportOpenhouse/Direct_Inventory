@@ -10,6 +10,11 @@ import { todayISO } from '../utils/format.js';
 // ── tiny deterministic helpers (no Math.random so re-renders stay stable) ──
 let _seq = 1000;
 const nextId = () => (_seq += 1);
+// manager_ids -> "Name A, Name B" (null when empty), mirroring the backend's manager_names.
+const mgrNames = (ids) => {
+  const names = (ids || []).map((id) => DB.users.find((x) => x.id === id)?.name).filter(Boolean);
+  return names.length ? names.join(', ') : null;
+};
 
 // The "logged in" user for the mock session (switchable via the login mock).
 function mockUser() {
@@ -133,11 +138,11 @@ const DB = {
   inventory: seedInventory(),
   tickets: [],
   users: [
-    { id: 1, email: 'admin@openhouse.in', name: 'Aarav Admin', phone: '9900000001', role: 'admin', is_active: true, manager: null, manager_name: null, manager_email: null, cities: [...CITIES], micro_market: [], society: [] },
-    { id: 2, email: 'manager@openhouse.in', name: 'Meera Manager', phone: '9900000002', role: 'manager', is_active: true, manager: null, manager_name: null, manager_email: null, cities: ['Gurgaon'], micro_market: [], society: [] },
-    { id: 3, email: 'ravi@openhouse.in', name: 'Ravi Sharma', phone: '9900000003', role: 'rm', is_active: true, manager: 2, manager_name: 'Meera Manager', manager_email: 'manager@openhouse.in', cities: ['Gurgaon'], micro_market: ['Golf Course Ext'], society: ['DLF The Crest'] },
-    { id: 4, email: 'sara@openhouse.in', name: 'Sara Khan', phone: '9900000004', role: 'rm', is_active: true, manager: 2, manager_name: 'Meera Manager', manager_email: 'manager@openhouse.in', cities: ['Noida'], micro_market: [], society: ['ATS Greens Village'] },
-    { id: 5, email: 'old@openhouse.in', name: 'Inactive User', phone: '', role: 'rm', is_active: false, manager: 2, manager_name: 'Meera Manager', manager_email: 'manager@openhouse.in', cities: [], micro_market: [], society: [] },
+    { id: 1, email: 'admin@openhouse.in', name: 'Aarav Admin', phone: '9900000001', role: 'admin', is_active: true, manager_ids: [], manager_names: null, cities: [...CITIES], micro_market: [], society: [] },
+    { id: 2, email: 'manager@openhouse.in', name: 'Meera Manager', phone: '9900000002', role: 'manager', is_active: true, manager_ids: [], manager_names: null, cities: ['Gurgaon'], micro_market: [], society: [] },
+    { id: 3, email: 'ravi@openhouse.in', name: 'Ravi Sharma', phone: '9900000003', role: 'rm', is_active: true, manager_ids: [2], manager_names: 'Meera Manager', cities: ['Gurgaon'], micro_market: ['Golf Course Ext'], society: ['DLF The Crest'] },
+    { id: 4, email: 'sara@openhouse.in', name: 'Sara Khan', phone: '9900000004', role: 'rm', is_active: true, manager_ids: [2], manager_names: 'Meera Manager', cities: ['Noida'], micro_market: [], society: ['ATS Greens Village'] },
+    { id: 5, email: 'old@openhouse.in', name: 'Inactive User', phone: '', role: 'rm', is_active: false, manager_ids: [2], manager_names: 'Meera Manager', cities: [], micro_market: [], society: [] },
   ],
   activity: seedActivity(),
 };
@@ -336,7 +341,8 @@ export function mockApi(method, path, body) {
     return { items };
   }
   if (p === '/api/users' && method === 'POST') {
-    const u = { id: nextId(), is_active: true, manager: null, micro_market: [], society: [], cities: [], ...body };
+    const u = { id: nextId(), is_active: true, manager_ids: [], micro_market: [], society: [], cities: [], ...body };
+    u.manager_names = mgrNames(u.manager_ids);
     DB.users.push(u);
     return u;
   }
@@ -350,11 +356,7 @@ export function mockApi(method, path, body) {
     const u = DB.users.find((x) => x.id === Number(userMatch[1]));
     if (!u) throw { status: 404, data: { error: 'not found' } };
     Object.assign(u, body);
-    if (body.manager != null) {
-      const mgr = DB.users.find((x) => x.id === body.manager);
-      u.manager_name = mgr?.name || null;
-      u.manager_email = mgr?.email || null;
-    }
+    if (body.manager_ids != null) u.manager_names = mgrNames(body.manager_ids);
     return u;
   }
 
@@ -498,7 +500,7 @@ export function mockApi(method, path, body) {
     if (me.role === 'manager') {
       // Tickets they raised OR on a property whose RM reports to them.
       items = items.filter((t) => t.created_by_id === me.id
-        || (DB.users.find((u) => u.id === t.assigned_rm_id)?.manager === me.id));
+        || (DB.users.find((u) => u.id === t.assigned_rm_id)?.manager_ids || []).includes(me.id));
     } else if (me.role === 'rm') {
       items = items.filter((t) => t.assigned_rm_id === me.id);
     }
