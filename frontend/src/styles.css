@@ -1181,7 +1181,9 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .sms-btn { display: flex; align-items: center; justify-content: space-between; width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-input); padding: 9px 13px; color: var(--text-2); }
 .sms-control { display: flex; align-items: center; width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-input); padding: 9px 13px; }
 .sms-control:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
-.sms-input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text-2); padding: 0; outline: none; font: inherit; }
+/* .sms qualifier beats the global input[type=text] rule (0,1,1) so the inner
+   filter input stays borderless — otherwise it draws a box inside the control. */
+.sms .sms-input { flex: 1; min-width: 0; width: auto; border: 0; border-radius: 0; box-shadow: none; background: transparent; color: var(--text-2); padding: 0; outline: none; font: inherit; }
 .sms-input::placeholder { color: var(--text-faint); }
 .sms-caret { color: var(--text-muted); margin-left: 8px; cursor: pointer; }
 .sms-placeholder { color: var(--text-faint); }
