@@ -178,7 +178,7 @@ export default function CallLog() {
                   <td>{c.recording_url ? <RecordingPlayer src={c.recording_url} /> : <span className="muted">—</span>}</td>
                   <td className="muted" style={{ fontSize: 12 }}>
                     {/* Inbound has no placed_by — the lead dialled, so credit them. */}
-                    {(c.lead_name || c.oh_id || '—')} → {(c.rm_name || c.placed_by || '—')}
+                    <span style={{ textDecoration: 'underline' }}>{c.lead_name || c.oh_id || '—'}</span> → <b>{c.rm_name || c.placed_by || '—'}</b>
                   </td>
                 </tr>
               ))

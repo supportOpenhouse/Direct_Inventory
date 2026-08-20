@@ -245,9 +245,9 @@ def _scope_clause(user: dict, alias: str = "", deleted: str | None = None) -> tu
     # Soft-deleted rows are invisible to every role. The only way back to one is
     # GET /api/inventory/<oh_id> (unscoped), which the activity-log UID link uses —
     # or, for an admin, the "Show Delete" toggle passing deleted=all|only.
-    if user["role"] == "admin" and deleted == "all":
+    if user["role"] in ("admin", "manager") and deleted == "all":
         d = ""
-    elif user["role"] == "admin" and deleted == "only":
+    elif user["role"] in ("admin", "manager") and deleted == "only":
         d = f"AND {p}consider_deleted"
     else:
         d = f"AND NOT {p}consider_deleted"

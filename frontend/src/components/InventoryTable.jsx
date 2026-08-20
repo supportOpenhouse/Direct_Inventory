@@ -1,8 +1,11 @@
 import { Fragment, useState } from 'react';
+import { api } from '../api/client.js';
+import { toast } from '../utils/toast.js';
 import ExpandPanel from './ExpandPanel.jsx';
 import OhPrice from './OhPrice.jsx';
 import StarCell from './StarCell.jsx';
 import CallButton from './CallButton.jsx';
+import { IconTrash, IconClose } from './icons.jsx';
 import {
   displayCity, formatDateCompact, formatDateRel, formatDateShort, formatPrice, isCreatedToday, reasonLabelAny, rowFlag, starColor,
   STAGE_DOT_COLOR, stageLabel, variation,
@@ -54,9 +57,22 @@ export default function InventoryTable({
   const [openId, setOpenId] = useState(null);
   const canSetPriority = ['admin', 'manager', 'rm'].includes(role);
   const isAdmin = role === 'admin';
-  // 17 always-on columns (incl. Assigned date) + OH-ID + Assigned RM (admin
-  // only) + select checkbox + optional Reason column.
-  const colCount = 17 + (isAdmin ? 2 : 0) + (selectMode ? 1 : 0) + (showReasonCol ? 1 : 0);
+  const isManager = role === 'manager';
+  const showOhId = isAdmin || isManager;   // OH-ID (+ the unarchive bin) shows for both
+  // 17 always-on columns (incl. Assigned date) + OH-ID (admin/manager) + Assigned RM
+  // (admin only) + select checkbox + optional Reason column.
+  const colCount = 17 + (showOhId ? 1 : 0) + (isAdmin ? 1 : 0) + (selectMode ? 1 : 0) + (showReasonCol ? 1 : 0);
+
+  // Restore a soft-deleted (archived) lead; the board refetches via 'inventory:added'.
+  async function unarchive(item) {
+    try {
+      await api.post(`/api/inventory/${encodeURIComponent(item.oh_id)}/unarchive`, null, { silent: true });
+      toast('Lead restored', 'success');
+      window.dispatchEvent(new Event('inventory:added'));
+    } catch (e) {
+      toast(e?.data?.error || e?.message || 'Could not restore', 'error');
+    }
+  }
 
   // Header checkbox state — tristate over the currently rendered (paged) rows.
   const visibleIds = items.map((it) => it.oh_id);
@@ -79,7 +95,7 @@ export default function InventoryTable({
               </th>
             )}
             <th className="inv-th inv-th-star" />
-            {isAdmin && <SortTh field="oh_id" label="OH-ID" sort={sort} onSort={onSort} />}
+            {showOhId && <SortTh field="oh_id" label="OH-ID" sort={sort} onSort={onSort} />}
             <SortTh field="city" label="City" sort={sort} onSort={onSort} />
             <SortTh field="society" label="Society" sort={sort} onSort={onSort} cls="inv-col-society" />
             <SortTh field="bedrooms" label="BHK" sort={sort} onSort={onSort} cls="inv-col-bhk" />
@@ -130,7 +146,20 @@ export default function InventoryTable({
                   )}
                   <StarCell item={item} canSet={canSetPriority} onUpdated={onUpdated}
                     after={<CallButton ohId={item.oh_id} phone={item.seller_phone} />} />
-                  {isAdmin && <td className="inv-td-id">{item.oh_id}</td>}
+                  {showOhId && (
+                    <td className="inv-td-id">
+                      <span className="ohid-cell">
+                        {item.oh_id}
+                        {item.consider_deleted && (
+                          <button type="button" className="unarchive-btn" title="Unarchive — restore this lead"
+                            onClick={(e) => { e.stopPropagation(); unarchive(item); }}>
+                            <IconTrash size={13} />
+                            <span className="ua-x" aria-hidden="true"><IconClose size={12} /></span>
+                          </button>
+                        )}
+                      </span>
+                    </td>
+                  )}
                   <td><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></td>
                   <td className={`inv-td-society ${flag ? `inv-society-${flag}` : ''}`}>
                     <span className="society-cell">

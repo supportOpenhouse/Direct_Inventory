@@ -42,7 +42,7 @@ export default function InventoryBoard({
 
   // Admin-only "Show Archived": one button cycling 0 hide → 1 show all → 2 only archived
   // (archived = the soft-deleted rows, normally hidden from everyone).
-  const canShowDeleted = allowShowDeleted && user?.role === 'admin';
+  const canShowDeleted = allowShowDeleted && (user?.role === 'admin' || user?.role === 'manager');
   const [archiveMode, setArchiveMode] = useState(0);
   const [filtersApplied, setFiltersApplied] = useState({});
   const [filterFormState, setFilterFormState] = useState({});
@@ -289,7 +289,7 @@ export default function InventoryBoard({
         {canShowDeleted && (
           <button className={archiveMode ? 'btn-primary' : 'btn-ghost'} onClick={() => setArchiveMode((m) => (m + 1) % 3)}
             title="Cycle archived leads: hide → show → only (admin)">
-            {['No Archived', 'Showing Archived', 'Showing Only Archived'][archiveMode]}
+            {['No Archived', 'Include Archived', 'Archived Only'][archiveMode]}
           </button>
         )}
         {filterCount > 0 && <button className="btn-link" onClick={() => { setFiltersApplied({}); setFilterFormState({}); }}>Reset</button>}

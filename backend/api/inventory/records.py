@@ -295,6 +295,36 @@ def add_note(oh_id: str):
         conn.close()
 
 
+@bp.post("/<oh_id>/unarchive")
+@require_auth("admin", "manager")
+def unarchive_one(oh_id: str):
+    """Restore a soft-deleted (archived) lead — set consider_deleted = FALSE. Admin: any
+    lead; manager: only within their cities. The original stage is untouched, so the lead
+    returns exactly where it was."""
+    user = g.user
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT city, consider_deleted FROM inventory WHERE oh_id = %s FOR UPDATE", (oh_id,))
+            row = cur.fetchone()
+            if not row:
+                return jsonify({"error": "not found"}), 404
+            if user["role"] == "manager" and row["city"] not in _expand_cities(user.get("cities") or []):
+                return jsonify({"error": "forbidden"}), 403
+            if not row["consider_deleted"]:
+                return jsonify({"ok": True, "consider_deleted": False})  # already restored
+            cur.execute("UPDATE inventory SET consider_deleted = FALSE WHERE oh_id = %s", (oh_id,))
+            log_activity(
+                cur, actor_user_id=user["id"], actor_email=user["email"],
+                entity_type="inventory", entity_id=oh_id, action="update",
+                field="consider_deleted", before_value=True, after_value=False,
+                metadata={"restored": True},
+            )
+    finally:
+        conn.close()
+    return jsonify({"ok": True, "consider_deleted": False})
+
+
 @bp.patch("/<oh_id>")
 @require_auth("admin", "manager", "rm")
 def update_one(oh_id: str):
