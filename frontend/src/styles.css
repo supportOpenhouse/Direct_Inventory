@@ -880,7 +880,9 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .adduser-row label { display: block; margin-bottom: 6px; }
 .adduser-row .au-field { flex: 1; min-width: 0; }
 .adduser-row .au-role { flex: 0 0 150px; }
-.adduser-row .au-role .role-select { width: 100%; }
+/* Match the Role dropdown's height to the text inputs + Managers multiselect
+   on the same form (the base .role-select is a compact 6px-pad variant). */
+.adduser-row .au-role .role-select { width: 100%; padding-top: 9px; padding-bottom: 9px; }
 .adduser-row .au-actions { margin-left: auto; flex: 0 0 auto; }
 .form-grid .form-wide-2 { grid-column: 1 / -1; }
 
@@ -1185,7 +1187,7 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
    filter input stays borderless — otherwise it draws a box inside the control. */
 .sms .sms-input { flex: 1; min-width: 0; width: auto; border: 0; border-radius: 0; box-shadow: none; background: transparent; color: var(--text-2); padding: 0; outline: none; font: inherit; }
 .sms-input::placeholder { color: var(--text-faint); }
-.sms-caret { color: var(--text-muted); margin-left: 8px; cursor: pointer; }
+.sms-caret { display: inline-flex; align-items: center; color: var(--text-muted); margin-left: 6px; cursor: pointer; }
 .sms-placeholder { color: var(--text-faint); }
 .sms-menu { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-lg); padding: 8px; z-index: 1100; overflow: auto; }
 .sms-search { margin-bottom: 6px; }

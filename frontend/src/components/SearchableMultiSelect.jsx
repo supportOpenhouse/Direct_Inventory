@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { IconChevronDown } from './icons.jsx';
 
 const MENU_MIN_WIDTH = 320;
 const LIST_CAP = 200;
@@ -140,7 +141,7 @@ export default function SearchableMultiSelect({
           onFocus={() => setOpen(true)}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
         />
-        <span className="sms-caret" role="button" tabIndex={-1} onMouseDown={(e) => { e.preventDefault(); if (!disabled) toggle(); }}>▾</span>
+        <span className="sms-caret" role="button" tabIndex={-1} onMouseDown={(e) => { e.preventDefault(); if (!disabled) toggle(); }}><IconChevronDown size={16} /></span>
       </div>
       {menu}
       {!single && chips && selectedCount > 0 && (
