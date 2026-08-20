@@ -144,8 +144,8 @@ export default function InventoryTable({
                       <input type="checkbox" readOnly checked={!!isSel} />
                     </td>
                   )}
-                  <StarCell item={item} canSet={canSetPriority} onUpdated={onUpdated}
-                    after={<CallButton ohId={item.oh_id} phone={item.seller_phone} />} />
+                  <StarCell item={item} canSet={canSetPriority && !item.consider_deleted} onUpdated={onUpdated}
+                    after={item.consider_deleted ? null : <CallButton ohId={item.oh_id} phone={item.seller_phone} />} />
                   {showOhId && (
                     <td className="inv-td-id">
                       <span className="ohid-cell">

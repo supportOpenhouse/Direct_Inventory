@@ -64,10 +64,9 @@ def get_one(oh_id: str):
             if not row:
                 return jsonify({"error": "not found"}), 404
             # Deliberately unscoped: this is the one endpoint that still serves a
-            # soft-deleted lead, because the activity-log UID popup links here.
-            # Its stage reads as 'deleted' (the stored stage is left intact).
-            if row.get("consider_deleted"):
-                row["stage"] = "deleted"
+            # soft-deleted lead, because the activity-log UID popup links here. The
+            # archived lead keeps its ORIGINAL stage; `consider_deleted` drives the
+            # read-only / red-border treatment instead.
             # Pull recent activity for this entity.
             cur.execute(
                 """
@@ -339,6 +338,9 @@ def update_one(oh_id: str):
             existing = cur.fetchone()
             if not existing:
                 return jsonify({"error": "not found"}), 404
+            # An archived (soft-deleted) lead is read-only — restore it first (/unarchive).
+            if existing.get("consider_deleted"):
+                return jsonify({"error": "This lead is archived — restore it before editing."}), 409
 
             # Any authenticated admin/manager/rm can edit any field they have UI
             # access to. Cross-assignment edits are intentionally allowed; the

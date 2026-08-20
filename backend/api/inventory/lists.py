@@ -41,9 +41,9 @@ _LIST_COLS = ", ".join(f"j.{c}" for c in (
     "oh_price", "oh_price_area", "oh_price_bhk", "oh_price_match",
     "oh_price_reason", "oh_near_diff", "assigned_rms", "reassigned_by_role",
 )) + (
-    # A soft-deleted row reports stage='deleted' (matches the detail endpoint + the
-    # frontend's red 'deleted' styling); the raw stage stays intact in the DB.
-    ", CASE WHEN j.consider_deleted THEN 'deleted' ELSE j.stage END AS stage"
+    # Archived rows keep their ORIGINAL stage; `consider_deleted` (above) drives the
+    # read-only / red-border treatment in the UI.
+    ", j.stage"
     ", CASE WHEN jsonb_typeof(j.note_thread) = 'array' "
     "THEN jsonb_array_length(j.note_thread) ELSE 0 END AS note_count"
 )

@@ -220,10 +220,12 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
     .reverse();
   const v = variation(full.price, full.oh_price);
   const listing = full.listing_link && !/^internal:\/\//.test(full.listing_link) ? full.listing_link : null;
-  const canEdit = canEditStatus && (['admin', 'manager', 'rm'].includes(role) || canPost);
+  // Archived (soft-deleted) leads are read-only — nothing can be changed, only restored.
+  const readOnly = !!item.consider_deleted;
+  const canEdit = canEditStatus && !readOnly && (['admin', 'manager', 'rm'].includes(role) || canPost);
   // Editing the raw property/seller fields is allowed wherever editing is
   // enabled, for the same roles the backend PATCH accepts.
-  const canEditDetails = canEditStatus && ['admin', 'manager', 'rm'].includes(role);
+  const canEditDetails = canEditStatus && !readOnly && ['admin', 'manager', 'rm'].includes(role);
   const [showStatus, setShowStatus] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
@@ -238,17 +240,17 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
   // a scheduled visit, so they must stay available even where general stage
   // editing is off (the Visit Status page passes allowStatusEdit=false). The
   // backend still enforces the precise per-user permission and 403s otherwise.
-  const canCancelVisit = item.stage === 'visit_scheduled' && ['admin', 'manager', 'rm'].includes(role);
+  const canCancelVisit = !readOnly && item.stage === 'visit_scheduled' && ['admin', 'manager', 'rm'].includes(role);
   // Revisit: schedule a fresh visit for a cancelled one. Backend lets the
   // schedule bypass the "already scheduled" guard for visit_cancelled rows.
-  const canScheduleRevisit = item.stage === 'visit_cancelled' && ['admin', 'manager', 'rm'].includes(role);
+  const canScheduleRevisit = !readOnly && item.stage === 'visit_cancelled' && ['admin', 'manager', 'rm'].includes(role);
   // No stage/status editing from visit_scheduled onward: in visit_scheduled the
   // only action is Cancel Visit, and post-visit (supply-tracker) stages are
   // driven by the CP sync — manual stage edits there would just be overwritten.
   const canEditStage = canEdit && item.stage !== 'visit_scheduled' && !SUPPLY_STAGES.includes(item.stage);
 
   return (
-    <div className="expand-inner">
+    <div className={'expand-inner' + (readOnly ? ' expand-archived' : '')}>
       {show.includes('property') && (
         <div className="expand-sec expand-sec-wide">
           <h4><IconHome size={14} /> Property Details
@@ -334,7 +336,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
             <NoteThread
               ohId={item.oh_id}
               initial={full.note_thread || []}
-              canPost={canPost}
+              canPost={canPost && !readOnly}
               onChange={(next) => {
                 setDetail((d) => ({ ...(d || {}), note_thread: next }));
                 onUpdated?.({ ...item, note_count: next.length });
