@@ -31,6 +31,8 @@ export const IconWarning = (p) => <S {...p}><path d="M10.3 3.9 1.8 18a2 2 0 0 0 
 export const IconInfo = (p) => <S {...p}><circle cx="12" cy="12" r="9" /><path d="M12 16v-4M12 8h.01" /></S>;
 export const IconSend = (p) => <S {...p}><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" /></S>;
 export const IconPhone = (p) => <S {...p}><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.8.7a2 2 0 0 1 1.7 2z" /></S>;
+// Restore / undo (counter-clockwise arrow) — unarchive a lead.
+export const IconRestore = (p) => <S {...p}><path d="M3 3v6h6" /><path d="M3.5 9a9 9 0 1 0 2.1-4" /></S>;
 // Trash / bin.
 export const IconTrash = (p) => <S {...p}><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6" /></S>;
 // Phone with a cross — no number on file.

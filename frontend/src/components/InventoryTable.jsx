@@ -5,7 +5,7 @@ import ExpandPanel from './ExpandPanel.jsx';
 import OhPrice from './OhPrice.jsx';
 import StarCell from './StarCell.jsx';
 import CallButton from './CallButton.jsx';
-import { IconTrash, IconClose } from './icons.jsx';
+import { IconTrash, IconRestore } from './icons.jsx';
 import {
   displayCity, formatDateCompact, formatDateRel, formatDateShort, formatPrice, isCreatedToday, reasonLabelAny, rowFlag, starColor,
   STAGE_DOT_COLOR, stageLabel, variation,
@@ -154,7 +154,7 @@ export default function InventoryTable({
                           <button type="button" className="unarchive-btn" title="Unarchive — restore this lead"
                             onClick={(e) => { e.stopPropagation(); unarchive(item); }}>
                             <IconTrash size={13} />
-                            <span className="ua-x" aria-hidden="true"><IconClose size={12} /></span>
+                            <span className="ua-x" aria-hidden="true"><IconRestore size={13} /></span>
                           </button>
                         )}
                       </span>
