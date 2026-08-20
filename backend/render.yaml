@@ -52,9 +52,7 @@ services:
 
   # Auto-assign POC for leads that arrived unassigned (bulk-seed etc).
   # mode='missing' → only empty assignments, never overwrites. Every 15 min.
-  # Every 15 min: backfill missing lead assignment AND piggy-back the Bonvoice call-log
-  # pull-sync (run_assign_missing.main() runs both). The Bonvoice step is best-effort and
-  # no-ops until the BONVOICE_* vars below are set, so it never affects the assign pass.
+  # Auto-assign POC for leads that arrived unassigned (bulk-seed etc). Every 15 min.
   - type: cron
     name: direct-inventory-assign-missing
     env: python
@@ -63,6 +61,26 @@ services:
     schedule: "*/15 * * * *"
     buildCommand: pip install -r requirements.txt
     startCommand: python -m scripts.run_assign_missing
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: DATABASE_URL
+        sync: false
+      - key: PROPERTIES_DB_URL
+        sync: false
+
+  # Supply Closure Tracker sync (mirror cp_inventory_status → inventory.stage), and
+  # piggy-backs the Bonvoice call-log pull-sync (run_supply_sync.main() runs both).
+  # Every 5 min. The Bonvoice step is best-effort and no-ops until the BONVOICE_* vars
+  # below are set, so it never affects the supply-sync pass.
+  - type: cron
+    name: direct-inventory-supply-sync
+    env: python
+    region: singapore
+    rootDir: backend
+    schedule: "*/5 * * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m scripts.run_supply_sync
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
@@ -82,24 +100,6 @@ services:
       - key: BONVOICE_DID
         sync: false
       - key: BONVOICE_SYNC_LOOKBACK_DAYS
-        sync: false
-
-  # Supply Closure Tracker sync: mirror cp_inventory_status → inventory.stage.
-  # One-way pull; keeps supply stages current without opening the tab. Every 5 min.
-  - type: cron
-    name: direct-inventory-supply-sync
-    env: python
-    region: singapore
-    rootDir: backend
-    schedule: "*/5 * * * *"
-    buildCommand: pip install -r requirements.txt
-    startCommand: python -m scripts.run_supply_sync
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.7
-      - key: DATABASE_URL
-        sync: false
-      - key: PROPERTIES_DB_URL
         sync: false
 
   # (The Bonvoice call-log pull-sync is NOT a separate cron — it's piggy-backed on the

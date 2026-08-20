@@ -38,6 +38,16 @@ def main() -> int:
     result = run_supply_sync()
     log.info("supply-sync: source_rows=%s matched=%s updated=%s",
              result.get("source_rows"), result.get("matched"), result.get("updated"))
+
+    # Piggy-back the Bonvoice call-log pull-sync on this cron instead of a separate Render
+    # cron service. Best-effort and self-guarding: it no-ops when Bonvoice isn't configured
+    # and swallows its own errors, so it can never affect the supply-sync pass.
+    try:
+        from backend.api.bonvoice import run_call_log_sync
+        run_call_log_sync(trigger="cron")
+    except Exception:  # noqa: BLE001
+        log.exception("bonvoice: call-log sync failed (piggy-backed on supply-sync cron)")
+
     return 0
 
 

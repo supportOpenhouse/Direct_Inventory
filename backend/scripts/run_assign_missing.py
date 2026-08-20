@@ -43,16 +43,6 @@ def main() -> int:
         conn.close()
     log.info("assign-missing: updated=%s scanned=%s remaining=%s",
              result.get("updated"), result.get("scanned"), result.get("remaining"))
-
-    # Piggy-back the Bonvoice call-log pull-sync on this same 15-min cron instead of a
-    # separate Render cron service. Best-effort and self-guarding: it no-ops when Bonvoice
-    # isn't configured and swallows its own errors, so it can never affect the assign pass.
-    try:
-        from backend.api.bonvoice import run_call_log_sync
-        run_call_log_sync(trigger="cron")
-    except Exception:  # noqa: BLE001
-        log.exception("bonvoice: call-log sync failed (piggy-backed on assign-missing cron)")
-
     return 0
 
 
