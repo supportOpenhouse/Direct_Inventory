@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { CITIES, STAGE_DOT_COLOR, STAGES, reasonLabelAny, stageLabel } from '../utils/format.js';
@@ -7,7 +8,7 @@ import FilterPanel from './FilterPanel.jsx';
 import SlideTabs from './SlideTabs.jsx';
 import AddInventoryModal from './AddInventoryModal.jsx';
 import BulkActionBar from './BulkActionBar.jsx';
-import { IconFilter, IconPlus, IconReload, IconSearch } from './icons.jsx';
+import { IconDownload, IconFilter, IconPlus, IconReload, IconSearch } from './icons.jsx';
 
 const PAGE_SIZE = 50;
 
@@ -20,10 +21,10 @@ const PAGE_SIZE = 50;
  * the Rejected page). `showAdd` toggles the add-inventory button.
  */
 export default function InventoryBoard({
-  fixedStages = null, showAdd = true, stageFilterable = true, toolbarExtra = null,
+  fixedStages = null, showAdd = true, stageFilterable = true, toolbarExtra = null, toolbarEnd = null,
   allowStatusEdit = true, reasonFilter = false, hideFollowUpFilter = false, reasonOptions = undefined,
   reloadSignal = 0, onReload = null, extraStageGroups = [], annotateVisitOverdue = false,
-  showReasonCol = false, showExport = false, allowShowDeleted = false,
+  showReasonCol = false, showExport = false, exportInTopbar = false, allowShowDeleted = false,
   // Optional external control of select mode (Home renders the Select button up
   // in its view-toggle bar). When uncontrolled, the toolbar shows its own button.
   controlledSelectMode = undefined, onSelectModeChange = undefined, hideSelectButton = false,
@@ -63,6 +64,9 @@ export default function InventoryBoard({
   useEffect(() => { if (!selectMode) setSelected(new Set()); }, [selectMode]);
   const [selectingAll, setSelectingAll] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  // When exportInTopbar is set, the Download CSV button is portaled into the topbar strip.
+  const [topbarSlot, setTopbarSlot] = useState(null);
+  useEffect(() => { if (exportInTopbar) setTopbarSlot(document.getElementById('topbar-slot')); }, [exportInTopbar]);
 
   const stages = fixedStages || STAGES;
   // "ALL" covers this board's own stages PLUS any grouped extras (e.g. the Post
@@ -200,6 +204,7 @@ export default function InventoryBoard({
   // Download all rows matching the current filters/scope as CSV (not just this
   // page) — the backend export honors the same params makeParams() builds.
   async function downloadCsv() {
+    if (!window.confirm(`Download ${total.toLocaleString('en-IN')} rows`)) return;
     try {
       setDownloading(true);
       const blob = await api.download(`/api/inventory/export?${makeParams()}`);
@@ -293,6 +298,7 @@ export default function InventoryBoard({
           </button>
         )}
         {filterCount > 0 && <button className="btn-link" onClick={() => { setFiltersApplied({}); setFilterFormState({}); }}>Reset</button>}
+        {toolbarEnd}
       </div>
 
       {/* Floats to the top-right of the page (see .bulk-bar) while selecting. */}
@@ -344,10 +350,16 @@ export default function InventoryBoard({
             {selectingAll ? 'Selecting…' : `Select All${total ? ` (${total})` : ''}`}
           </button>
         )}
-        {showExport && (
+        {showExport && !exportInTopbar && (
           <button className="btn-ghost" onClick={downloadCsv} disabled={downloading || total === 0}>
-            {downloading ? 'Preparing…' : `Download CSV${total ? ` (${total})` : ''}`}
+            {downloading ? 'Preparing…' : 'Download CSV'}
           </button>
+        )}
+        {showExport && exportInTopbar && topbarSlot && createPortal(
+          <button className="btn-primary" style={{ order: 2 }} onClick={downloadCsv} disabled={downloading || total === 0}>
+            <IconDownload size={16} /> {downloading ? 'Preparing…' : 'Download CSV'}
+          </button>,
+          topbarSlot,
         )}
         <button className="btn-ghost" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>← Prev</button>
         <span className="page-num">

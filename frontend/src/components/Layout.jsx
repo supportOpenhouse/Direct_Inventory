@@ -241,6 +241,8 @@ export default function Layout() {
           {(seg === 'qualified-leads' || seg === 'follow-ups') && <AddInventoryButton defaultStage="follow_up" />}
           {seg === 'tickets' && (isAdmin || isManager) && <CreateTicketButton />}
           {seg === 'users' && isAdmin && <ReassignLeadsButton />}
+          {/* Portal target for page-owned topbar actions (e.g. Call Log's "Sync from Bonvoice"). */}
+          <div id="topbar-slot" className="topbar-slot" />
           <IncomingCallBell />
           <NotificationBell role={user?.role} />
           {/* Theme toggle + logout live only on the profile page. */}

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import CardDetailModal from '../components/CardDetailModal.jsx';
-import { IconCalendar, IconClose, IconTicket, IconUser } from '../components/icons.jsx';
+import { IconCalendar, IconClose, IconDownload, IconTicket, IconUser } from '../components/icons.jsx';
 import { stageLabel } from '../utils/format.js';
 
 function formatTs(iso) {
@@ -91,6 +92,9 @@ export default function Logs() {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [detail, setDetail] = useState(null); // inventory record shown in the popup
+  // Download CSV is rendered (via portal) into the topbar strip, left of the bell.
+  const [topbarSlot, setTopbarSlot] = useState(null);
+  useEffect(() => { setTopbarSlot(document.getElementById('topbar-slot')); }, []);
 
   // UID column → open the property detail popup IMMEDIATELY with a skeleton
   // seed, then fill in the record. On a cache hit the fetch resolves instantly
@@ -121,6 +125,7 @@ export default function Logs() {
   // Every matching row, not just the 500 on screen — the backend export
   // honors the same filters/scope.
   async function downloadCsv() {
+    if (!window.confirm(`Download ${total.toLocaleString('en-IN')} rows`)) return;
     try {
       setDownloading(true);
       const blob = await api.download(`/api/activity/export?${makeParams()}`);
@@ -139,13 +144,13 @@ export default function Logs() {
 
   return (
     <div>
-      <div className="al-head">
-        <div><div className="al-subtitle">All dashboard activity</div></div>
-        <div className="al-result-count">{total} result{total === 1 ? '' : 's'}</div>
-        <button className="btn-ghost al-export-btn" onClick={downloadCsv} disabled={loading || downloading || total === 0}>
-          {downloading ? 'Preparing…' : `Download CSV${total ? ` (${total})` : ''}`}
-        </button>
-      </div>
+      {/* Download CSV lives in the topbar strip (portaled), styled like Add Inventory. */}
+      {topbarSlot && createPortal(
+        <button className="btn-primary" onClick={downloadCsv} disabled={loading || downloading || total === 0}>
+          <IconDownload size={16} /> {downloading ? 'Preparing…' : 'Download CSV'}
+        </button>,
+        topbarSlot,
+      )}
 
       <div className="al-filters">
         <input className="al-filter-input" placeholder="Search actor, action, UID, details…" value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && refresh()} />

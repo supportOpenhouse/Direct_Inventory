@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../api/client.js';
 import { toast } from '../utils/toast.js';
 import RecordingPlayer from '../components/RecordingPlayer.jsx';
@@ -17,6 +18,13 @@ const BY_UNKNOWN = 'unknown';
 const DURATIONS = ['<1 min', '1-3 mins', '3-5 mins', '5+ mins'];
 const ymd = (d) => d.toISOString().slice(0, 10);
 
+// Capitalize the first letter of each segment (split on space or '.'), strip any
+// email domain: "a.gupta@openhouse.in" → "A.Gupta", "arti ahirwar" → "Arti Ahirwar".
+function capName(s) {
+  if (!s) return '';
+  return String(s).split('@')[0].replace(/(^|[.\s])([a-z])/g, (_, sep, ch) => sep + ch.toUpperCase());
+}
+
 export default function CallLog() {
   const [q, setQ] = useState('');
   const [conn, setConn] = useState('');
@@ -32,6 +40,10 @@ export default function CallLog() {
   const [nonce, setNonce] = useState(0);   // bumped after a sync to force a refetch
   const { user } = useAuth();
   const [detail, setDetail] = useState(null);  // property popup, opened from a lead name
+  // The "Sync from Bonvoice" button is rendered (via portal) into the topbar strip,
+  // left of the incoming-calls bell — while keeping its state/handler here.
+  const [topbarSlot, setTopbarSlot] = useState(null);
+  useEffect(() => { setTopbarSlot(document.getElementById('topbar-slot')); }, []);
 
   // Open the property detail popup for an oh_id — same flow as the Activity Logs UID.
   function openUid(uid) {
@@ -93,9 +105,14 @@ export default function CallLog() {
 
   return (
     <div>
-      <div className="al-head">
-        <div className="al-result-count">{total.toLocaleString('en-IN')} call{total === 1 ? '' : 's'}{loading ? ' · …' : ''}</div>
-      </div>
+      {/* Sync button lives in the topbar strip (portaled), left of the incoming-calls bell. */}
+      {topbarSlot && user?.role === 'admin' && createPortal(
+        <button className="btn-primary" onClick={runSync} disabled={syncing}
+          title="Pull Bonvoice's own call records for this date range">
+          {syncing ? 'Syncing…' : 'Sync from Bonvoice'}
+        </button>,
+        topbarSlot,
+      )}
 
       <div className="al-filters">
         <input className="al-filter-input" placeholder="Search phone (any format) / lead name…"
@@ -118,21 +135,18 @@ export default function CallLog() {
         {anyFilter && (
           <button className="btn-ghost" onClick={() => { setQ(''); setConn(''); setBy(''); setDur(''); setPage(0); }}>Clear</button>
         )}
-        {/* Backfill from Bonvoice is admin-only (the endpoint requires admin). */}
+        {/* Backfill date range is admin-only (the endpoint requires admin). The Sync
+            button itself is portaled to the topbar. */}
         {user?.role === 'admin' && (
-          <>
-            <div className="al-date-range">
-              <span className="al-date-lbl">SYNC</span>
-              <input type="date" className="al-date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} title="Sync from" />
-              <span className="al-date-sep">to</span>
-              <input type="date" className="al-date" value={to} min={from} onChange={(e) => setTo(e.target.value)} title="Sync to" />
-            </div>
-            <button className="btn-primary" onClick={runSync} disabled={syncing}
-              title="Pull Bonvoice's own call records for this date range">
-              {syncing ? 'Syncing…' : 'Sync from Bonvoice'}
-            </button>
-          </>
+          <div className="al-date-range">
+            <span className="al-date-lbl">SYNC</span>
+            <input type="date" className="al-date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} title="Sync from" />
+            <span className="al-date-sep">to</span>
+            <input type="date" className="al-date" value={to} min={from} onChange={(e) => setTo(e.target.value)} title="Sync to" />
+          </div>
         )}
+        {/* Result count — moved here from the old header, into the Sync button's old spot. */}
+        <div className="al-result-count">{total.toLocaleString('en-IN')} call{total === 1 ? '' : 's'}{loading ? ' · …' : ''}</div>
       </div>
 
       <div className="al-table-wrap">
@@ -154,34 +168,41 @@ export default function CallLog() {
             ) : items.length === 0 ? (
               <tr><td colSpan={7} className="al-empty">{anyFilter ? 'No calls match these filters.' : 'No calls logged yet.'}</td></tr>
             ) : (
-              items.map((c) => (
-                <tr key={`${c.call_id}-${c.leg}`}>
-                  <td className="al-ts">{formatCallTime(c.start_at) || '—'}</td>
-                  <td>
-                    {c.oh_id ? (
-                      <>
+              items.map((c) => {
+                // Incoming = the lead dialled in (lead is the source). Direction from the
+                // PBX record; lead_side is the fallback for older rows.
+                const incoming = (c.direction || '').toLowerCase().startsWith('in') || c.lead_side === 'from';
+                const leadName = capName(c.lead_name) || c.oh_id || '—';
+                const rmName = capName(c.rm_name) || capName(c.placed_by) || '—';
+                // Lead name underlined, RM name bold — regardless of position.
+                const leadEl = <span style={{ textDecoration: 'underline' }}>{leadName}</span>;
+                const rmEl = <b>{rmName}</b>;
+                return (
+                  <tr key={`${c.call_id}-${c.leg}`}>
+                    <td className="al-ts">{formatCallTime(c.start_at) || '—'}</td>
+                    <td>
+                      {c.oh_id ? (
                         <button type="button" className="al-uid-link" onClick={() => openUid(c.oh_id)}>{c.oh_id}</button>
-                        {c.lead_side === 'from' && <span className="muted" style={{ fontSize: 11.5, marginLeft: 6 }}>(incoming)</span>}
-                      </>
-                    ) : <span className="muted">—</span>}
-                  </td>
-                  <td style={{ fontFamily: "'Spline Sans Mono', monospace", fontSize: 12, whiteSpace: 'nowrap' }}>
-                    {c.source_number || '—'} → {c.destination_number || '—'}
-                  </td>
-                  <td style={{ fontSize: 12.5 }}>
-                    <span className={c.answered ? 'cat-pill cat-sync' : 'cat-pill cat-default'}>
-                      {c.answered ? 'connected' : 'not connected'}
-                    </span>{' '}
-                    <span className="muted" style={{ fontSize: 11.5 }}>{c.status || c.agent_status || ''}</span>
-                  </td>
-                  <td style={{ fontFamily: "'Spline Sans Mono', monospace", fontSize: 12 }}>{callDuration(c.start_at, c.end_at)}</td>
-                  <td>{c.recording_url ? <RecordingPlayer src={c.recording_url} /> : <span className="muted">—</span>}</td>
-                  <td className="muted" style={{ fontSize: 12 }}>
-                    {/* Inbound has no placed_by — the lead dialled, so credit them. */}
-                    <span style={{ textDecoration: 'underline' }}>{c.lead_name || c.oh_id || '—'}</span> → <b>{c.rm_name || c.placed_by || '—'}</b>
-                  </td>
-                </tr>
-              ))
+                      ) : <span className="muted">—</span>}
+                    </td>
+                    <td style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
+                      <span style={{ fontFamily: "'Spline Sans Mono', monospace" }}>{c.source_number || '—'} → {c.destination_number || '—'}</span>
+                      <span className="muted" style={{ marginLeft: 8, fontSize: 11 }}>{incoming ? 'incoming' : 'outgoing'}</span>
+                    </td>
+                    <td style={{ fontSize: 12.5 }}>
+                      <span className={c.answered ? 'cat-pill cat-sync' : 'cat-pill cat-default'}>
+                        {c.answered ? 'connected' : 'not connected'}
+                      </span>
+                    </td>
+                    <td style={{ fontFamily: "'Spline Sans Mono', monospace", fontSize: 12 }}>{callDuration(c.start_at, c.end_at)}</td>
+                    <td>{c.recording_url ? <RecordingPlayer src={c.recording_url} /> : <span className="muted">—</span>}</td>
+                    <td className="muted" style={{ fontSize: 12 }}>
+                      {/* placed by → placed to. Outgoing: RM placed it to the lead; incoming: lead placed it to the RM. */}
+                      {incoming ? <>{leadEl} → {rmEl}</> : <>{rmEl} → {leadEl}</>}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

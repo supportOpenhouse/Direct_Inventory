@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -123,7 +124,6 @@ function TodaysTask({ task, loading, role, tickets }) {
 
   return (
     <section className="todays-task">
-      <h2 className="tt-title">Today's Task</h2>
       <div className="task-grid">
         <TaskCard color="#fa541c" Icon={IconLeads} title="TASK 1 : NEW LEADS → ACTIVE LEADS"
           total={total1} worked={worked1} loading={loading}
@@ -241,8 +241,15 @@ function BoardView({ s, loading, visitsLoading }) {
 
 export default function Home() {
   const { user } = useAuth();
-  const [view, setView] = useState('board'); // board | table
+  // Remember Board/Table choice across navigation + reloads.
+  const [view, setView] = useState(() => {
+    try { return localStorage.getItem('di_home_view') === 'table' ? 'table' : 'board'; } catch { return 'board'; }
+  });
+  useEffect(() => { try { localStorage.setItem('di_home_view', view); } catch { /* ignore */ } }, [view]);
   const [tableSelect, setTableSelect] = useState(false); // Table view's select mode
+  // Table-view action buttons are portaled into the topbar strip, left of the bell.
+  const [topbarSlot, setTopbarSlot] = useState(null);
+  useEffect(() => { setTopbarSlot(document.getElementById('topbar-slot')); }, []);
   const [summary, setSummary] = useState(null);
   const [quickLoading, setQuickLoading] = useState(true);
   const [stagesLoading, setStagesLoading] = useState(true);
@@ -272,27 +279,38 @@ export default function Home() {
 
   // Toggle pinned top-right (unchanged). Table view adds, to its left:
   // Re-scan CP, Select, then Add Inventory (right before the toggle).
-  const viewbar = (
-    <div className="home-viewbar">
-      {view === 'table' && (
-        <>
-          <CpScanButton />
-          <button className={tableSelect ? 'btn-primary' : 'btn-ghost'} onClick={() => setTableSelect((v) => !v)}>
-            {tableSelect ? 'Exit Select' : 'Select'}
-          </button>
-          <AddInventoryButton />
-        </>
-      )}
-      <SlideTabs className="view-toggle">
-        <button className={view === 'board' ? 'on' : ''} onClick={() => { setView('board'); setTableSelect(false); }}>Board</button>
-        <button className={view === 'table' ? 'on' : ''} onClick={() => setView('table')}>Table</button>
-      </SlideTabs>
-    </div>
+  const viewToggle = (
+    <SlideTabs className="view-toggle">
+      <button className={view === 'board' ? 'on' : ''} onClick={() => { setView('board'); setTableSelect(false); }}>Board</button>
+      <button className={view === 'table' ? 'on' : ''} onClick={() => setView('table')}>Table</button>
+    </SlideTabs>
+  );
+  // Board view: toggle sits in its own bar. Table view: it rides at the right end
+  // of the InventoryBoard toolbar (which now fills the otherwise-empty row).
+  const viewbar = view === 'board'
+    ? <div className="home-viewbar"><h2 className="tt-title">Today's Task</h2>{viewToggle}</div>
+    : null;
+
+  // Table view's action buttons live in the topbar strip. Order (via flex `order`):
+  // Re-scan CP (1) · Download CSV (2, portaled by InventoryBoard) · Select (3) · Add Inventory (4).
+  // Colors alternate: white (btn-ghost) / orange (btn-primary).
+  const topbarActions = topbarSlot && view === 'table' && createPortal(
+    <>
+      <span style={{ order: 1, display: 'inline-flex' }}><CpScanButton /></span>
+      <span style={{ order: 3, display: 'inline-flex' }}>
+        <button className={tableSelect ? 'btn-primary' : 'btn-ghost'} onClick={() => setTableSelect((v) => !v)}>
+          {tableSelect ? 'Exit Select' : 'Select'}
+        </button>
+      </span>
+      <span style={{ order: 4, display: 'inline-flex' }}><AddInventoryButton /></span>
+    </>,
+    topbarSlot,
   );
 
   return (
     <div>
       {viewbar}
+      {topbarActions}
       {view === 'board' ? (
         <>
           <TodaysTask task={summary?.todays_task} loading={quickLoading} role={user?.role} tickets={summary?.unresolved_tickets} />
@@ -300,7 +318,8 @@ export default function Home() {
           <BoardView s={summary} loading={stagesLoading} visitsLoading={visitsLoading} />
         </>
       ) : (
-        <InventoryBoard showReasonCol showExport hideSelectButton showAdd={false} allowShowDeleted
+        <InventoryBoard showReasonCol showExport exportInTopbar hideSelectButton showAdd={false} allowShowDeleted
+          toolbarEnd={viewToggle}
           controlledSelectMode={tableSelect} onSelectModeChange={setTableSelect}
           extraStageGroups={[
             { key: 'post_visit', label: 'Post Visit', stages: SUPPLY_STAGES, color: '#6366f1', before: 'rejected' },
