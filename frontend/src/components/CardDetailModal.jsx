@@ -20,7 +20,7 @@ export default function CardDetailModal({ item, role, onUpdated, onClose: rawClo
 
   return (
     <div className={backdropClass} onClick={onClose}>
-      <div className={`modal modal-wide${item.consider_deleted ? ' modal-deleted' : ''}`} onClick={(e) => e.stopPropagation()}>
+      <div className={`modal modal-wide modal-detail${item.consider_deleted ? ' modal-deleted' : ''}`} onClick={(e) => e.stopPropagation()}>
         <div className="modal-head-row">
           <h3>{item.society || (loading ? <span className="inv-skel" style={{ display: 'inline-block', width: 160 }} /> : '—')}</h3>
           {item.city ? <span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span> : null}

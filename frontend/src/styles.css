@@ -318,7 +318,9 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .unarchive-btn:hover .ua-x { display: inline-flex; }
 /* Archived lead's expand drawer — same red dashed border as the detail popup. Inset a
    little so the TOP edge isn't hidden flush under the row above. */
-.expand-archived { border: 2px dashed #ff1f1f; border-radius: var(--r-lg); margin: 5px; }
+/* .expand-inner qualifier so this beats .expand-inner's own border-top (same
+   specificity, defined later) — otherwise the top dashed edge is overwritten. */
+.expand-inner.expand-archived { border: 2px dashed #ff1f1f; border-radius: var(--r-lg); margin: 5px; }
 /* Toasts — top-right, above modals (backdrop z 1000). Errors get a red accent
    and linger; success/info are brief. */
 .toaster { position: fixed; top: 16px; right: 16px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; max-width: min(400px, calc(100vw - 32px)); }
@@ -863,6 +865,19 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
    so the dashed red frame is the signal that what you're reading only still
    exists behind an activity-log link. */
 .modal-deleted { border: 2px dashed #ff1f1f; }
+
+/* Detail popup (CardDetailModal): wider + flat. Drop the inner card frame
+   (.inv-table-wrap border/shadow), the archived red-dashed inner border, and the
+   section divider lines; lay sections out 3-up — row1 Property/Pricing/Seller,
+   row2 Notes/RM/Tickets — with Call Activity trailing to its own row. The outer
+   .modal-deleted dashed frame stays as the archived signal. */
+.modal-detail { max-width: 1080px; }
+.modal-detail .inv-table-wrap { border: 0; border-radius: 0; box-shadow: none; background: transparent; overflow: visible; }
+.modal-detail .expand-inner { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 0; }
+.modal-detail .expand-inner.expand-archived { border: 0; border-radius: 0; margin: 0; }
+.modal-detail .expand-sec { border-right: 0; }
+.modal-detail .expand-sec.call-activity { order: 99; min-width: 0; }
+@media (max-width: 760px) { .modal-detail .expand-inner { grid-template-columns: 1fr; } }
 .modal h3 { font-size: 19px; margin-bottom: 4px; }
 .modal-sub { color: var(--text-muted); font-size: 13px; margin: 0 0 16px; }
 .modal-actions { display: flex; gap: 10px; align-items: center; margin-top: 20px; }

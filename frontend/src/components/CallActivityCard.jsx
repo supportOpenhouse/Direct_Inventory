@@ -21,7 +21,7 @@ export default function CallActivityCard({ ohId }) {
   if (!calls) return null;  // still loading — don't flash an empty section
 
   return (
-    <div className="expand-sec expand-sec-wide" style={{ minWidth: 320, flexBasis: 320 }}>
+    <div className="expand-sec expand-sec-wide call-activity" style={{ minWidth: 320, flexBasis: 320 }}>
       <h4><IconPhone size={14} /> Call activity <span className="muted" style={{ fontWeight: 400 }}>· {calls.length}</span></h4>
       {calls.length === 0 && <div className="muted" style={{ fontSize: 13 }}>No calls yet.</div>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 320, overflowY: 'auto' }}>
