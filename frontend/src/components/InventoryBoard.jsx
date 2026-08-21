@@ -1,5 +1,6 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useLocation } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { CITIES, STAGE_DOT_COLOR, STAGES, reasonLabelAny, stageLabel } from '../utils/format.js';
@@ -31,22 +32,38 @@ export default function InventoryBoard({
   reasonPills = false,
 }) {
   const { user } = useAuth();
-  const [qInput, setQInput] = useState('');
-  const [qApplied, setQApplied] = useState('');
-  const [city, setCity] = useState('');
+  // Persist this board's filters per route in localStorage (NOT the DB), so leaving
+  // the page and coming back restores them. Keyed by pathname → each board is separate.
+  const { pathname } = useLocation();
+  const storageKey = `di_board:${pathname}`;
+  const stored = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { return {}; }
+  }, [storageKey]);
+
+  const [qInput, setQInput] = useState(stored.q || '');
+  const [qApplied, setQApplied] = useState(stored.q || '');
+  const [city, setCity] = useState(stored.city || '');
   // Default to "ALL" selected (empty set → effectiveStages falls back to the
   // fixed stage set), so no individual stage pill is pre-selected.
-  const [stageSel, setStageSel] = useState(() => new Set());
-  const [sort, setSort] = useState({ field: 'smart', dir: 'desc' });
+  const [stageSel, setStageSel] = useState(() => new Set(stored.stageSel || []));
+  const [sort, setSort] = useState(stored.sort || { field: 'smart', dir: 'desc' });
   const [page, setPage] = useState(0);
   const [pageInput, setPageInput] = useState('1');
 
   // Admin-only "Show Archived": one button cycling 0 hide → 1 show all → 2 only archived
   // (archived = the soft-deleted rows, normally hidden from everyone).
   const canShowDeleted = allowShowDeleted && (user?.role === 'admin' || user?.role === 'manager');
-  const [archiveMode, setArchiveMode] = useState(0);
-  const [filtersApplied, setFiltersApplied] = useState({});
-  const [filterFormState, setFilterFormState] = useState({});
+  const [archiveMode, setArchiveMode] = useState(stored.archiveMode || 0);
+  const [filtersApplied, setFiltersApplied] = useState(stored.filtersApplied || {});
+  const [filterFormState, setFilterFormState] = useState(stored.filterFormState || {});
+  // Save filters back whenever any of them change.
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({
+        q: qApplied, city, stageSel: [...stageSel], sort, archiveMode, filtersApplied, filterFormState,
+      }));
+    } catch { /* ignore */ }
+  }, [storageKey, qApplied, city, stageSel, sort, archiveMode, filtersApplied, filterFormState]);
   const [showFilters, setShowFilters] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
