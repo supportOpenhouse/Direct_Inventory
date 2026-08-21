@@ -160,7 +160,7 @@ export default function CallLog() {
                   <td>
                     {c.oh_id ? (
                       <>
-                        <button type="button" className="al-uid-link" onClick={() => openUid(c.oh_id)}>{c.lead_name || c.oh_id}</button>
+                        <button type="button" className="al-uid-link" onClick={() => openUid(c.oh_id)}>{c.oh_id}</button>
                         {c.lead_side === 'from' && <span className="muted" style={{ fontSize: 11.5, marginLeft: 6 }}>(incoming)</span>}
                       </>
                     ) : <span className="muted">—</span>}
