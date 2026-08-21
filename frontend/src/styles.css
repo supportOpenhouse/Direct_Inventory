@@ -894,8 +894,12 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .modal-detail .expand-inner.expand-archived { border: 0; border-radius: 0; margin: 0; }
 .modal-detail .expand-sec { border-right: 0; min-width: 0; }
 /* Row 1 (3-up): Property · Pricing · Seller. Row 2 (4-up): Notes · RM · Tickets · Call Activity. */
-/* Row 1: Property · Pricing · Seller · RM History (4-up, span 3 each). */
-.modal-detail .sec-property, .modal-detail .sec-pricing, .modal-detail .sec-seller, .modal-detail .sec-rm { grid-column: span 3; }
+/* Row 1: Property (wide) · Pricing · Seller (narrow) · RM History. */
+.modal-detail .sec-property { grid-column: span 4; }
+.modal-detail .sec-pricing, .modal-detail .sec-rm { grid-column: span 3; }
+.modal-detail .sec-seller { grid-column: span 2; }
+/* Keep section headings on one line (they were wrapping in the narrower columns). */
+.modal-detail .expand-sec h4 { white-space: nowrap; }
 /* Row 2: Notes gets the most space (half), then Tickets · Call Activity. */
 .modal-detail .sec-notes { grid-column: span 6; }
 .modal-detail .sec-tickets, .modal-detail .call-activity { grid-column: span 3; }

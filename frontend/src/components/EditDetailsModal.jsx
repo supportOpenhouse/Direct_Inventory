@@ -104,7 +104,7 @@ export default function EditDetailsModal({ item, onUpdated, onClose: rawClose })
     <div className={backdropClass} onClick={onClose}>
       <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head-row">
-          <h3>Edit Details</h3>
+          <h3>Edit</h3>
           <span className="role-chip">{item.oh_id}</span>
           <button className="modal-close" onClick={onClose}><IconClose /></button>
         </div>

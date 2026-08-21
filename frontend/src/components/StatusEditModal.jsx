@@ -57,7 +57,7 @@ export default function StatusEditModal({ item, onUpdated, onClose: rawClose }) 
       <div className={backdropClass} onClick={onClose}>
         <div className="modal" onClick={(e) => e.stopPropagation()}>
           <div className="modal-head-row">
-            <h3>Edit Status</h3>
+            <h3>Edit</h3>
             <span className="role-chip">{item.oh_id}</span>
             <button className="modal-close" onClick={onClose}><IconClose /></button>
           </div>

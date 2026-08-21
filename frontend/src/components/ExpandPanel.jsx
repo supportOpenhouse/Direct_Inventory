@@ -95,7 +95,7 @@ function AssignedRmField({ item, role, onUpdated, readOnly }) {
       <span className="field-lbl">Assigned RM</span>
       <span className="field-val">
         {currentLabel}
-        {isAdmin && !item.consider_deleted && !readOnly && <button type="button" className="btn-link" style={{ marginLeft: 8 }} onClick={startEdit}>Change</button>}
+        {isAdmin && !item.consider_deleted && !readOnly && <button type="button" className="btn-link" style={{ display: 'block', marginTop: 2, padding: 0 }} onClick={startEdit}>Change</button>}
       </span>
     </div>
   );
@@ -257,7 +257,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
         <div className="expand-sec expand-sec-wide sec-property">
           <h4><IconHome size={14} /> Property Details
             {canEditDetails && (
-              <button type="button" className="btn-edit-details" onClick={() => setShowEdit(true)}><IconEdit size={13} /> Edit Details</button>
+              <button type="button" className="btn-edit-details" onClick={() => setShowEdit(true)}><IconEdit size={13} /> Edit</button>
             )}
           </h4>
           <div className="field-grid-2">
@@ -329,7 +329,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
               </span>
             )}
             {canEditStage && (
-              <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowStatus(true)}><IconEdit size={13} /> Edit Status</button>
+              <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowStatus(true)}><IconEdit size={13} /> Edit</button>
             )}
           </div>
           {detail === null ? (
