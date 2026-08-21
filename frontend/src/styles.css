@@ -894,10 +894,13 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .modal-detail .expand-inner.expand-archived { border: 0; border-radius: 0; margin: 0; }
 .modal-detail .expand-sec { border-right: 0; min-width: 0; }
 /* Row 1 (3-up): Property · Pricing · Seller. Row 2 (4-up): Notes · RM · Tickets · Call Activity. */
-.modal-detail .sec-property, .modal-detail .sec-pricing, .modal-detail .sec-seller { grid-column: span 4; }
-.modal-detail .sec-notes, .modal-detail .sec-rm, .modal-detail .sec-tickets, .modal-detail .call-activity { grid-column: span 3; }
-.modal-detail .sec-property { order: 1; } .modal-detail .sec-pricing { order: 2; } .modal-detail .sec-seller { order: 3; }
-.modal-detail .sec-notes { order: 4; } .modal-detail .sec-rm { order: 5; } .modal-detail .sec-tickets { order: 6; } .modal-detail .call-activity { order: 7; }
+/* Row 1: Property · Pricing · Seller · RM History (4-up, span 3 each). */
+.modal-detail .sec-property, .modal-detail .sec-pricing, .modal-detail .sec-seller, .modal-detail .sec-rm { grid-column: span 3; }
+/* Row 2: Notes gets the most space (half), then Tickets · Call Activity. */
+.modal-detail .sec-notes { grid-column: span 6; }
+.modal-detail .sec-tickets, .modal-detail .call-activity { grid-column: span 3; }
+.modal-detail .sec-property { order: 1; } .modal-detail .sec-pricing { order: 2; } .modal-detail .sec-seller { order: 3; } .modal-detail .sec-rm { order: 4; }
+.modal-detail .sec-notes { order: 5; } .modal-detail .sec-tickets { order: 6; } .modal-detail .call-activity { order: 7; }
 @media (max-width: 760px) { .modal-detail .expand-inner { grid-template-columns: 1fr; } .modal-detail .expand-sec { grid-column: auto; } }
 .modal h3 { font-size: 19px; margin-bottom: 4px; }
 .modal-sub { color: var(--text-muted); font-size: 13px; margin: 0 0 16px; }
@@ -999,6 +1002,10 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .al-filters { display: flex; gap: 10px; flex-wrap: nowrap; align-items: center; margin-bottom: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 12px; }
 .usr-scope { display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
 .al-filter-input { flex: 1 1 120px; min-width: 80px; }
+/* Search input with a leading magnifying-glass icon overlaid at the start. */
+.al-search-wrap { position: relative; flex: 1 1 120px; min-width: 80px; display: flex; }
+.al-search-wrap .al-filter-input { flex: 1; width: 100%; padding-left: 36px; }
+.al-search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); display: inline-flex; color: var(--text-muted); pointer-events: none; }
 .al-filter-select { width: auto; min-width: 0; max-width: 130px; flex: 0 0 auto; }
 .al-date-range { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
 /* Buttons stretch to the filter row's height so they match the date/select inputs. */

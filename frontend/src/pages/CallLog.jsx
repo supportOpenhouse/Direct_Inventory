@@ -5,6 +5,7 @@ import { toast } from '../utils/toast.js';
 import RecordingPlayer from '../components/RecordingPlayer.jsx';
 import CardDetailModal from '../components/CardDetailModal.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { IconSearch } from '../components/icons.jsx';
 import { callDuration, formatCallTime } from '../utils/format.js';
 
 /* Bonvoice Call Log — every call Bonvoice has reported, with its recording.
@@ -115,8 +116,11 @@ export default function CallLog() {
       )}
 
       <div className="al-filters">
-        <input className="al-filter-input" placeholder="Search phone (any format) / lead name…"
-          value={q} onChange={(e) => reset(() => setQ(e.target.value))} />
+        <div className="al-search-wrap">
+          <span className="al-search-icon"><IconSearch size={15} /></span>
+          <input className="al-filter-input" placeholder="Search phone (any format) / lead name…"
+            value={q} onChange={(e) => reset(() => setQ(e.target.value))} />
+        </div>
         <select className="al-filter-select" value={conn} onChange={(e) => reset(() => setConn(e.target.value))}>
           <option value="">Outcome</option>
           <option value="Connected">Connected</option>
