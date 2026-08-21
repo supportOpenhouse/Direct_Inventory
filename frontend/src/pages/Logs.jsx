@@ -194,6 +194,7 @@ export default function Logs() {
           item={detail}
           role={user?.role}
           showAssignedRm
+          viewOnly
           onUpdated={(u) => setDetail((p) => ({ ...p, ...u }))}
           onClose={() => setDetail(null)}
         />

@@ -8,7 +8,7 @@ import { useModalExit } from '../utils/useModalExit.js';
  * bell. Editing is delegated to the inline ExpandPanel sections; this is mainly
  * a focused view of one lead with its notes thread.
  */
-export default function CardDetailModal({ item, role, onUpdated, onClose: rawClose, showAssignedRm = false }) {
+export default function CardDetailModal({ item, role, onUpdated, onClose: rawClose, showAssignedRm = false, viewOnly = false }) {
   // Escape handling lives in useModalExit — its version is stack-aware, so this
   // modal no longer closes when something is open on top of it.
   const { onClose, backdropClass } = useModalExit(rawClose);
@@ -46,7 +46,7 @@ export default function CardDetailModal({ item, role, onUpdated, onClose: rawClo
           )}
         </div>
         <div className="inv-table-wrap" style={{ overflow: 'visible' }}>
-          <ExpandPanel item={item} role={role} onUpdated={onUpdated} canPost={canPost} showAssignedRm={showAssignedRm} />
+          <ExpandPanel item={item} role={role} onUpdated={onUpdated} canPost={canPost} showAssignedRm={showAssignedRm} viewOnly={viewOnly} />
         </div>
       </div>
     </div>

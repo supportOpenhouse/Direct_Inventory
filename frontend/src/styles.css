@@ -770,6 +770,9 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .expand-sec-wide { flex-grow: 1.7; }
 .expand-sec-narrow { flex-grow: 0.6; min-width: 190px; flex-basis: 190px; }
 .expand-sec:last-child { border-right: 0; }
+/* Call Activity wants a bit more room in the flex-wrap (inline table) layout;
+   the detail modal overrides this via its grid rules. */
+.call-activity { flex: 1 1 320px; min-width: 320px; }
 .expand-sec h4 { font-family: 'Inter', sans-serif; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-strong); margin-bottom: 12px; display: flex; align-items: center; gap: 7px; }
 .field-row { display: flex; flex-direction: column; gap: 2px; margin-bottom: 11px; }
 .field-lbl { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint); font-weight: 700; }
@@ -871,13 +874,17 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
    section divider lines; lay sections out 3-up — row1 Property/Pricing/Seller,
    row2 Notes/RM/Tickets — with Call Activity trailing to its own row. The outer
    .modal-deleted dashed frame stays as the archived signal. */
-.modal-detail { max-width: 1080px; }
+.modal-detail { max-width: 1120px; }
 .modal-detail .inv-table-wrap { border: 0; border-radius: 0; box-shadow: none; background: transparent; overflow: visible; }
-.modal-detail .expand-inner { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 0; }
+.modal-detail .expand-inner { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); border-top: 0; }
 .modal-detail .expand-inner.expand-archived { border: 0; border-radius: 0; margin: 0; }
-.modal-detail .expand-sec { border-right: 0; }
-.modal-detail .expand-sec.call-activity { order: 99; min-width: 0; }
-@media (max-width: 760px) { .modal-detail .expand-inner { grid-template-columns: 1fr; } }
+.modal-detail .expand-sec { border-right: 0; min-width: 0; }
+/* Row 1 (3-up): Property · Pricing · Seller. Row 2 (4-up): Notes · RM · Tickets · Call Activity. */
+.modal-detail .sec-property, .modal-detail .sec-pricing, .modal-detail .sec-seller { grid-column: span 4; }
+.modal-detail .sec-notes, .modal-detail .sec-rm, .modal-detail .sec-tickets, .modal-detail .call-activity { grid-column: span 3; }
+.modal-detail .sec-property { order: 1; } .modal-detail .sec-pricing { order: 2; } .modal-detail .sec-seller { order: 3; }
+.modal-detail .sec-notes { order: 4; } .modal-detail .sec-rm { order: 5; } .modal-detail .sec-tickets { order: 6; } .modal-detail .call-activity { order: 7; }
+@media (max-width: 760px) { .modal-detail .expand-inner { grid-template-columns: 1fr; } .modal-detail .expand-sec { grid-column: auto; } }
 .modal h3 { font-size: 19px; margin-bottom: 4px; }
 .modal-sub { color: var(--text-muted); font-size: 13px; margin: 0 0 16px; }
 .modal-actions { display: flex; gap: 10px; align-items: center; margin-top: 20px; }

@@ -33,7 +33,7 @@ function cleanRm(v) {
 // Assigned-RM row in Seller Details. Visible to admin + manager; admin can
 // change it inline via PUT <oh_id>/assigned-rms (same endpoint Edit Details
 // uses). Changing collapses to a single primary RM, mirroring Edit Details.
-function AssignedRmField({ item, role, onUpdated }) {
+function AssignedRmField({ item, role, onUpdated, readOnly }) {
   const isAdmin = role === 'admin';
   const visible = isAdmin || role === 'manager';
   const currentRm = (item.assigned_rms && item.assigned_rms[0]) || null;
@@ -95,7 +95,7 @@ function AssignedRmField({ item, role, onUpdated }) {
       <span className="field-lbl">Assigned RM</span>
       <span className="field-val">
         {currentLabel}
-        {isAdmin && !item.consider_deleted && <button type="button" className="btn-link" style={{ marginLeft: 8 }} onClick={startEdit}>Change</button>}
+        {isAdmin && !item.consider_deleted && !readOnly && <button type="button" className="btn-link" style={{ marginLeft: 8 }} onClick={startEdit}>Change</button>}
       </span>
     </div>
   );
@@ -103,9 +103,9 @@ function AssignedRmField({ item, role, onUpdated }) {
 
 // 5th column: tickets raised on this property. Lazy-loads on mount, shows the
 // latest on top with a "+N more" toggle, and lets admin/manager raise a new one.
-function TicketsSection({ item, role }) {
-  // No new tickets on an archived (soft-deleted) lead — it's read-only.
-  const canCreate = (role === 'admin' || role === 'manager') && !item.consider_deleted;
+function TicketsSection({ item, role, readOnly }) {
+  // No new tickets on an archived (soft-deleted) lead or a view-only popup (e.g. Logs).
+  const canCreate = (role === 'admin' || role === 'manager') && !item.consider_deleted && !readOnly;
   const [tickets, setTickets] = useState(null); // null = loading
   const [expanded, setExpanded] = useState(false);
   const [open, setOpen] = useState(null);
@@ -146,7 +146,7 @@ function TicketsSection({ item, role }) {
   const extra = ordered.length - shown.length;
 
   return (
-    <div className="expand-sec">
+    <div className="expand-sec sec-tickets">
       <h4><IconTicket size={14} /> Tickets
         {canCreate && !creating && (
           <button type="button" className="btn-edit-details" onClick={() => setCreating(true)}>+ New Ticket</button>
@@ -197,7 +197,7 @@ function TicketsSection({ item, role }) {
  * Distributed columns: Property Details · Pricing · Seller Details · Notes · Tickets.
  * `sections` lets a host trim what's shown (Leads keeps it lean).
  */
-export default function ExpandPanel({ item, role, onUpdated, canPost = true, sections, canEditStatus = true, showAssignedRm = true }) {
+export default function ExpandPanel({ item, role, onUpdated, canPost = true, sections, canEditStatus = true, showAssignedRm = true, viewOnly = false }) {
   const show = sections || ['property', 'pricing', 'seller', 'notes', 'rm_history', 'tickets'];
   // List rows are slim (no note_thread); fetch the full record on mount and
   // render detail sections from it. The slim parent row doubles as the
@@ -222,7 +222,8 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
   const v = variation(full.price, full.oh_price);
   const listing = full.listing_link && !/^internal:\/\//.test(full.listing_link) ? full.listing_link : null;
   // Archived (soft-deleted) leads are read-only — nothing can be changed, only restored.
-  const readOnly = !!item.consider_deleted;
+  // viewOnly forces the same button-less view without the archived styling (e.g. the Logs popup).
+  const readOnly = viewOnly || !!item.consider_deleted;
   const canEdit = canEditStatus && !readOnly && (['admin', 'manager', 'rm'].includes(role) || canPost);
   // Editing the raw property/seller fields is allowed wherever editing is
   // enabled, for the same roles the backend PATCH accepts.
@@ -251,9 +252,9 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
   const canEditStage = canEdit && item.stage !== 'visit_scheduled' && !SUPPLY_STAGES.includes(item.stage);
 
   return (
-    <div className={'expand-inner' + (readOnly ? ' expand-archived' : '')}>
+    <div className={'expand-inner' + (item.consider_deleted ? ' expand-archived' : '')}>
       {show.includes('property') && (
-        <div className="expand-sec expand-sec-wide">
+        <div className="expand-sec expand-sec-wide sec-property">
           <h4><IconHome size={14} /> Property Details
             {canEditDetails && (
               <button type="button" className="btn-edit-details" onClick={() => setShowEdit(true)}><IconEdit size={13} /> Edit Details</button>
@@ -271,7 +272,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
       )}
 
       {show.includes('pricing') && (
-        <div className="expand-sec">
+        <div className="expand-sec sec-pricing">
           <h4><IconMoney size={14} /> Pricing &amp; Source</h4>
           <div className="field-grid-2">
             <Field label="Asking"><span className="val-orange">{formatPrice(full.price)}</span></Field>
@@ -289,7 +290,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
       )}
 
       {show.includes('seller') && (
-        <div className="expand-sec expand-sec-narrow">
+        <div className="expand-sec expand-sec-narrow sec-seller">
           <h4><IconUser size={14} /> Seller Details</h4>
           <Field label="Seller name">{full.seller_name || '—'}</Field>
           <Field label="Phone no.">
@@ -297,7 +298,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
               ? <a className="inv-link" href={`tel:${full.seller_phone}`}>{full.seller_phone}</a>
               : '—'}
           </Field>
-          {showAssignedRm && <AssignedRmField item={full} role={role} onUpdated={onUpdated} />}
+          {showAssignedRm && <AssignedRmField item={full} role={role} onUpdated={onUpdated} readOnly={readOnly} />}
         </div>
       )}
 
@@ -305,7 +306,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
       <CallActivityCard ohId={item.oh_id} />
 
       {show.includes('notes') && (
-        <div className="expand-sec">
+        <div className="expand-sec sec-notes">
           <div className="expand-status-row">
             <span className="expand-status-cur">
               <span className="stage-dot" style={{ background: STAGE_DOT_COLOR[item.stage] }} />
@@ -348,7 +349,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
       )}
 
       {show.includes('rm_history') && (
-        <div className="expand-sec expand-sec-narrow">
+        <div className="expand-sec expand-sec-narrow sec-rm">
           <h4><IconReload size={14} /> RM History</h4>
           {detail === null ? (
             <div className="muted" style={{ fontSize: 13 }}>Loading…</div>
@@ -369,7 +370,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
         </div>
       )}
 
-      {show.includes('tickets') && <TicketsSection item={item} role={role} />}
+      {show.includes('tickets') && <TicketsSection item={item} role={role} readOnly={readOnly} />}
 
       {showStatus && (
         <StatusEditModal item={item} onUpdated={(u) => onUpdated?.(u)} onClose={() => setShowStatus(false)} />
