@@ -57,5 +57,11 @@ export const IconLock = (p) => <S {...p}><rect x="5" y="11" width="14" height="9
 export const IconTasks = (p) => <S {...p}><rect x="6" y="4" width="12" height="17" rx="2" /><path d="M9 4V3h6v1" /><path d="m9.5 12.5 1.8 1.8 3.2-3.6" /></S>;
 // Speech bubble — tickets / conversations on a property.
 export const IconTicket = (p) => <S {...p}><path d="M21 11.5a8.38 8.38 0 0 1-9 8.5 9.06 9.06 0 0 1-4-1L3 20l1-3.8A8.38 8.38 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5Z" /><path d="M8.5 11h7M8.5 14h4" /></S>;
-// Ticket stub: landscape body with top/bottom-centre notches + a vertical perforation.
-export const IconTicketStub = (p) => <S {...p}><path d="M3 7a2 2 0 0 1 2-2h5.5a1.5 1.5 0 0 0 3 0H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5.5a1.5 1.5 0 0 0-3 0H5a2 2 0 0 1-2-2Z" /><path d="M12 9.5v1.5M12 13v1.5" /></S>;
+// Ticket stub with a check — resolved/support-ticket vibe.
+export const IconTicketCheck = (p) => <S {...p}><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" /><path d="m8.5 12 2 2 4-4.5" /></S>;
+
+// Tag / label ticket — the classic "support tag".
+export const IconTicketTag = (p) => <S {...p}><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0l-7.2-7.2a2 2 0 0 1-.6-1.4V4a1 1 0 0 1 1-1h7.6a2 2 0 0 1 1.4.6l7.8 7.8a2 2 0 0 1 0 2.8Z" /><circle cx="7.5" cy="7.5" r="1.3" /></S>;
+
+// Admission ticket, horizontal with notches — most literal "ticket".
+export const IconTicketStub = (p) => <S {...p}><path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2.5a2 2 0 0 0 0 5V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2.5a2 2 0 0 0 0-5Z" /><path d="M15 5v14" strokeDasharray="1.5 2.5" /></S>;
