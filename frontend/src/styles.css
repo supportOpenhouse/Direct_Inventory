@@ -879,10 +879,23 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .adduser-row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 14px; }
 .adduser-row label { display: block; margin-bottom: 6px; }
 .adduser-row .au-field { flex: 1; min-width: 0; }
-.adduser-row .au-role { flex: 0 0 150px; }
+/* min-width:0 stops the Managers multiselect from stretching the cell past its
+   basis, so Role + Managers stay the same width. */
+.adduser-row .au-role { flex: 0 0 170px; min-width: 0; }
 /* Match the Role dropdown's height to the text inputs + Managers multiselect
    on the same form (the base .role-select is a compact 6px-pad variant). */
-.adduser-row .au-role .role-select { width: 100%; padding-top: 9px; padding-bottom: 9px; }
+/* Drop the native OS arrow (which hugs the edge) for the same chevron as the
+   Managers caret, inset 15px to match. padding-right reserves room so text
+   never slides under it. Light + dark stroke = --text-muted per theme. */
+.adduser-row .au-role .role-select {
+  width: 100%; padding-top: 9px; padding-bottom: 9px; padding-right: 36px;
+  appearance: none; -webkit-appearance: none; -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a817a' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 15px center; background-size: 16px 16px;
+}
+[data-theme='dark'] .adduser-row .au-role .role-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a0a0a0' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
 .adduser-row .au-actions { margin-left: auto; flex: 0 0 auto; }
 .form-grid .form-wide-2 { grid-column: 1 / -1; }
 
