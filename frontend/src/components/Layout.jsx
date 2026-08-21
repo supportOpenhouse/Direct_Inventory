@@ -12,8 +12,11 @@ import AddInventoryButton from './AddInventoryButton.jsx';
 import CreateTicketButton from './CreateTicketButton.jsx';
 import {
   IconHome, IconLeads, IconQualified, IconFollowUp, IconVisit, IconPipeline, IconRejected,
-  IconReport, IconUsers, IconLogs, IconTasks, IconTicket, IconPhone, IconDialer, IconSun, IconMoon, IconMenu, IconLogout, IconChevron,
+  IconReport, IconUsers, IconLogs, IconTasks, IconTicket, IconDialer, IconSun, IconMoon, IconMenu, IconLogout, IconChevron,
 } from './icons.jsx';
+
+// Bonvoice Call Log uses its brand PNG (from public/) instead of a stroke icon.
+const BonvoiceIcon = () => <img src="/bonvoice_icon.png" alt="" width={18} height={18} style={{ display: 'block', objectFit: 'contain' }} />;
 
 const PRIMARY = [
   { to: '/', label: 'Home', Icon: IconHome, end: true },
@@ -195,7 +198,7 @@ export default function Layout() {
 
         {isRm && navItem({ to: '/live-calls', label: 'Live Calls', Icon: IconDialer, dotKey: 'liveCalls' })}
         {/* Call log is visible to all roles — scoped server-side (RM: own number, manager: team). */}
-        {navItem({ to: '/call-log', label: 'Bonvoice Call Log', Icon: IconPhone })}
+        {navItem({ to: '/call-log', label: 'Bonvoice Call Log', Icon: BonvoiceIcon })}
 
         <div className="sidebar-section-label">Insights</div>
         {(isAdmin || isManager)
