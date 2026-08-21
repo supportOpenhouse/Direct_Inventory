@@ -12,11 +12,11 @@ import AddInventoryButton from './AddInventoryButton.jsx';
 import CreateTicketButton from './CreateTicketButton.jsx';
 import {
   IconHome, IconLeads, IconQualified, IconFollowUp, IconVisit, IconPipeline, IconRejected,
-  IconReport, IconUsers, IconLogs, IconTasks, IconTicket, IconDialer, IconSun, IconMoon, IconMenu, IconLogout, IconChevron,
+  IconReport, IconUsers, IconLogs, IconTasks, IconTicket, IconTicketStub, IconDialer, IconSun, IconMoon, IconMenu, IconLogout, IconChevron,
 } from './icons.jsx';
 
-// Bonvoice Call Log uses its brand PNG (from public/) instead of a stroke icon.
-const BonvoiceIcon = () => <img src="/bonvoice_icon.png" alt="" width={18} height={18} style={{ display: 'block', objectFit: 'contain' }} />;
+// Bonvoice Call Log reuses the (chat-bubble) tickets icon, mirrored horizontally.
+const BonvoiceIcon = () => <span style={{ display: 'inline-flex', transform: 'scaleX(-1)' }}><IconTicket /></span>;
 
 const PRIMARY = [
   { to: '/', label: 'Home', Icon: IconHome, end: true },
@@ -26,7 +26,7 @@ const PRIMARY = [
   { to: '/visit-scheduled', label: 'Visit Status', Icon: IconVisit },
   { to: '/pipeline', label: 'Supply Closure Tracker', Icon: IconPipeline },
   { to: '/rejected', label: 'Rejected', Icon: IconRejected },
-  { to: '/tickets', label: 'Tickets', Icon: IconTicket, dotKey: 'tickets' },
+  { to: '/tickets', label: 'Tickets', Icon: IconTicketStub, dotKey: 'tickets' },
 ];
 
 const TITLES = {
