@@ -18,14 +18,15 @@ export default function CallActivityCard({ ohId }) {
     return () => { alive = false; };
   }, [ohId]);
 
-  if (!calls) return null;  // still loading — don't flash an empty section
-
+  // Always render the section (with a loading state) so it doesn't pop in a
+  // split second late and shift the drawer layout — mirrors the notes/RM columns.
   return (
     <div className="expand-sec expand-sec-wide call-activity">
-      <h4><IconPhone size={14} /> Call activity <span className="muted" style={{ fontWeight: 400 }}>· {calls.length}</span></h4>
-      {calls.length === 0 && <div className="muted" style={{ fontSize: 13 }}>No calls yet.</div>}
+      <h4><IconPhone size={14} /> Call activity {calls != null && <span className="muted" style={{ fontWeight: 400 }}>· {calls.length}</span>}</h4>
+      {calls === null && <div className="muted" style={{ fontSize: 13 }}>Loading…</div>}
+      {calls?.length === 0 && <div className="muted" style={{ fontSize: 13 }}>No calls yet.</div>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 320, overflowY: 'auto' }}>
-        {calls.map((c) => (
+        {(calls || []).map((c) => (
           <div key={`${c.call_id}-${c.leg}`} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span className={c.answered ? 'cat-pill cat-sync' : 'cat-pill cat-default'}>
