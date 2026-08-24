@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
 import { ALL_REJECT_REASONS, CITIES } from '../utils/format.js';
 import SearchableMultiSelect from './SearchableMultiSelect.jsx';
+import PresetBar from './PresetBar.jsx';
 import { IconClose } from './icons.jsx';
 import { useModalExit } from '../utils/useModalExit.js';
 
@@ -43,7 +44,8 @@ const EMPTY = {
   assigned_preset: '', assigned_from: '', assigned_to: '', assigned_empty: false,
 };
 
-export default function FilterPanel({ initial, defaultCity = '', role = '', showReason = false, showFollowUp = true, showVisitOverdue = false, reasonOptions = ALL_REJECT_REASONS, onApply, onClose: rawClose }) {
+export default function FilterPanel({ initial, defaultCity = '', role = '', showReason = false, showFollowUp = true, showVisitOverdue = false, reasonOptions = ALL_REJECT_REASONS, onApply, onClose: rawClose,
+  presetDoc = null, onPresetChange, presetsSaving = false, presetCity = '', presetStageSel = [], onApplyPreset }) {
   const { onClose, backdropClass } = useModalExit(rawClose);
   const [f, setF] = useState(() => ({
     ...EMPTY, ...initial,
@@ -157,7 +159,7 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
 
   function reset() { setF(EMPTY); }
 
-  function apply() {
+  function buildApplied() {
     const out = {};
     if (f.society.length) out.society = f.society.join(',');
     if (f.locality.length) out.locality = f.locality.join(',');
@@ -186,14 +188,26 @@ export default function FilterPanel({ initial, defaultCity = '', role = '', show
     if (f.assigned_from) out.assigned_from = f.assigned_from;
     if (f.assigned_to) out.assigned_to = f.assigned_to;
     if (f.assigned_empty) out.assigned_empty = 1;
-    onApply(out, f);
+    return out;
   }
+  function apply() { onApply(buildApplied(), f); }
 
   return (
     <div className={backdropClass} onClick={onClose}>
       <div className="modal filter-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head-row">
           <h3>Filters</h3>
+          {presetDoc && onApplyPreset && (
+            <PresetBar
+              doc={presetDoc}
+              // A preset captures the form as it stands plus the board's city tab
+              // and stage-pill selection (both live outside this modal).
+              currentFilters={{ city: presetCity, stageSel: presetStageSel, form: f, applied: buildApplied() }}
+              onApply={onApplyPreset}
+              onChange={onPresetChange}
+              saving={presetsSaving}
+            />
+          )}
           <span className="mhr-spacer" />
           {activeCount > 0 && (
             <>

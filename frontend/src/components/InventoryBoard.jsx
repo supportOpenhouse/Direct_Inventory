@@ -73,46 +73,27 @@ export default function InventoryBoard({
     } catch { /* ignore */ }
   }, [storageKey, qApplied, city, stageSel, sort, archiveMode, filtersApplied, filterFormState]);
 
-  // ── Saved filter presets (Home only; see api/presets + migration 044) ────────
-  const [presetData, setPresetData] = useState({ preset1: null, preset2: null, preset3: null, sequence: [], priority: null });
+  // ── Saved filter presets (Home only; see api/presets + migration 044). The
+  // PresetBar UI lives in the Filters modal; this owns the doc + apply/save. ────
+  const [presetDoc, setPresetDoc] = useState({ presets: [null, null, null], sequence: [1, 2, 3], priority: null });
+  const [presetsSaving, setPresetsSaving] = useState(false);
   const priorityApplied = useRef(false);
-  const dragSlot = useRef(null);
 
-  // A preset captures the board filters EXCEPT the search text.
-  function captureFilters() { return { city, stageSel: [...stageSel], filtersApplied, filterFormState }; }
-  function applyPresetFilters(p) {
-    const f = p?.filters; if (!f) return;
-    setCity(f.city || '');
-    setStageSel(new Set(f.stageSel || []));
-    setFiltersApplied(f.filtersApplied || {});
-    setFilterFormState(f.filterFormState || {});
+  // Apply a preset's captured filters to the board (city + stage pills + advanced
+  // filters), leaving the search text alone, and close the Filters modal.
+  function applyPresetFilters(filters) {
+    if (!filters) return;
+    setCity(filters.city || '');
+    setStageSel(new Set(filters.stageSel || []));
+    setFiltersApplied(filters.applied || {});
+    setFilterFormState(filters.form || {});
     setPage(0);
+    setShowFilters(false);
   }
-  const usedSlots = () => [1, 2, 3].filter((n) => presetData[`preset${n}`]?.name);
-  const orderedPresets = (presetData.sequence || [])
-    .map((slot) => ({ slot, ...(presetData[`preset${slot}`] || {}) }))
-    .filter((p) => p.name);
-
-  async function savePresets(next) {
-    setPresetData(next);
-    try { await api.put('/api/presets', next); } catch { /* non-blocking */ }
-  }
-  function addPreset() {
-    if (usedSlots().length >= 3) return;
-    const name = (window.prompt('Name this preset (saves the current filters):') || '').trim();
-    if (!name) return;
-    const slot = [1, 2, 3].find((n) => !presetData[`preset${n}`]?.name);
-    const sequence = [...(presetData.sequence || []), slot];
-    savePresets({ ...presetData, [`preset${slot}`]: { name, filters: captureFilters() }, sequence, priority: sequence[0] });
-  }
-  function deletePreset(slot) {
-    const sequence = (presetData.sequence || []).filter((s) => s !== slot);
-    savePresets({ ...presetData, [`preset${slot}`]: null, sequence, priority: sequence[0] ?? null });
-  }
-  function reorderPreset(fromSlot, toIndex) {
-    const seq = (presetData.sequence || []).filter((s) => s !== fromSlot);
-    seq.splice(toIndex, 0, fromSlot);
-    savePresets({ ...presetData, sequence: seq, priority: seq[0] ?? null });
+  async function savePresetDoc(next) {
+    setPresetDoc(next);
+    setPresetsSaving(true);
+    try { await api.put('/api/presets', next); } catch { /* non-blocking */ } finally { setPresetsSaving(false); }
   }
 
   // Load presets; if the sticky was absent/expired, apply the priority preset once.
@@ -121,10 +102,11 @@ export default function InventoryBoard({
     let alive = true;
     api.get('/api/presets').then((r) => {
       if (!alive || !r) return;
-      setPresetData({ preset1: null, preset2: null, preset3: null, sequence: [], priority: null, ...r });
-      if (!priorityApplied.current && (stored._expired || stored._ts == null) && r.priority) {
+      setPresetDoc(r);
+      const prio = r.priority ? r.presets?.[r.priority - 1] : null;
+      if (!priorityApplied.current && (stored._expired || stored._ts == null) && prio) {
         priorityApplied.current = true;
-        applyPresetFilters(r[`preset${r.priority}`]);
+        applyPresetFilters(prio.filters);
       }
     }).catch(() => {});
     return () => { alive = false; };
@@ -374,26 +356,6 @@ export default function InventoryBoard({
           {qApplied && <button type="button" className="btn-ghost" onClick={() => { setQInput(''); setQApplied(''); }}>Clear</button>}
         </form>
         <button className="btn-ghost" onClick={() => setShowFilters(true)}><IconFilter size={16} /> Filters{filterCount ? ` (${filterCount})` : ''}</button>
-        {presets && (
-          <div className="preset-bar">
-            {orderedPresets.map((p, i) => (
-              <span key={p.slot} className={`preset-chip ${p.slot === presetData.priority ? 'preset-priority' : ''}`}
-                draggable
-                onDragStart={() => { dragSlot.current = p.slot; }}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => { e.preventDefault(); if (dragSlot.current != null && dragSlot.current !== p.slot) reorderPreset(dragSlot.current, i); dragSlot.current = null; }}>
-                <button type="button" className="preset-apply" onClick={() => applyPresetFilters(p)}
-                  title={p.slot === presetData.priority ? 'Priority preset — auto-applies on open' : 'Apply preset'}>
-                  {p.slot === presetData.priority && <span className="preset-star">★</span>}{p.name}
-                </button>
-                <button type="button" className="preset-x" onClick={() => deletePreset(p.slot)} aria-label="Remove preset">×</button>
-              </span>
-            ))}
-            {usedSlots().length < 3 && (
-              <button type="button" className="preset-add" onClick={addPreset}>+ Preset</button>
-            )}
-          </div>
-        )}
         {canShowDeleted && (
           <button className={archiveMode ? 'btn-primary' : 'btn-ghost'} onClick={() => setArchiveMode((m) => (m + 1) % 3)}
             title="Cycle archived leads: hide → show → only (admin)">
@@ -491,7 +453,15 @@ export default function InventoryBoard({
           showReason={reasonFilter} showFollowUp={!hideFollowUpFilter} showVisitOverdue={annotateVisitOverdue}
           {...(reasonOptions ? { reasonOptions } : {})}
           onClose={() => setShowFilters(false)}
-          onApply={(applied, form) => { setFiltersApplied(applied); setFilterFormState(form); setShowFilters(false); }} />
+          onApply={(applied, form) => { setFiltersApplied(applied); setFilterFormState(form); setShowFilters(false); }}
+          {...(presets ? {
+            presetDoc,
+            onPresetChange: savePresetDoc,
+            presetsSaving,
+            presetCity: city,
+            presetStageSel: [...stageSel],
+            onApplyPreset: applyPresetFilters,
+          } : {})} />
       )}
       {showAddModal && (
         <AddInventoryModal onClose={() => setShowAddModal(false)} onAdded={() => { setShowAddModal(false); refresh(0); refreshCounts(); }} />

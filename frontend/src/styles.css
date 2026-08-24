@@ -555,17 +555,51 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 
 /* ── toolbar (board / table view) ────────────────────────────────────── */
 .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-/* Saved filter presets: draggable chips right of the Filters button. */
-.preset-bar { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.preset-chip { display: inline-flex; align-items: center; height: 34px; background: var(--surface-3); border: 1px solid var(--border); border-radius: var(--r-pill); overflow: hidden; cursor: grab; }
-.preset-chip.preset-priority { border-color: var(--brand); background: var(--brand-softer); }
-.preset-apply { border: 0; background: transparent; color: var(--text-2); font-weight: 600; font-size: 12.5px; padding: 0 4px 0 13px; height: 100%; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
-.preset-chip.preset-priority .preset-apply { color: var(--brand-strong); }
-.preset-star { color: var(--brand); }
-.preset-x { border: 0; background: transparent; color: var(--text-muted); cursor: pointer; padding: 0 9px 0 4px; height: 100%; font-size: 15px; line-height: 1; }
-.preset-x:hover { color: var(--red); }
-.preset-add { height: 34px; border: 1px dashed var(--border); background: transparent; color: var(--text-muted); font-weight: 600; font-size: 12.5px; padding: 0 12px; border-radius: var(--r-pill); cursor: pointer; }
-.preset-add:hover { border-color: var(--brand); color: var(--brand-strong); }
+/* ── saved filter presets (Filters modal header) ───────────────────────────
+   Three slots right of the "Filters" heading. Display order IS priority order:
+   the leftmost chip auto-applies, so the ★ sits in the first slot and dragging
+   a chip there promotes it. (Ported from CP-Inventory-Portal.) */
+.preset-bar { display: flex; align-items: center; gap: 6px; margin-left: 12px; padding: 0 4px; position: relative; }
+.preset-chip {
+  display: inline-flex; align-items: center; gap: 2px; position: relative;
+  max-width: 150px; height: 28px; padding: 0 4px 0 8px;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface-2); font-size: 12px; font-weight: 600;
+  cursor: grab; transition: border-color .14s, background .14s, opacity .14s;
+}
+.preset-chip:hover { border-color: var(--brand); }
+.preset-chip-priority { border-color: var(--brand); background: var(--brand-softer); }
+.preset-chip-dragging { opacity: .4; cursor: grabbing; }
+.preset-drop-before::before, .preset-drop-after::after {
+  content: ''; position: absolute; top: -2px; bottom: -2px; width: 2px;
+  border-radius: 2px; background: var(--brand);
+}
+.preset-drop-before::before { left: -4px; }
+.preset-drop-after::after { right: -4px; }
+.preset-chip-blank { border-style: dashed; opacity: .35; width: 28px; cursor: default; pointer-events: none; }
+.preset-chip-add { border-style: dashed; color: var(--text-muted); cursor: pointer; padding: 0 10px; gap: 4px; }
+.preset-chip-add:hover { color: var(--brand-strong); border-style: solid; }
+.preset-chip-apply {
+  background: none; border: 0; padding: 0; font: inherit; color: inherit;
+  cursor: pointer; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.preset-star { color: var(--brand); margin-right: 3px; }
+.preset-icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; flex-shrink: 0;
+  border: 0; border-radius: 50%; background: none; color: var(--text-muted); cursor: pointer;
+}
+.preset-icon-btn:hover { background: var(--surface-3); color: var(--text); }
+.preset-icon-btn:disabled { opacity: .4; cursor: default; }
+.preset-chip-naming { cursor: default; padding-left: 6px; max-width: 190px; }
+.preset-chip-naming input {
+  width: 120px; height: 20px; padding: 0 4px; border: 0; background: none;
+  font: inherit; color: var(--text); outline: none;
+}
+@media (max-width: 620px) {
+  .modal-head-row { flex-wrap: wrap; }
+  .preset-bar { order: 3; width: 100%; margin-left: 0; }
+}
 /* ── sliding segmented toggles ────────────────────────────────────────────
    <SlideTabs> adds .seg-slide + a .seg-thumb that travels to the active option.
    The thumb paints the "selected" surface, so the active BUTTON goes
