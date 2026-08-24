@@ -29,16 +29,24 @@ export default function InventoryBoard({
   // Optional external control of select mode (Home renders the Select button up
   // in its view-toggle bar). When uncontrolled, the toolbar shows its own button.
   controlledSelectMode = undefined, onSelectModeChange = undefined, hideSelectButton = false,
-  reasonPills = false,
+  reasonPills = false, presets = false,
 }) {
   const { user } = useAuth();
   // Persist this board's filters per route in localStorage (NOT the DB), so leaving
   // the page and coming back restores them. Keyed by pathname → each board is separate.
   const { pathname } = useLocation();
   const storageKey = `di_board:${pathname}`;
+  // On preset-enabled boards the sticky expires after 12h so the priority preset
+  // can take over; other boards keep it indefinitely.
+  const STICKY_TTL = 12 * 60 * 60 * 1000;
   const stored = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { return {}; }
-  }, [storageKey]);
+    try {
+      const raw = JSON.parse(localStorage.getItem(storageKey) || '{}');
+      if (presets && raw._ts && (Date.now() - raw._ts) > STICKY_TTL) return { _expired: true };
+      return raw;
+    } catch { return {}; }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey, presets]);
 
   const [qInput, setQInput] = useState(stored.q || '');
   const [qApplied, setQApplied] = useState(stored.q || '');
@@ -60,10 +68,68 @@ export default function InventoryBoard({
   useEffect(() => {
     try {
       localStorage.setItem(storageKey, JSON.stringify({
-        q: qApplied, city, stageSel: [...stageSel], sort, archiveMode, filtersApplied, filterFormState,
+        q: qApplied, city, stageSel: [...stageSel], sort, archiveMode, filtersApplied, filterFormState, _ts: Date.now(),
       }));
     } catch { /* ignore */ }
   }, [storageKey, qApplied, city, stageSel, sort, archiveMode, filtersApplied, filterFormState]);
+
+  // ── Saved filter presets (Home only; see api/presets + migration 044) ────────
+  const [presetData, setPresetData] = useState({ preset1: null, preset2: null, preset3: null, sequence: [], priority: null });
+  const priorityApplied = useRef(false);
+  const dragSlot = useRef(null);
+
+  // A preset captures the board filters EXCEPT the search text.
+  function captureFilters() { return { city, stageSel: [...stageSel], filtersApplied, filterFormState }; }
+  function applyPresetFilters(p) {
+    const f = p?.filters; if (!f) return;
+    setCity(f.city || '');
+    setStageSel(new Set(f.stageSel || []));
+    setFiltersApplied(f.filtersApplied || {});
+    setFilterFormState(f.filterFormState || {});
+    setPage(0);
+  }
+  const usedSlots = () => [1, 2, 3].filter((n) => presetData[`preset${n}`]?.name);
+  const orderedPresets = (presetData.sequence || [])
+    .map((slot) => ({ slot, ...(presetData[`preset${slot}`] || {}) }))
+    .filter((p) => p.name);
+
+  async function savePresets(next) {
+    setPresetData(next);
+    try { await api.put('/api/presets', next); } catch { /* non-blocking */ }
+  }
+  function addPreset() {
+    if (usedSlots().length >= 3) return;
+    const name = (window.prompt('Name this preset (saves the current filters):') || '').trim();
+    if (!name) return;
+    const slot = [1, 2, 3].find((n) => !presetData[`preset${n}`]?.name);
+    const sequence = [...(presetData.sequence || []), slot];
+    savePresets({ ...presetData, [`preset${slot}`]: { name, filters: captureFilters() }, sequence, priority: sequence[0] });
+  }
+  function deletePreset(slot) {
+    const sequence = (presetData.sequence || []).filter((s) => s !== slot);
+    savePresets({ ...presetData, [`preset${slot}`]: null, sequence, priority: sequence[0] ?? null });
+  }
+  function reorderPreset(fromSlot, toIndex) {
+    const seq = (presetData.sequence || []).filter((s) => s !== fromSlot);
+    seq.splice(toIndex, 0, fromSlot);
+    savePresets({ ...presetData, sequence: seq, priority: seq[0] ?? null });
+  }
+
+  // Load presets; if the sticky was absent/expired, apply the priority preset once.
+  useEffect(() => {
+    if (!presets) return undefined;
+    let alive = true;
+    api.get('/api/presets').then((r) => {
+      if (!alive || !r) return;
+      setPresetData({ preset1: null, preset2: null, preset3: null, sequence: [], priority: null, ...r });
+      if (!priorityApplied.current && (stored._expired || stored._ts == null) && r.priority) {
+        priorityApplied.current = true;
+        applyPresetFilters(r[`preset${r.priority}`]);
+      }
+    }).catch(() => {});
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presets]);
   const [showFilters, setShowFilters] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -308,6 +374,26 @@ export default function InventoryBoard({
           {qApplied && <button type="button" className="btn-ghost" onClick={() => { setQInput(''); setQApplied(''); }}>Clear</button>}
         </form>
         <button className="btn-ghost" onClick={() => setShowFilters(true)}><IconFilter size={16} /> Filters{filterCount ? ` (${filterCount})` : ''}</button>
+        {presets && (
+          <div className="preset-bar">
+            {orderedPresets.map((p, i) => (
+              <span key={p.slot} className={`preset-chip ${p.slot === presetData.priority ? 'preset-priority' : ''}`}
+                draggable
+                onDragStart={() => { dragSlot.current = p.slot; }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => { e.preventDefault(); if (dragSlot.current != null && dragSlot.current !== p.slot) reorderPreset(dragSlot.current, i); dragSlot.current = null; }}>
+                <button type="button" className="preset-apply" onClick={() => applyPresetFilters(p)}
+                  title={p.slot === presetData.priority ? 'Priority preset — auto-applies on open' : 'Apply preset'}>
+                  {p.slot === presetData.priority && <span className="preset-star">★</span>}{p.name}
+                </button>
+                <button type="button" className="preset-x" onClick={() => deletePreset(p.slot)} aria-label="Remove preset">×</button>
+              </span>
+            ))}
+            {usedSlots().length < 3 && (
+              <button type="button" className="preset-add" onClick={addPreset}>+ Preset</button>
+            )}
+          </div>
+        )}
         {canShowDeleted && (
           <button className={archiveMode ? 'btn-primary' : 'btn-ghost'} onClick={() => setArchiveMode((m) => (m + 1) % 3)}
             title="Cycle archived leads: hide → show → only (admin)">

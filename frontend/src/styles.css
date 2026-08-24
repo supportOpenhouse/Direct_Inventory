@@ -555,6 +555,17 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 
 /* ── toolbar (board / table view) ────────────────────────────────────── */
 .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+/* Saved filter presets: draggable chips right of the Filters button. */
+.preset-bar { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.preset-chip { display: inline-flex; align-items: center; height: 34px; background: var(--surface-3); border: 1px solid var(--border); border-radius: var(--r-pill); overflow: hidden; cursor: grab; }
+.preset-chip.preset-priority { border-color: var(--brand); background: var(--brand-softer); }
+.preset-apply { border: 0; background: transparent; color: var(--text-2); font-weight: 600; font-size: 12.5px; padding: 0 4px 0 13px; height: 100%; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+.preset-chip.preset-priority .preset-apply { color: var(--brand-strong); }
+.preset-star { color: var(--brand); }
+.preset-x { border: 0; background: transparent; color: var(--text-muted); cursor: pointer; padding: 0 9px 0 4px; height: 100%; font-size: 15px; line-height: 1; }
+.preset-x:hover { color: var(--red); }
+.preset-add { height: 34px; border: 1px dashed var(--border); background: transparent; color: var(--text-muted); font-weight: 600; font-size: 12.5px; padding: 0 12px; border-radius: var(--r-pill); cursor: pointer; }
+.preset-add:hover { border-color: var(--brand); color: var(--brand-strong); }
 /* ── sliding segmented toggles ────────────────────────────────────────────
    <SlideTabs> adds .seg-slide + a .seg-thumb that travels to the active option.
    The thumb paints the "selected" surface, so the active BUTTON goes

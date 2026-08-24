@@ -318,7 +318,7 @@ export default function Home() {
           <BoardView s={summary} loading={stagesLoading} visitsLoading={visitsLoading} />
         </>
       ) : (
-        <InventoryBoard showReasonCol showExport exportInTopbar hideSelectButton showAdd={false} allowShowDeleted
+        <InventoryBoard showReasonCol showExport exportInTopbar hideSelectButton showAdd={false} allowShowDeleted presets
           toolbarEnd={viewToggle}
           controlledSelectMode={tableSelect} onSelectModeChange={setTableSelect}
           extraStageGroups={[

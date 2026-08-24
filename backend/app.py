@@ -38,6 +38,7 @@ from .api import live_calls as live_calls_api
 from .api import geo as geo_api
 from .api import home as home_api
 from .api import post_token as post_token_api
+from .api import presets as presets_api
 from .api import sync as sync_api
 from .api import tickets as tickets_api
 from .api import users as users_api
@@ -91,6 +92,7 @@ def create_app() -> Flask:
     app.register_blueprint(inventory_bp)
     app.register_blueprint(home_api.bp)
     app.register_blueprint(post_token_api.bp)
+    app.register_blueprint(presets_api.bp)
     app.register_blueprint(users_api.bp)
     app.register_blueprint(sync_api.bp)
     app.register_blueprint(visits_api.bp)
