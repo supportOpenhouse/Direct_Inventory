@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { CITIES, STAGE_DOT_COLOR, STAGES, reasonLabelAny, stageLabel } from '../utils/format.js';
@@ -34,19 +34,31 @@ export default function InventoryBoard({
   const { user } = useAuth();
   // Persist this board's filters per route in localStorage (NOT the DB), so leaving
   // the page and coming back restores them. Keyed by pathname → each board is separate.
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
+  const navigate = useNavigate();
   const storageKey = `di_board:${pathname}`;
+  // Deep link (/?q=OHLND0001, from the bare /OHLND0001 route): seed the search
+  // box and open with ZERO filters — sticky and the priority preset both yield.
+  const deepQ = useMemo(() => (new URLSearchParams(search).get('q') || '').trim(), [search]);
   // On preset-enabled boards the sticky expires after 12h so the priority preset
   // can take over; other boards keep it indefinitely.
   const STICKY_TTL = 12 * 60 * 60 * 1000;
   const stored = useMemo(() => {
+    if (deepQ) return { q: deepQ, _deep: true };
     try {
       const raw = JSON.parse(localStorage.getItem(storageKey) || '{}');
       if (presets && raw._ts && (Date.now() - raw._ts) > STICKY_TTL) return { _expired: true };
       return raw;
     } catch { return {}; }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storageKey, presets]);
+  }, [storageKey, presets, deepQ]);
+
+  // Drop ?q= once it has seeded state, so a later reload/back doesn't re-apply
+  // the OH-ID over whatever the user has since searched or filtered.
+  useEffect(() => {
+    if (deepQ) navigate(pathname, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [qInput, setQInput] = useState(stored.q || '');
   const [qApplied, setQApplied] = useState(stored.q || '');
@@ -104,7 +116,7 @@ export default function InventoryBoard({
       if (!alive || !r) return;
       setPresetDoc(r);
       const prio = r.priority ? r.presets?.[r.priority - 1] : null;
-      if (!priorityApplied.current && (stored._expired || stored._ts == null) && prio) {
+      if (!priorityApplied.current && !stored._deep && (stored._expired || stored._ts == null) && prio) {
         priorityApplied.current = true;
         applyPresetFilters(prio.filters);
       }

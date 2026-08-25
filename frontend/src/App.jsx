@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext.jsx';
 import Layout from './components/Layout.jsx';
 import Toaster from './components/Toaster.jsx';
@@ -25,10 +25,23 @@ const Dialer = lazy(() => import('./pages/Dialer.jsx'));
 const DialerPrevious = lazy(() => import('./pages/DialerPrevious.jsx'));
 const LiveCalls = lazy(() => import('./pages/LiveCalls.jsx'));
 
+// A bare /OHLND0001 link (shared from the sheet, a ticket, or WhatsApp) lands on
+// Home with that OH-ID already in the search box and no filters applied.
+// Anything else unrecognised still falls back to Home.
+const OH_ID_RE = /^\/(OHL[A-Z]{1,2}D\d{4}[A-Z]*)\/?$/i;
+
+function CatchAll() {
+  const { pathname } = useLocation();
+  const m = pathname.match(OH_ID_RE);
+  return <Navigate to={m ? `/?q=${encodeURIComponent(m[1].toUpperCase())}` : '/'} replace />;
+}
+
 function RequireAuth({ children, roles }) {
   const { user, loading } = useAuth();
+  const loc = useLocation();
   if (loading) return <div className="loading">Loading…</div>;
-  if (!user) return <Navigate to="/login" replace />;
+  // Carry the intended destination through login so a shared /OHID link survives it.
+  if (!user) return <Navigate to="/login" replace state={{ from: loc.pathname + loc.search }} />;
   // Admin always passes; otherwise the role must be in `roles`.
   if (roles && !roles.includes(user.role) && user.role !== 'admin') {
     return <Navigate to="/" replace />;
@@ -70,7 +83,7 @@ export default function App() {
           <Route path="/live-calls" element={<RequireAuth roles={['rm']}><LiveCalls /></RequireAuth>} />
           <Route path="/track-tasks" element={<RequireAuth roles={[]}><TrackTasks /></RequireAuth>} />
         </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<CatchAll />} />
         </Routes>
       </Suspense>
     </>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { USING_MOCKS } from '../api/client.js';
 
@@ -14,14 +14,17 @@ export default function Login() {
   const { user, loginWithGoogle, loginAsDev } = useAuth();
   const [error, setError] = useState(null);
   const nav = useNavigate();
+  // RequireAuth stashes where the user was headed (e.g. /?q=OHLND0001 from a
+  // shared OH-ID link); fall back to Home.
+  const dest = useLocation().state?.from || '/';
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to={dest} replace />;
 
   async function handleSuccess(cred) {
     setError(null);
     try {
       await loginWithGoogle(cred.credential);
-      nav('/');
+      nav(dest, { replace: true });
     } catch (e) {
       setError(e.data?.error || e.message);
     }
@@ -29,7 +32,7 @@ export default function Login() {
 
   async function dev(email) {
     setError(null);
-    try { await loginAsDev(email); nav('/'); }
+    try { await loginAsDev(email); nav(dest, { replace: true }); }
     catch (e) { setError(e.data?.error || e.message); }
   }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { rejectReasonLabel, stageLabel, STAGE_DOT_COLOR, SUPPLY_STAGES } from '../utils/format.js';
@@ -241,8 +241,12 @@ function BoardView({ s, loading, visitsLoading }) {
 
 export default function Home() {
   const { user } = useAuth();
+  // A deep-linked OH-ID (/OHLND0001 → /?q=OHLND0001) must land on Table view —
+  // that's where the search box and the board live.
+  const deepQ = new URLSearchParams(useLocation().search).get('q');
   // Remember Board/Table choice across navigation + reloads.
   const [view, setView] = useState(() => {
+    if (deepQ) return 'table';
     try { return localStorage.getItem('di_home_view') === 'table' ? 'table' : 'board'; } catch { return 'board'; }
   });
   useEffect(() => { try { localStorage.setItem('di_home_view', view); } catch { /* ignore */ } }, [view]);
