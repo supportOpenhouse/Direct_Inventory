@@ -784,6 +784,9 @@ td.inv-society-fire::before {
   content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
   background: url('/fire_animation.gif') bottom / auto 50% repeat-x;
   opacity: 0.5;
+  /* Fade the fire out at the left/right edges of the cell. */
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 15%, #000 85%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 15%, #000 85%, transparent);
 }
 td.inv-society-fire .society-cell { position: relative; z-index: 1; }
 /* Thick white edge around the society name so it stays legible over the fire. */
