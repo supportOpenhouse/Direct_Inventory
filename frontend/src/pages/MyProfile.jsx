@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
+import TruckLoader from '../components/TruckLoader.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { CITIES, foldCities } from '../utils/format.js';
 import SlideTabs from '../components/SlideTabs.jsx';
@@ -105,53 +106,7 @@ export default function MyProfile() {
     return { groups, unassigned };
   }, [people]);
 
-  if (loading) {
-    // Card skeletons mirroring the loaded layout — no whole-page "Loading…".
-    return (
-      <div className="profile-page">
-        <div className="profile-grid2">
-          <div className="profile-col">
-            <div className="card-block">
-              <div className="pf-head">
-                <span className="inv-skel" style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0 }} />
-                <div style={{ flex: 1, display: 'grid', gap: 8 }}>
-                  <span className="inv-skel" style={{ width: 180 }} />
-                  <span className="inv-skel" style={{ width: 240 }} />
-                </div>
-              </div>
-              <div className="pf-grid">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div className="pf-field" key={i}>
-                    <span className="inv-skel" style={{ width: 56 }} />
-                    <span className="inv-skel" style={{ width: '70%', marginTop: 8 }} />
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="card-block">
-              <h3><span className="inv-skel" style={{ width: 100 }} /></h3>
-              <table className="data-table">
-                <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
-                <tbody>
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <tr key={i}>
-                      {Array.from({ length: 4 }).map((__, c) => <td key={c}><span className="inv-skel" /></td>)}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div className="profile-col">
-            <div className="card-block scope-card">
-              <h3><span className="inv-skel" style={{ width: 140 }} /></h3>
-              <div className="scope-map-skeleton" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div className="profile-page"><div className="loader-block"><TruckLoader /></div></div>;
   if (error) return <div className="modal-error">{error}</div>;
   if (!me) return null;
 

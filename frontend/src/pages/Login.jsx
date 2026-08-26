@@ -3,6 +3,7 @@ import { GoogleLogin } from '@react-oauth/google';
 import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { USING_MOCKS } from '../api/client.js';
+import DottedSurface from '../components/DottedSurface.jsx';
 
 const DEV_ACCOUNTS = [
   { email: 'admin@openhouse.in', name: 'Aarav Admin', role: 'Admin' },
@@ -39,6 +40,7 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-hero">
+        <DottedSurface />
         <div className="lh-brand">
           <img src="/openhouse-logo.png" alt="Openhouse" />
           <span>Openhouse</span>

@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext.jsx';
+import TruckLoader from './components/TruckLoader.jsx';
 import Layout from './components/Layout.jsx';
 import Toaster from './components/Toaster.jsx';
 import Login from './pages/Login.jsx';
@@ -39,7 +40,7 @@ function CatchAll() {
 function RequireAuth({ children, roles }) {
   const { user, loading } = useAuth();
   const loc = useLocation();
-  if (loading) return <div className="loading">Loading…</div>;
+  if (loading) return <div className="loader-block loader-block-page"><TruckLoader /></div>;
   // Carry the intended destination through login so a shared /OHID link survives it.
   if (!user) return <Navigate to="/login" replace state={{ from: loc.pathname + loc.search }} />;
   // Admin always passes; otherwise the role must be in `roles`.
@@ -53,7 +54,7 @@ export default function App() {
   return (
     <>
       <Toaster />
-      <Suspense fallback={<div className="loading">Loading…</div>}>
+      <Suspense fallback={<div className="loader-block loader-block-page"><TruckLoader /></div>}>
         <Routes>
         <Route path="/login" element={<Login />} />
         <Route element={<RequireAuth><Layout /></RequireAuth>}>

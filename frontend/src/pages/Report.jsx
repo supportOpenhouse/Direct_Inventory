@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api/client.js';
+import TruckLoader from '../components/TruckLoader.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { STAGES, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
 import { PRESETS, PRESET_LABELS, downloadCSV, todayIST } from '../utils/reportFilters.js';
@@ -126,6 +127,7 @@ export default function Report() {
 
       {tab === 'users' && (
         <>
+          {loading && <div className="loader-block"><TruckLoader /></div>}
           {!loading && data.users.length === 0 && !error && <div className="al-empty">No stage changes for the selected range.</div>}
           <div className="ur-user-list">
             {data.users.map((u) => (

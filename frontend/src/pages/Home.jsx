@@ -321,22 +321,26 @@ export default function Home() {
     <div>
       {viewbar}
       {topbarActions}
-      {view === 'board' ? (
-        <>
-          <TodaysTask task={summary?.todays_task} loading={quickLoading} role={user?.role} tickets={summary?.unresolved_tickets} />
-          <div className="page-head"><h2>Summary</h2></div>
-          <BoardView s={summary} loading={stagesLoading} visitsLoading={visitsLoading} />
-        </>
-      ) : (
-        <InventoryBoard showReasonCol showExport exportInTopbar hideSelectButton showAdd={false} allowShowDeleted presets
-          toolbarEnd={viewToggle}
-          controlledSelectMode={tableSelect} onSelectModeChange={setTableSelect}
-          extraStageGroups={[
-            { key: 'post_visit', label: 'Post Visit', stages: SUPPLY_STAGES, color: '#6366f1', before: 'rejected' },
-            // Own box at the very end (no `before`), separate from Post Visit.
-            { key: 'visit_cancelled', label: 'Visit Cancelled', stages: ['visit_cancelled'], color: STAGE_DOT_COLOR.visit_cancelled },
-          ]} />
-      )}
+      {/* Animate the Board↔Table swap: keying by `view` remounts + replays the
+          slide-in (Table from the right, Board from the left). */}
+      <div key={view} className={`page-anim page-${view === 'table' ? 'fwd' : 'back'}`}>
+        {view === 'board' ? (
+          <>
+            <TodaysTask task={summary?.todays_task} loading={quickLoading} role={user?.role} tickets={summary?.unresolved_tickets} />
+            <div className="page-head"><h2>Summary</h2></div>
+            <BoardView s={summary} loading={stagesLoading} visitsLoading={visitsLoading} />
+          </>
+        ) : (
+          <InventoryBoard showReasonCol showExport exportInTopbar hideSelectButton showAdd={false} allowShowDeleted presets
+            toolbarEnd={viewToggle}
+            controlledSelectMode={tableSelect} onSelectModeChange={setTableSelect}
+            extraStageGroups={[
+              { key: 'post_visit', label: 'Post Visit', stages: SUPPLY_STAGES, color: '#6366f1', before: 'rejected' },
+              // Own box at the very end (no `before`), separate from Post Visit.
+              { key: 'visit_cancelled', label: 'Visit Cancelled', stages: ['visit_cancelled'], color: STAGE_DOT_COLOR.visit_cancelled },
+            ]} />
+        )}
+      </div>
     </div>
   );
 }

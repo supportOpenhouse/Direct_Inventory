@@ -143,7 +143,7 @@ export default function InventoryBoard({
   const [downloading, setDownloading] = useState(false);
   // When exportInTopbar is set, the Download CSV button is portaled into the topbar strip.
   const [topbarSlot, setTopbarSlot] = useState(null);
-  useEffect(() => { if (exportInTopbar) setTopbarSlot(document.getElementById('topbar-slot')); }, [exportInTopbar]);
+  useEffect(() => { setTopbarSlot(document.getElementById('topbar-slot')); }, []);
 
   const stages = fixedStages || STAGES;
   // "ALL" covers this board's own stages PLUS any grouped extras (e.g. the Post
@@ -355,11 +355,7 @@ export default function InventoryBoard({
           {CITIES.map((c) => <button key={c} className={city === c ? 'tab tab-active' : 'tab'} onClick={() => setCity(c)}>{c}</button>)}
         </SlideTabs>
         {showAdd && <button className="btn-primary" onClick={() => setShowAddModal(true)}><IconPlus size={16} /> Add Inventory</button>}
-        {!hideSelectButton && (
-          <button className={selectMode ? 'btn-primary' : 'btn-ghost'} onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}>
-            {selectMode ? 'Exit Select' : 'Select'}
-          </button>
-        )}
+        {/* Select button is portaled to the topbar strip (see below). */}
         {toolbarExtra}
         {/* Search + Filters pinned right; the input elongates to fill the gap. */}
         <form className="search-form" onSubmit={onSearch}>
@@ -403,7 +399,7 @@ export default function InventoryBoard({
         </div>
       )}
 
-      {reasonPills && (
+      {reasonPills && reasonList.length > 0 && (
         <div className="stage-counts reason-counts">
           <div className="stage-pills">
             <button type="button" className={reasonSel.size === 0 ? 'count-pill count-pill-active' : 'count-pill'} onClick={clearReasonPills}>
@@ -435,6 +431,14 @@ export default function InventoryBoard({
         {showExport && exportInTopbar && topbarSlot && createPortal(
           <button className="btn-primary" style={{ order: 2 }} onClick={downloadCsv} disabled={downloading || total === 0}>
             <IconDownload size={16} /> {downloading ? 'Preparing…' : 'Download CSV'}
+          </button>,
+          topbarSlot,
+        )}
+        {/* Select button pushed to the topbar strip on every board that shows it. */}
+        {!hideSelectButton && topbarSlot && createPortal(
+          <button className={selectMode ? 'btn-primary' : 'btn-ghost'} style={{ order: 5 }}
+            onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}>
+            {selectMode ? 'Exit Select' : 'Select'}
           </button>,
           topbarSlot,
         )}

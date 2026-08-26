@@ -1,5 +1,6 @@
 import { cloneElement, Fragment, useEffect, useRef, useState } from 'react';
 import { api } from '../api/client.js';
+import { TableLoader } from './TruckLoader.jsx';
 import { toast } from '../utils/toast.js';
 import ExpandPanel from './ExpandPanel.jsx';
 import OhPrice from './OhPrice.jsx';
@@ -146,7 +147,6 @@ const COLUMNS = [
 ];
 const DEFAULT_COL_KEYS = COLUMNS.map((c) => c.key);
 
-const SKELETON_ROWS = 8;
 
 export default function InventoryTable({
   items, role, sort, onSort, onUpdated, loading = false,
@@ -241,11 +241,7 @@ export default function InventoryTable({
           </tr>
         </thead>
         <tbody>
-          {loading && Array.from({ length: SKELETON_ROWS }).map((_, r) => (
-            <tr className="inv-row" key={`s-${r}`}>
-              {Array.from({ length: colCount }).map((__, c) => <td key={c}><span className="inv-skel" /></td>)}
-            </tr>
-          ))}
+          {loading && <TableLoader colSpan={colCount} />}
           {!loading && items.length === 0 && (
             <tr><td className="inv-empty" colSpan={colCount}>No matching rows.</td></tr>
           )}

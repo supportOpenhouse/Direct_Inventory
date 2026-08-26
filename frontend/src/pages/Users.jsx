@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
+import TruckLoader, { TableLoader } from '../components/TruckLoader.jsx';
 import { CITIES } from '../utils/format.js';
 import UserEditModal from '../components/UserEditModal.jsx';
 import SearchableMultiSelect from '../components/SearchableMultiSelect.jsx';
@@ -103,12 +104,8 @@ export default function Users() {
           </tr></thead>
           <tbody>
             {loading ? (
-              // Skeleton rows — headers stay visible, cells shimmer until data lands.
-              Array.from({ length: 8 }).map((_, i) => (
-                <tr key={`skel-${i}`}>
-                  {Array.from({ length: 7 }).map((__, c) => <td key={c}><span className="inv-skel" /></td>)}
-                </tr>
-              ))
+              // Headers stay visible; the truck runs until the rows land.
+              <TableLoader colSpan={7} />
             ) : (
               sortedUsers.map((u) => (
                 <tr key={u.id} className={u.is_active ? '' : 'usr-inactive'}>
@@ -135,7 +132,7 @@ export default function Users() {
           <button className="btn-ghost" onClick={recompute} disabled={recomputing}>{recomputing ? 'Recomputing…' : 'Recompute scopes'}</button>
         </div>
         {clashLoading ? (
-          <p className="muted">Loading…</p>
+          <div className="loader-block"><TruckLoader /></div>
         ) : clashes.length === 0 ? (
           <p className="muted">No clashes, every society is covered by at most one RM.</p>
         ) : (

@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../api/client.js';
+import { TableLoader } from '../components/TruckLoader.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import ExpandPanel from '../components/ExpandPanel.jsx';
 import FilterPanel from '../components/FilterPanel.jsx';
@@ -71,9 +72,7 @@ function ActionTable({ items, loading, role, onUpdated, primaryLabel, primaryMod
           </tr>
         </thead>
         <tbody>
-          {loading && Array.from({ length: 6 }).map((_, r) => (
-            <tr className="inv-row" key={`s${r}`}>{Array.from({ length: cols }).map((__, c) => <td key={c}><span className="inv-skel" /></td>)}</tr>
-          ))}
+          {loading && <TableLoader colSpan={cols} />}
           {!loading && items.length === 0 && <tr><td className="inv-empty" colSpan={cols}>{emptyText}</td></tr>}
           {!loading && items.map((it) => {
             const isOpen = openId === it.oh_id;
@@ -287,8 +286,8 @@ export default function Leads() {
       </div>
 
       <div className="leads-split" ref={containerRef}>
-        {paneView !== 'active' && (
-          <div className="leads-pane" style={{ width: paneView === 'both' ? `calc(${leftPct}% - 7px)` : '100%' }}>
+        <div className={`leads-pane ${paneView === 'active' ? 'leads-pane-collapsed' : ''}`}
+          style={{ width: paneView === 'active' ? 0 : (paneView === 'both' ? `calc(${leftPct}% - 7px)` : '100%') }}>
             <div className="leads-pane-head">
               <h3>Leads</h3>
               <span className="lph-count accent">{leadsTotal}</span>
@@ -305,7 +304,6 @@ export default function Leads() {
               </button>
             )}
           </div>
-        )}
 
         {paneView === 'both' && (
           <div className={`split-divider ${draggingRef.current ? 'dragging' : ''}`}
@@ -315,8 +313,8 @@ export default function Leads() {
           </div>
         )}
 
-        {paneView !== 'lead' && (
-          <div className="leads-pane" style={{ width: paneView === 'both' ? `calc(${100 - leftPct}% - 7px)` : '100%' }}>
+        <div className={`leads-pane ${paneView === 'lead' ? 'leads-pane-collapsed' : ''}`}
+          style={{ width: paneView === 'lead' ? 0 : (paneView === 'both' ? `calc(${100 - leftPct}% - 7px)` : '100%') }}>
             <div className="leads-pane-head">
               <h3>Active Leads</h3>
               <span className="lph-count">{activeTotal}</span>
@@ -333,7 +331,6 @@ export default function Leads() {
               </button>
             )}
           </div>
-        )}
       </div>
 
       {showFilters && (

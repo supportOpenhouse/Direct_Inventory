@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { api, setAuthToken } from '../api/client.js';
+import DottedSurface from '../components/DottedSurface.jsx';
 
 const AuthContext = createContext(null);
 
@@ -89,6 +90,7 @@ export function AuthProvider({ children }) {
           <div className="wc-grad">
             {/* Full hero, kept intact (same content/layout as the login screen). */}
             <div className="login-hero wc-hero">
+              <DottedSurface />
               <div className="lh-brand">
                 <img src="/openhouse-logo.png" alt="Openhouse" />
                 <span>Openhouse</span>

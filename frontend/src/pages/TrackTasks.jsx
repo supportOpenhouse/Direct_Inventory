@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api/client.js';
+import { TableLoader } from '../components/TruckLoader.jsx';
 import { STAGES, SUPPLY_STAGES, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
 import { todayIST } from '../utils/reportFilters.js';
 import AssignNewLeadsButton from '../components/AssignNewLeadsButton.jsx';
@@ -170,9 +171,7 @@ export default function TrackTasks() {
             </tr>
           </thead>
           <tbody>
-            {loading && Array.from({ length: 6 }).map((_, r) => (
-              <tr className="inv-row" key={`s${r}`}>{Array.from({ length: cols }).map((__, c) => <td key={c}><span className="inv-skel" /></td>)}</tr>
-            ))}
+            {loading && <TableLoader colSpan={cols} />}
             {!loading && users.length === 0 && (
               <tr><td className="inv-empty" colSpan={cols}>No users have leads created today.</td></tr>
             )}
@@ -230,9 +229,7 @@ export default function TrackTasks() {
             </tr>
           </thead>
           <tbody>
-            {loadingCounts && Array.from({ length: 6 }).map((_, r) => (
-              <tr className="inv-row" key={`sc${r}`}>{Array.from({ length: stageCols.length + 2 }).map((__, c) => <td key={c}><span className="inv-skel" /></td>)}</tr>
-            ))}
+            {loadingCounts && <TableLoader colSpan={stageCols.length + 2} />}
             {!loadingCounts && rmCounts.length === 0 && (
               <tr><td className="inv-empty" colSpan={stageCols.length + 2}>No RMs with assigned leads.</td></tr>
             )}

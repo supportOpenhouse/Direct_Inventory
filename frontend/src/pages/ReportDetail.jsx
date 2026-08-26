@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api/client.js';
+import TruckLoader from '../components/TruckLoader.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { displayCity, formatDateShort, rejectReasonLabel, STAGE_DOT_COLOR, stageLabel } from '../utils/format.js';
 import { PRESETS, PRESET_LABELS, downloadCSV, todayIST } from '../utils/reportFilters.js';
@@ -62,7 +63,7 @@ function DayLeadsModal({ email, date, onOpenUid, onClose: rawClose }) {
           <span className="role-chip">{email}</span>
           <button className="modal-close" onClick={onClose}><IconClose /></button>
         </div>
-        {loading && <div className="al-empty">Loading…</div>}
+        {loading && <div className="loader-block"><TruckLoader /></div>}
         {error && <div className="modal-error">{error}</div>}
         {!loading && !error && leads.length === 0 && <div className="al-empty">No actions.</div>}
         {!loading && leads.length > 0 && (

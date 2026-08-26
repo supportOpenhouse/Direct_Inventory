@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api/client.js';
+import TruckLoader from '../components/TruckLoader.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import TicketModal, { ticketStatusClass, ticketStatusLabel } from '../components/TicketModal.jsx';
 import CardDetailModal from '../components/CardDetailModal.jsx';
@@ -129,7 +130,7 @@ export default function Tickets() {
       </div>
 
       {loading ? (
-        <div className="tk-list">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="tk-card tk-card-skel" />)}</div>
+        <div className="loader-block"><TruckLoader label="Loading tickets…" /></div>
       ) : items.length === 0 ? (
         <div className="empty-state">
           <IconTicket size={28} />

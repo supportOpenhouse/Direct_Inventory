@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../api/client.js';
+import { TableLoader } from '../components/TruckLoader.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import CardDetailModal from '../components/CardDetailModal.jsx';
 import { IconCalendar, IconClose, IconDownload, IconTicket, IconUser } from '../components/icons.jsx';
@@ -174,7 +175,7 @@ export default function Logs() {
             <th className="al-th">Details</th>
           </tr></thead>
           <tbody>
-            {loading ? <tr><td colSpan={6} className="al-empty">Loading…</td></tr>
+            {loading ? <TableLoader colSpan={6} />
               : items.length === 0 ? <tr><td colSpan={6} className="al-empty">No matching activity.</td></tr>
                 : items.map((a) => (
                   <tr key={a.id}>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { api } from '../api/client.js';
+import TruckLoader from '../components/TruckLoader.jsx';
 import { toast } from '../utils/toast.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { formatCallTime } from '../utils/format.js';
@@ -163,7 +164,7 @@ export default function LiveCalls() {
   // Admins run campaigns, they don't take calls — bounce them home (our RequireAuth
   // lets admin through, so the real gate is here).
   if (!isRm) return <Navigate to="/" replace />;
-  if (!data) return <div className="page"><p className="lc-muted">Loading…</p></div>;
+  if (!data) return <div className="page"><div className="loader-block"><TruckLoader label="Loading live calls…" /></div></div>;
 
   const completed = data.completed || [];
   const upcoming = data.upcoming || [];

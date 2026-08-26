@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../api/client.js';
+import { TableLoader } from '../components/TruckLoader.jsx';
 import { toast } from '../utils/toast.js';
 import RecordingPlayer from '../components/RecordingPlayer.jsx';
 import CardDetailModal from '../components/CardDetailModal.jsx';
@@ -168,7 +169,7 @@ export default function CallLog() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="al-empty">Loading calls…</td></tr>
+              <TableLoader colSpan={7} label="Loading calls…" />
             ) : items.length === 0 ? (
               <tr><td colSpan={7} className="al-empty">{anyFilter ? 'No calls match these filters.' : 'No calls logged yet.'}</td></tr>
             ) : (
