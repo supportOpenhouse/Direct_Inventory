@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { cloneElement, Fragment, useEffect, useRef, useState } from 'react';
 import { api } from '../api/client.js';
 import { toast } from '../utils/toast.js';
 import ExpandPanel from './ExpandPanel.jsx';
@@ -25,6 +25,9 @@ const SORTABLE = new Set([
   'price', 'oh_price', 'variation', 'stage', 'seller_name', 'seller_phone',
   'posting_date', 'created_at', 'follow_up_at',
 ]);
+// The "normal" (never-clicked) order — the default smart triage sort. A third
+// click on a sorted column cycles back to this.
+const DEFAULT_SORT = { field: 'smart', dir: 'desc' };
 
 // Assigned RMs are joined onto each row as [{id, name, email}, ...].
 function formatAssignedRms(rms) {
@@ -39,22 +42,109 @@ function assignedRmsTitle(rms) {
   return rms.map((r) => r.name || r.email || `#${r.id}`).join(', ');
 }
 
-function SortTh({ field, label, sort, onSort, align = 'left', cls = '' }) {
+function SortTh({ field, label, sort, onSort, align = 'left', cls = '', drag = null }) {
   const active = sort?.field === field;
   const arrow = active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕';
   function click() {
     if (!SORTABLE.has(field)) return;
-    onSort({ field, dir: active ? (sort.dir === 'asc' ? 'desc' : 'asc') : 'desc' });
+    // 3-state cycle: normal → desc → asc → normal (back to the default order).
+    if (!active) onSort({ field, dir: 'desc' });
+    else if (sort.dir === 'desc') onSort({ field, dir: 'asc' });
+    else onSort(DEFAULT_SORT);
   }
   return (
     <th
       className={`inv-th ${cls} ${align === 'right' ? 'inv-th-right' : ''} ${SORTABLE.has(field) ? 'inv-th-sortable' : ''} ${active ? 'inv-th-active' : ''}`}
       onClick={click}
+      {...drag}
     >
       {label} <span className={active ? 'inv-th-arrow-active' : 'inv-th-arrow'}>{arrow}</span>
     </th>
   );
 }
+
+// Reorderable data columns (the select checkbox + star stay pinned left). Each
+// column: a header (sortable `th` or plain) + a `cell(item, ctx)` renderer. Order
+// is user-draggable and persisted in localStorage (di_inv_cols).
+const COLUMNS = [
+  { key: 'oh_id', show: (c) => c.showOhId, th: { field: 'oh_id', label: 'OH-ID' },
+    cell: (item, c) => (
+      <td className="inv-td-id">
+        <span className="ohid-cell">
+          {item.oh_id}
+          {item.consider_deleted && (
+            <button type="button" className="unarchive-btn" title="Unarchive — restore this lead"
+              onClick={(e) => { e.stopPropagation(); c.unarchive(item); }}>
+              <IconTrash size={13} />
+              <span className="ua-x" aria-hidden="true"><IconRestore size={13} /></span>
+            </button>
+          )}
+        </span>
+      </td>
+    ) },
+  { key: 'city', th: { field: 'city', label: 'City' },
+    cell: (item) => <td><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></td> },
+  { key: 'society', th: { field: 'society', label: 'Society', cls: 'inv-col-society' },
+    cell: (item, c) => (
+      <td className={`inv-td-society ${c.flag ? `inv-society-${c.flag}` : ''} ${c.fireFollowup ? 'inv-society-fire' : ''}`}>
+        <span className="society-cell">
+          <span className="inv-clip inv-clip-society" title={item.society || ''}>{item.society || '—'}</span>
+          {isCreatedToday(item.created_at) && <img className="new-badge-img" src="/new.png" alt="NEW" />}
+        </span>
+      </td>
+    ) },
+  { key: 'bedrooms', th: { field: 'bedrooms', label: 'BHK', cls: 'inv-col-bhk' },
+    cell: (item) => <td className="inv-col-bhk">{item.bedrooms != null ? `${item.bedrooms} BHK` : '—'}</td> },
+  { key: 'floor', th: { field: 'floor', label: 'Floor' },
+    cell: (item) => <td>{item.floor || '—'}</td> },
+  { key: 'area_sqft', th: { field: 'area_sqft', label: 'Area', cls: 'inv-col-area' },
+    cell: (item) => <td className="inv-col-area">{item.area_sqft != null ? `${item.area_sqft} sqft` : '—'}</td> },
+  { key: 'price', th: { field: 'price', label: 'Asking', align: 'right', cls: 'inv-col-asking' },
+    cell: (item) => <td className="inv-td-num val-orange inv-col-asking">{formatPrice(item.price)}</td> },
+  { key: 'oh_price', th: { field: 'oh_price', label: 'OH Price', align: 'right', cls: 'inv-col-oh' },
+    cell: (item) => <td className="inv-td-num inv-col-oh"><OhPrice item={item} /></td> },
+  { key: 'variation', th: { field: 'variation', label: 'Variation', align: 'right' },
+    cell: (item, c) => <td className={`inv-td-num ${c.v ? `val-var-${c.v.sign}` : 'muted'}`}>{c.v ? c.v.label : '—'}</td> },
+  { key: 'stage', th: { field: 'stage', label: 'Stage', cls: 'inv-col-stage' },
+    cell: (item) => (
+      <td className="inv-col-stage">
+        <span className="stage-dot" style={{ background: STAGE_DOT_COLOR[item.stage] }} />{stageLabel(item.stage)}
+        {item.stage === 'visit_scheduled' && item.visit_overdue && <span className="stage-overdue">Overdue</span>}
+      </td>
+    ) },
+  { key: 'reason', show: (c) => c.showReasonCol, th: { label: 'Reason', cls: 'inv-col-reason', plain: true },
+    cell: (item) => (
+      <td className="inv-td-muted inv-col-reason">
+        {item.stage_reason ? <span className="inv-clip" title={reasonLabelAny(item.stage_reason)}>{reasonLabelAny(item.stage_reason)}</span> : '—'}
+      </td>
+    ) },
+  { key: 'follow_up_at', th: { field: 'follow_up_at', label: 'Follow-up', cls: 'inv-col-followup' },
+    cell: (item) => <td className="inv-td-muted inv-col-followup">{formatDateShort(item.follow_up_at)}</td> },
+  { key: 'seller_name', th: { field: 'seller_name', label: 'Seller' },
+    cell: (item) => <td><span className="inv-clip inv-clip-seller" title={item.seller_name || ''}>{item.seller_name || '—'}</span></td> },
+  { key: 'seller_phone', th: { field: 'seller_phone', label: 'Phone' },
+    cell: (item) => <td className="inv-td-muted">{item.seller_phone || '—'}</td> },
+  { key: 'posting_date', th: { field: 'posting_date', label: 'Posted', cls: 'inv-col-posted' },
+    cell: (item) => <td className="inv-td-muted inv-col-posted">{formatDateCompact(item.posting_date)}</td> },
+  { key: 'created_at', th: { field: 'created_at', label: 'Created' },
+    cell: (item) => <td className="inv-td-muted">{item.created_at ? formatDateRel(item.created_at) : '—'}</td> },
+  { key: 'assigned_rm', show: (c) => c.isAdmin, th: { label: 'Assigned RM', plain: true },
+    cell: (item) => <td className="inv-td-muted" title={assignedRmsTitle(item.assigned_rms)}><span className="inv-clip inv-clip-rm">{formatAssignedRms(item.assigned_rms)}</span></td> },
+  { key: 'assigned_at', th: { label: 'Assigned', plain: true },
+    cell: (item) => <td className="inv-td-muted">{formatDateRel(item.assigned_at)}</td> },
+  { key: 'notes', th: { label: 'Notes', plain: true },
+    cell: (item, c) => (
+      <td className="inv-td-notes">
+        {c.noteCount > 0 ? (
+          <span className="inv-td-notes-wrap">
+            <span className="note-initials" title={`${c.noteCount} note${c.noteCount === 1 ? '' : 's'}`}>{c.noteCount}</span>
+            <span className="inv-td-notes-body">{c.noteCount === 1 ? 'note' : 'notes'}</span>
+          </span>
+        ) : '—'}
+      </td>
+    ) },
+];
+const DEFAULT_COL_KEYS = COLUMNS.map((c) => c.key);
 
 const SKELETON_ROWS = 8;
 
@@ -68,9 +158,38 @@ export default function InventoryTable({
   const isAdmin = role === 'admin';
   const isManager = role === 'manager';
   const showOhId = isAdmin || isManager;   // OH-ID (+ the unarchive bin) shows for both
-  // 17 always-on columns (incl. Assigned date) + OH-ID (admin/manager) + Assigned RM
-  // (admin only) + select checkbox + optional Reason column.
-  const colCount = 17 + (showOhId ? 1 : 0) + (isAdmin ? 1 : 0) + (selectMode ? 1 : 0) + (showReasonCol ? 1 : 0);
+  // Draggable column order, persisted per user in localStorage. Merge the stored
+  // order with COLUMNS so newly-added/removed columns self-heal.
+  const dragCol = useRef(null);
+  const [colOrder, setColOrder] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('di_inv_cols') || 'null');
+      if (Array.isArray(saved)) {
+        const known = new Set(DEFAULT_COL_KEYS);
+        const merged = saved.filter((k) => known.has(k));
+        DEFAULT_COL_KEYS.forEach((k) => { if (!merged.includes(k)) merged.push(k); });
+        return merged;
+      }
+    } catch { /* ignore */ }
+    return DEFAULT_COL_KEYS;
+  });
+  useEffect(() => { try { localStorage.setItem('di_inv_cols', JSON.stringify(colOrder)); } catch { /* ignore */ } }, [colOrder]);
+  function moveCol(fromKey, toKey) {
+    if (!fromKey || fromKey === toKey) return;
+    setColOrder((prev) => {
+      const next = prev.filter((k) => k !== fromKey);
+      const idx = next.indexOf(toKey);
+      next.splice(idx < 0 ? next.length : idx, 0, fromKey);
+      return next;
+    });
+  }
+  const boardCtx = { showOhId, isAdmin, showReasonCol, unarchive };
+  const orderedCols = colOrder
+    .map((k) => COLUMNS.find((c) => c.key === k))
+    .filter(Boolean)
+    .filter((col) => !col.show || col.show(boardCtx));
+  // Fixed left columns (select checkbox + star) + the reorderable data columns.
+  const colCount = (selectMode ? 1 : 0) + 1 + orderedCols.length;
 
   // Restore a soft-deleted (archived) lead; the board refetches via 'inventory:added'.
   async function unarchive(item) {
@@ -104,25 +223,21 @@ export default function InventoryTable({
               </th>
             )}
             <th className="inv-th inv-th-star" />
-            {showOhId && <SortTh field="oh_id" label="OH-ID" sort={sort} onSort={onSort} />}
-            <SortTh field="city" label="City" sort={sort} onSort={onSort} />
-            <SortTh field="society" label="Society" sort={sort} onSort={onSort} cls="inv-col-society" />
-            <SortTh field="bedrooms" label="BHK" sort={sort} onSort={onSort} cls="inv-col-bhk" />
-            <SortTh field="floor" label="Floor" sort={sort} onSort={onSort} />
-            <SortTh field="area_sqft" label="Area" sort={sort} onSort={onSort} cls="inv-col-area" />
-            <SortTh field="price" label="Asking" sort={sort} onSort={onSort} align="right" cls="inv-col-asking" />
-            <SortTh field="oh_price" label="OH Price" sort={sort} onSort={onSort} align="right" cls="inv-col-oh" />
-            <SortTh field="variation" label="Variation" sort={sort} onSort={onSort} align="right" />
-            <SortTh field="stage" label="Stage" sort={sort} onSort={onSort} cls="inv-col-stage" />
-            {showReasonCol && <th className="inv-th inv-col-reason">Reason</th>}
-            <SortTh field="follow_up_at" label="Follow-up" sort={sort} onSort={onSort} cls="inv-col-followup" />
-            <SortTh field="seller_name" label="Seller" sort={sort} onSort={onSort} />
-            <SortTh field="seller_phone" label="Phone" sort={sort} onSort={onSort} />
-            <SortTh field="posting_date" label="Posted" sort={sort} onSort={onSort} cls="inv-col-posted" />
-            <SortTh field="created_at" label="Created" sort={sort} onSort={onSort} />
-            {isAdmin && <th className="inv-th">Assigned RM</th>}
-            <th className="inv-th">Assigned</th>
-            <th className="inv-th">Notes</th>
+            {orderedCols.map((col) => {
+              const drag = {
+                draggable: true,
+                onDragStart: () => { dragCol.current = col.key; },
+                onDragOver: (e) => e.preventDefault(),
+                onDrop: (e) => { e.preventDefault(); moveCol(dragCol.current, col.key); dragCol.current = null; },
+                onDragEnd: () => { dragCol.current = null; },
+              };
+              return col.th.plain ? (
+                <th key={col.key} className={`inv-th inv-th-drag ${col.th.cls || ''}`} {...drag}>{col.th.label}</th>
+              ) : (
+                <SortTh key={col.key} field={col.th.field} label={col.th.label} align={col.th.align}
+                  cls={`${col.th.cls || ''} inv-th-drag`} sort={sort} onSort={onSort} drag={drag} />
+              );
+            })}
           </tr>
         </thead>
         <tbody>
@@ -158,57 +273,7 @@ export default function InventoryTable({
                   )}
                   <StarCell item={item} canSet={canSetPriority && !item.consider_deleted} onUpdated={onUpdated}
                     after={item.consider_deleted ? null : <CallButton ohId={item.oh_id} phone={item.seller_phone} />} />
-                  {showOhId && (
-                    <td className="inv-td-id">
-                      <span className="ohid-cell">
-                        {item.oh_id}
-                        {item.consider_deleted && (
-                          <button type="button" className="unarchive-btn" title="Unarchive — restore this lead"
-                            onClick={(e) => { e.stopPropagation(); unarchive(item); }}>
-                            <IconTrash size={13} />
-                            <span className="ua-x" aria-hidden="true"><IconRestore size={13} /></span>
-                          </button>
-                        )}
-                      </span>
-                    </td>
-                  )}
-                  <td><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></td>
-                  <td className={`inv-td-society ${flag ? `inv-society-${flag}` : ''} ${fireFollowup ? 'inv-society-fire' : ''}`}>
-                    <span className="society-cell">
-                      <span className="inv-clip inv-clip-society" title={item.society || ''}>{item.society || '—'}</span>
-                      {isCreatedToday(item.created_at) && <img className="new-badge-img" src="/new.png" alt="NEW" />}
-                    </span>
-                  </td>
-                  <td className="inv-col-bhk">{item.bedrooms != null ? `${item.bedrooms} BHK` : '—'}</td>
-                  <td>{item.floor || '—'}</td>
-                  <td className="inv-col-area">{item.area_sqft != null ? `${item.area_sqft} sqft` : '—'}</td>
-                  <td className="inv-td-num val-orange inv-col-asking">{formatPrice(item.price)}</td>
-                  <td className="inv-td-num inv-col-oh"><OhPrice item={item} /></td>
-                  <td className={`inv-td-num ${v ? `val-var-${v.sign}` : 'muted'}`}>{v ? v.label : '—'}</td>
-                  <td className="inv-col-stage">
-                    <span className="stage-dot" style={{ background: STAGE_DOT_COLOR[item.stage] }} />{stageLabel(item.stage)}
-                    {item.stage === 'visit_scheduled' && item.visit_overdue && <span className="stage-overdue">Overdue</span>}
-                  </td>
-                  {showReasonCol && (
-                    <td className="inv-td-muted inv-col-reason">
-                      {item.stage_reason ? <span className="inv-clip" title={reasonLabelAny(item.stage_reason)}>{reasonLabelAny(item.stage_reason)}</span> : '—'}
-                    </td>
-                  )}
-                  <td className="inv-td-muted inv-col-followup">{formatDateShort(item.follow_up_at)}</td>
-                  <td><span className="inv-clip inv-clip-seller" title={item.seller_name || ''}>{item.seller_name || '—'}</span></td>
-                  <td className="inv-td-muted">{item.seller_phone || '—'}</td>
-                  <td className="inv-td-muted inv-col-posted">{formatDateCompact(item.posting_date)}</td>
-                  <td className="inv-td-muted">{item.created_at ? formatDateRel(item.created_at) : '—'}</td>
-                  {isAdmin && <td className="inv-td-muted" title={assignedRmsTitle(item.assigned_rms)}><span className="inv-clip inv-clip-rm">{formatAssignedRms(item.assigned_rms)}</span></td>}
-                  <td className="inv-td-muted">{formatDateRel(item.assigned_at)}</td>
-                  <td className="inv-td-notes">
-                    {noteCount > 0 ? (
-                      <span className="inv-td-notes-wrap">
-                        <span className="note-initials" title={`${noteCount} note${noteCount === 1 ? '' : 's'}`}>{noteCount}</span>
-                        <span className="inv-td-notes-body">{noteCount === 1 ? 'note' : 'notes'}</span>
-                      </span>
-                    ) : '—'}
-                  </td>
+                  {orderedCols.map((col) => cloneElement(col.cell(item, { ...boardCtx, v, flag, fireFollowup, noteCount }), { key: col.key }))}
                 </tr>
                 {isOpen && !selectMode && (
                   <tr className="expand-row">

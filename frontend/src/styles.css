@@ -680,6 +680,10 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .inv-th-right { text-align: right; }
 .inv-th-sortable { cursor: pointer; user-select: none; }
 .inv-th-sortable:hover { color: var(--text); }
+/* Draggable column headers (reorder → saved to localStorage). */
+.inv-th-drag { cursor: grab; user-select: none; }
+.inv-th-drag:active { cursor: grabbing; }
+.inv-th-drag[draggable='true']:hover { color: var(--text); }
 .th-sort { background: none; border: 0; padding: 0; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
 .th-sort:hover { color: var(--text); }
 .inv-th-active { color: var(--brand-strong); }

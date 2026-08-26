@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { rejectReasonLabel, stageLabel, STAGE_DOT_COLOR, SUPPLY_STAGES } from '../utils/format.js';
+import { todayIST } from '../utils/reportFilters.js';
 import InventoryBoard from '../components/InventoryBoard.jsx';
 import CpScanButton from '../components/CpScanButton.jsx';
 import AddInventoryButton from '../components/AddInventoryButton.jsx';
@@ -244,12 +245,17 @@ export default function Home() {
   // A deep-linked OH-ID (/OHLND0001 → /?q=OHLND0001) must land on Table view —
   // that's where the search box and the board live.
   const deepQ = new URLSearchParams(useLocation().search).get('q');
-  // Remember Board/Table choice across navigation + reloads.
+  // Board/Table choice sticks for the rest of the day, then expires: a fresh IST
+  // day always opens on Board; toggling to Table then sticks until the next day.
   const [view, setView] = useState(() => {
     if (deepQ) return 'table';
-    try { return localStorage.getItem('di_home_view') === 'table' ? 'table' : 'board'; } catch { return 'board'; }
+    try {
+      const raw = JSON.parse(localStorage.getItem('di_home_view') || 'null');
+      if (raw && raw.date === todayIST() && (raw.view === 'table' || raw.view === 'board')) return raw.view;
+    } catch { /* ignore */ }
+    return 'board';
   });
-  useEffect(() => { try { localStorage.setItem('di_home_view', view); } catch { /* ignore */ } }, [view]);
+  useEffect(() => { try { localStorage.setItem('di_home_view', JSON.stringify({ view, date: todayIST() })); } catch { /* ignore */ } }, [view]);
   const [tableSelect, setTableSelect] = useState(false); // Table view's select mode
   // Table-view action buttons are portaled into the topbar strip, left of the bell.
   const [topbarSlot, setTopbarSlot] = useState(null);
