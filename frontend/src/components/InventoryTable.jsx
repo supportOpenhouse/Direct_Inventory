@@ -173,7 +173,7 @@ export default function InventoryTable({
                     </td>
                   )}
                   <td><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></td>
-                  <td className={`inv-td-society ${flag ? `inv-society-${flag}` : ''} ${fireFollowup ? `inv-society-fire inv-society-fire-${item.stage === 'call_not_received' ? 'cnr' : 'fu'}` : ''}`}>
+                  <td className={`inv-td-society ${flag ? `inv-society-${flag}` : ''} ${fireFollowup ? 'inv-society-fire' : ''}`}>
                     <span className="society-cell">
                       <span className="inv-clip inv-clip-society" title={item.society || ''}>{item.society || '—'}</span>
                       {isCreatedToday(item.created_at) && <img className="new-badge-img" src="/new.png" alt="NEW" />}

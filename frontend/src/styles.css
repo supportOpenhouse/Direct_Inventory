@@ -778,15 +778,9 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 td.inv-society-fire { position: relative; }
 td.inv-society-fire::before {
   content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background-position: bottom; background-size: auto 50%; background-repeat: repeat-x;
+  background: url('/fire_animation.gif') bottom / auto 50% repeat-x;
   opacity: 0.5;
 }
-/* Per-stage fire (light theme). Follow Up = fire_animation, CNR = fire_animation_2. */
-td.inv-society-fire-fu::before  { background-image: url('/fire_animation.gif'); }
-td.inv-society-fire-cnr::before { background-image: url('/fire_animation_2.gif'); }
-/* Dark theme swaps to the pink variants (CNR = pink, Follow Up = pink_2). */
-:root[data-theme='dark'] td.inv-society-fire-fu::before  { background-image: url('/fire_animation_pink_2.gif'); }
-:root[data-theme='dark'] td.inv-society-fire-cnr::before { background-image: url('/fire_animation_pink.gif'); }
 td.inv-society-fire .society-cell { position: relative; z-index: 1; }
 /* Thick white edge around the society name so it stays legible over the fire. */
 td.inv-society-fire .inv-clip-society {
