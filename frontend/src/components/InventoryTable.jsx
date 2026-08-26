@@ -10,6 +10,7 @@ import {
   displayCity, formatDateCompact, formatDateRel, formatDateShort, formatPrice, isCreatedToday, reasonLabelAny, rowFlag, starColor,
   STAGE_DOT_COLOR, stageLabel, variation,
 } from '../utils/format.js';
+import { todayIST } from '../utils/reportFilters.js';
 
 const SORTABLE = new Set([
   'oh_id', 'city', 'society', 'bedrooms', 'floor', 'area_sqft',
@@ -129,6 +130,9 @@ export default function InventoryTable({
             const v = variation(item.price, item.oh_price);
             const color = starColor(item);
             const flag = rowFlag(item);
+            // Fire behind the society name when a Follow-up / Call-not-received lead is due today.
+            const fireFollowup = (item.stage === 'follow_up' || item.stage === 'call_not_received')
+              && item.follow_up_at?.slice(0, 10) === todayIST();
             const isOpen = openId === item.oh_id;
             const isSel = selected?.has?.(item.oh_id);
             // List rows are slim: note_count int instead of the full note_thread.
@@ -161,7 +165,7 @@ export default function InventoryTable({
                     </td>
                   )}
                   <td><span className="city-chip">{displayCity(item.city)?.toUpperCase()}</span></td>
-                  <td className={`inv-td-society ${flag ? `inv-society-${flag}` : ''}`}>
+                  <td className={`inv-td-society ${flag ? `inv-society-${flag}` : ''} ${fireFollowup ? 'inv-society-fire' : ''}`}>
                     <span className="society-cell">
                       <span className="inv-clip inv-clip-society" title={item.society || ''}>{item.society || '—'}</span>
                       {isCreatedToday(item.created_at) && <img className="new-badge-img" src="/new.png" alt="NEW" />}

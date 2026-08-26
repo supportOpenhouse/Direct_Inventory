@@ -773,6 +773,15 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
    yellow = follow-up overdue, red = aging untouched lead (see rowFlag). */
 .inv-td-society.inv-society-yellow { color: var(--yellow); }
 .inv-td-society.inv-society-red { color: var(--red-fg); }
+/* Fire animation behind the society name: Follow-up / Call-not-received due today.
+   Gif scaled to row height (auto 100%), tiled left→right to cover the column. */
+td.inv-society-fire { position: relative; }
+td.inv-society-fire::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: url('/fire_animation.gif') center / auto 100% repeat-x;
+}
+td.inv-society-fire .society-cell { position: relative; z-index: 1; }
+td.inv-society-fire .inv-clip-society { text-shadow: 0 0 3px var(--surface), 0 0 3px var(--surface), 0 0 2px var(--surface); }
 .inv-empty { text-align: center; padding: 48px; color: var(--text-muted); }
 .inv-link { color: var(--brand-strong); font-weight: 600; }
 .inv-link:hover { text-decoration: underline; }
