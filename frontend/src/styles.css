@@ -778,10 +778,16 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 td.inv-society-fire { position: relative; }
 td.inv-society-fire::before {
   content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background: url('/fire_animation.gif') center / auto 100% repeat-x;
+  background: url('/fire_animation.gif') center / auto 50% repeat-x;
+  opacity: 0.5;
 }
 td.inv-society-fire .society-cell { position: relative; z-index: 1; }
-td.inv-society-fire .inv-clip-society { text-shadow: 0 0 3px var(--surface), 0 0 3px var(--surface), 0 0 2px var(--surface); }
+/* Thick white edge around the society name so it stays legible over the fire. */
+td.inv-society-fire .inv-clip-society {
+  text-shadow:
+    -1.5px -1.5px 0 #fff, 1.5px -1.5px 0 #fff, -1.5px 1.5px 0 #fff, 1.5px 1.5px 0 #fff,
+    -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff;
+}
 .inv-empty { text-align: center; padding: 48px; color: var(--text-muted); }
 .inv-link { color: var(--brand-strong); font-weight: 600; }
 .inv-link:hover { text-decoration: underline; }
