@@ -109,6 +109,10 @@ def list_inventory():
             )
             today_ist = "(NOW() AT TIME ZONE 'Asia/Kolkata')::DATE"
             order_clause = (
+                # Follow Up / Call-not-received leads due TODAY float above
+                # EVERYTHING — even reassigned + priority-starred leads.
+                f"CASE WHEN follow_up_at::DATE = {today_ist} "
+                f"     AND stage IN ('follow_up', 'call_not_received') THEN 0 ELSE 1 END ASC, "
                 # Reassigned leads float to the very top of the board.
                 f"CASE WHEN reassigned THEN 0 ELSE 1 END ASC, "
                 f"CASE WHEN follow_up_at IS NULL THEN 3 "

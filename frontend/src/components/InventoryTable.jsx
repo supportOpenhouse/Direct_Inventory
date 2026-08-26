@@ -12,6 +12,14 @@ import {
 } from '../utils/format.js';
 import { todayIST } from '../utils/reportFilters.js';
 
+// follow_up_at arrives as an RFC-822 date string (Flask's default) or 'YYYY-MM-DD';
+// normalise to a UTC calendar date (dates are stored tz-less at midnight).
+const ymd = (v) => {
+  if (!v) return '';
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? '' : `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+};
+
 const SORTABLE = new Set([
   'oh_id', 'city', 'society', 'bedrooms', 'floor', 'area_sqft',
   'price', 'oh_price', 'variation', 'stage', 'seller_name', 'seller_phone',
@@ -132,7 +140,7 @@ export default function InventoryTable({
             const flag = rowFlag(item);
             // Fire behind the society name when a Follow-up / Call-not-received lead is due today.
             const fireFollowup = (item.stage === 'follow_up' || item.stage === 'call_not_received')
-              && item.follow_up_at?.slice(0, 10) === todayIST();
+              && ymd(item.follow_up_at) === todayIST();
             const isOpen = openId === item.oh_id;
             const isSel = selected?.has?.(item.oh_id);
             // List rows are slim: note_count int instead of the full note_thread.
