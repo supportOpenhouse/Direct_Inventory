@@ -22,6 +22,7 @@ export default function DottedSurface({
     const CAM_Y = 355, CAM_Z = 1220, FOV = 60;
 
     let w = 0, h = 0, focal = 0;
+    function resize() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       w = canvas.clientWidth; h = canvas.clientHeight;
       if (!w || !h) return;
