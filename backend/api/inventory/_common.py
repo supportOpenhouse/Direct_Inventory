@@ -159,7 +159,6 @@ SORTABLE_FIELDS = {
     "posting_date":  "posting_date",
     "created_at":    "created_at",
     "follow_up_at":  "follow_up_at",
-    "notes":         "notes",
     "updated_at":    "updated_at",
 }
 

@@ -49,13 +49,6 @@ export function isDateBeforeToday(iso) {
   const day = dateOnly(iso);
   return day != null && day < todayISO();
 }
-export function isDateToday(iso) {
-  return dateOnly(iso) === todayISO();
-}
-export function isDateAfterToday(iso) {
-  const day = dateOnly(iso);
-  return day != null && day > todayISO();
-}
 
 // Whole days between `iso` and now, floored. 0 = within the last 24h.
 function daysAgo(iso) {
@@ -282,12 +275,6 @@ export function displayCity(city) {
 // so 'Greater Noida' is never offered or stored as a separate city.
 export function foldCities(list) {
   return [...new Set((list || []).map(displayCity).filter(Boolean))];
-}
-
-export const MANUAL_SOURCES = new Set(['Website', 'manual']);
-export function isManualSource(src) {
-  if (!src) return false;
-  return MANUAL_SOURCES.has(src);
 }
 
 // Star color rendered for a row. Manual override (star_color) wins; otherwise

@@ -32,7 +32,7 @@ _LIST_COLS = ", ".join(f"j.{c}" for c in (
     "id", "oh_id", "source", "city", "locality", "society", "bedrooms",
     "area_sqft", "floor", "tower", "unit_no", "price", "seller_name",
     "seller_phone", "posting_date", "listing_link", "stage_reason",
-    "notes", "assigned_rm_id", "assigned_rm_ids", "assigned_mgr_id",
+    "assigned_rm_ids", "assigned_mgr_id",
     "forms_visit_id", "visit_at", "visit_exec", "follow_up_at", "priority",
     "cp_match", "star_color", "reassigned", "reassigned_by_id",
     "created_at", "updated_at", "last_synced_at", "assigned_at",
