@@ -89,8 +89,8 @@ const COLUMNS = [
     cell: (item, c) => (
       <td className={`inv-td-society ${c.flag ? `inv-society-${c.flag}` : ''} ${c.fireFollowup ? 'inv-society-fire' : ''}`}>
         <span className="society-cell">
-          <span className="inv-clip inv-clip-society" title={item.society || ''}>{item.society || '—'}</span>
           {isCreatedToday(item.created_at) && <img className="new-badge-img" src="/new.png" alt="NEW" />}
+          <span className="inv-clip inv-clip-society" title={item.society || ''}>{item.society || '—'}</span>
         </span>
       </td>
     ) },

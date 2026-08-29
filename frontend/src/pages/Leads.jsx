@@ -82,8 +82,8 @@ function ActionTable({ items, loading, role, onUpdated, primaryLabel, primaryMod
                   <StarCell item={it} canSet={canSet} onUpdated={onUpdated} />
                   <td className="inv-td-society">
                     <div className="lead-society-line">
-                      <span className="lead-society-name">{it.society || '—'}</span>
                       {isNew(it) && <NewBadge />}
+                      <span className="lead-society-name">{it.society || '—'}</span>
                     </div>
                     <div className="inv-td-muted lead-society-sub" style={{ fontWeight: 400, fontSize: 12 }}>{displayCity(it.city)} · {it.oh_id}</div>
                   </td>
