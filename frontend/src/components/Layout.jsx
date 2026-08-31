@@ -183,7 +183,7 @@ export default function Layout() {
         <div className="sidebar-brand">
           <img src="/openhouse-logo.png" alt="Openhouse" />
           <div className="brand-text">
-            <div className="brand-name">Openhouse</div>
+            <div className="brand-name">Open<span style={{ fontWeight: 400 }}>house</span></div>
             <div className="brand-sub">Direct Inventory</div>
           </div>
         </div>

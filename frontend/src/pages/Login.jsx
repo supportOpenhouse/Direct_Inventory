@@ -43,7 +43,7 @@ export default function Login() {
         <DottedSurface />
         <div className="lh-brand">
           <img src="/openhouse-logo.png" alt="Openhouse" />
-          <span>Openhouse</span>
+          <span>Open<span style={{ fontWeight: 400 }}>house</span></span>
         </div>
         <div>
           <h2>Direct Inventory Portal</h2>
