@@ -90,6 +90,7 @@ const COLUMNS = [
       <td className={`inv-td-society ${c.flag ? `inv-society-${c.flag}` : ''} ${c.fireFollowup ? 'inv-society-fire' : ''}`}>
         <span className="society-cell">
           {isCreatedToday(item.created_at) && <img className="new-badge-img" src="/new.png" alt="NEW" />}
+          {c.fireFollowup && <img className="new-badge-img" src="/today_stamp.png" alt="TODAY" />}
           <span className="inv-clip inv-clip-society" title={item.society || ''}>{item.society || '—'}</span>
         </span>
       </td>
