@@ -199,7 +199,11 @@ export default function CallLog() {
                         {c.answered ? 'connected' : 'not connected'}
                       </span>
                     </td>
-                    <td style={{ fontFamily: "'Spline Sans Mono', monospace", fontSize: 12 }}>{callDuration(c.start_at, c.end_at)}</td>
+                    <td style={{ fontFamily: "'Spline Sans Mono', monospace", fontSize: 12 }}>
+                      {c.recording_url
+                        ? <a className="inv-link" href={c.recording_url} target="_blank" rel="noreferrer" title="Open recording in a new tab">{callDuration(c.start_at, c.end_at)}</a>
+                        : callDuration(c.start_at, c.end_at)}
+                    </td>
                     <td>{c.recording_url ? <RecordingPlayer src={c.recording_url} /> : <span className="muted">—</span>}</td>
                     <td className="muted" style={{ fontSize: 12 }}>
                       {/* placed by → placed to. Outgoing: RM placed it to the lead; incoming: lead placed it to the RM. */}

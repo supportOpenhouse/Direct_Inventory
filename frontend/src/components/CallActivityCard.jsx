@@ -33,8 +33,10 @@ export default function CallActivityCard({ ohId }) {
                 {c.answered ? 'connected' : 'not connected'}
               </span>
               <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{formatCallTime(c.start_at) || '—'}</span>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: "'Spline Sans Mono', monospace", marginLeft: 'auto' }}>
-                {callDuration(c.start_at, c.end_at)}
+              <span style={{ fontSize: 12, fontFamily: "'Spline Sans Mono', monospace", marginLeft: 'auto' }}>
+                {c.recording_url
+                  ? <a className="inv-link" href={c.recording_url} target="_blank" rel="noreferrer" title="Open recording in a new tab">{callDuration(c.start_at, c.end_at)}</a>
+                  : <span style={{ color: 'var(--text-muted)' }}>{callDuration(c.start_at, c.end_at)}</span>}
               </span>
             </div>
             {/* Streams straight off Bonvoice's url. Zero-duration calls have no file. */}

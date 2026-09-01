@@ -265,7 +265,11 @@ export default function DialerPrevious() {
                       <span className={r.answered ? 'cat-pill cat-sync' : 'cat-pill cat-default'}>{r.answered ? 'connected' : 'not connected'}</span>{' '}
                       <span className="muted" style={{ fontSize: 11.5 }}>{r.status || r.agent_status || ''}</span>
                     </td>
-                    <td style={{ fontFamily: "'Spline Sans Mono', monospace", fontSize: 12 }}>{callDuration(r.start_at, r.end_at)}</td>
+                    <td style={{ fontFamily: "'Spline Sans Mono', monospace", fontSize: 12 }}>
+                      {r.recording_url
+                        ? <a className="inv-link" href={r.recording_url} target="_blank" rel="noreferrer" title="Open recording in a new tab">{callDuration(r.start_at, r.end_at)}</a>
+                        : callDuration(r.start_at, r.end_at)}
+                    </td>
                     <td>{r.recording_url ? <RecordingPlayer src={r.recording_url} /> : <span className="muted">—</span>}</td>
                     <td className="muted" style={{ fontSize: 12 }}><span style={{ textDecoration: 'underline' }}>{r.lead_name || r.oh_id || '—'}</span> → <b>{r.rm_name || r.placed_by || '—'}</b></td>
                   </tr>
