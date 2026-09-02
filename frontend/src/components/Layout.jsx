@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useContext, useEffect, useRef, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate, UNSAFE_RouteContext as RouteContext } from 'react-router-dom';
+import { AnimatePresence, motion } from 'motion/react';
 import { api } from '../api/client.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
@@ -61,9 +62,24 @@ function pageIndex(path) {
   return seg in PAGE_ORDER ? PAGE_ORDER[seg] : -1;
 }
 
-// Slides the routed page in from the left/right based on where the destination
-// sits in the hierarchy relative to the page you left. Pages not in the list
-// (e.g. profile) get a plain fade.
+// Freeze the route context so the EXITING page keeps rendering its OLD route
+// while it animates out — <Outlet/> is context-driven and would otherwise flip
+// to the new route the instant the URL changes.
+function FrozenRouter({ children }) {
+  const ctx = useContext(RouteContext);
+  const frozen = useRef(ctx).current;
+  return <RouteContext.Provider value={frozen}>{children}</RouteContext.Provider>;
+}
+
+// Full-page reel: the whole current page slides out one way while the whole new
+// page slides in from the other (fwd = new from the right, old to the left;
+// back = mirror). Pages outside the hierarchy list ('none') cross-fade instead.
+const pageVariants = {
+  enter: (dir) => (dir === 'none' ? { x: 0, opacity: 0 } : { x: dir === 'back' ? '-100%' : '100%', opacity: 1 }),
+  center: { x: 0, opacity: 1 },
+  exit: (dir) => (dir === 'none' ? { x: 0, opacity: 0 } : { x: dir === 'back' ? '100%' : '-100%', opacity: 1 }),
+};
+
 function AnimatedOutlet() {
   const location = useLocation();
   const prevPath = useRef(location.pathname);
@@ -75,9 +91,22 @@ function AnimatedOutlet() {
     prevPath.current = location.pathname;
   }
   return (
-    <div key={location.pathname} className={`page-anim page-${dir.current}`}>
-      <Outlet />
-    </div>
+    // popLayout: the exiting page pops to absolute so it slides out on top while
+    // the new page takes its place in flow — the two move simultaneously.
+    <AnimatePresence mode="popLayout" initial={false} custom={dir.current}>
+      <motion.div
+        key={location.pathname}
+        className="page-reel"
+        custom={dir.current}
+        variants={pageVariants}
+        initial="enter"
+        animate="center"
+        exit="exit"
+        transition={{ duration: 0.36, ease: [0.76, 0, 0.24, 1] }}
+      >
+        <FrozenRouter><Outlet /></FrozenRouter>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
