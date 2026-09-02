@@ -978,7 +978,7 @@ td.inv-society-fire .inv-clip-society {
 
 /* ── modal ───────────────────────────────────────────────────────────── */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(20,16,14,0.5); backdrop-filter: blur(2px); display: grid; place-items: start center; padding: 48px 16px; z-index: 1000; overflow: auto; animation: modal-scrim-in var(--t-enter) var(--ease-out); }
-.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); width: 100%; max-width: 480px; padding: 24px; animation: modal-in var(--t-enter) var(--ease-out); }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); width: 100%; max-width: 480px; padding: 24px; transform-origin: center; animation: modal-in .34s cubic-bezier(.16, 1, .3, 1); will-change: transform, opacity; }
 /* The scrim FADES, the modal TRAVELS — two animations on purpose (motion doc
    §5), so the panel can drop to the bottom on close while the scrim just fades.
    `forwards` holds the end state for the ~240ms before useModalExit unmounts. */
@@ -986,8 +986,10 @@ td.inv-society-fire .inv-clip-society {
 .modal-backdrop-closing .modal { animation: modal-out var(--t-enter) var(--ease-out) forwards; }
 @keyframes modal-scrim-in  { from { opacity: 0; } to { opacity: 1; } }
 @keyframes modal-scrim-out { to { opacity: 0; } }
-@keyframes modal-in  { from { opacity: 0; transform: translateY(12px) scale(.99); } to { opacity: 1; transform: none; } }
-@keyframes modal-out { to { opacity: 0; transform: translateY(24px); } }   /* exits downward */
+/* Smooth scale-morph: the panel grows into place (expo-out easing = no bounce,
+   no clunk) while the scrim fades. Exit scales back down + fades. */
+@keyframes modal-in  { from { opacity: 0; transform: translateY(8px) scale(.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes modal-out { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(4px) scale(.96); } }
 /* reduced-motion: a modal arriving/leaving carries meaning — keep it, make it
    instant. useModalExit drops its unmount delay to 0 to match. */
 @media (prefers-reduced-motion: reduce) {
