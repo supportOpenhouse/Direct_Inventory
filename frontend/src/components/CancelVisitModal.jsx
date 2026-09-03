@@ -72,7 +72,7 @@ export default function CancelVisitModal({ item, onCancelled, onClose: rawClose 
         <div className="modal-actions">
           <span style={{ flex: 1 }} />
           <button className="btn-ghost" onClick={onClose} disabled={busy}>Keep Visit</button>
-          <button className="btn-primary" onClick={submit} disabled={busy}>
+          <button className="btn-primary" onClick={submit} disabled={busy || !reason.trim()}>
             {busy ? <><span className="btn-spinner" />Cancelling…</> : 'Cancel Visit'}
           </button>
         </div>
