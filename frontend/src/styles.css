@@ -908,8 +908,13 @@ td.inv-society-fire .inv-clip-society {
 .assigned-rm-edit .btn-soft, .assigned-rm-edit .btn-link { padding: 5px 9px; }
 .field-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .expand-status-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--hairline); }
-.expand-status-cur { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 13px; font-weight: 600; color: var(--text); }
+.expand-status-cur { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; max-width: 100%; min-width: 0; font-size: 13px; font-weight: 600; color: var(--text); }
 .btn-edit-status { font-size: 12px; padding: 6px 11px; }
+.expand-status-actions { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* Cancel reason sits on the stage line; buttons drop to their own row. */
+.expand-status-row-stacked { flex-direction: column; align-items: flex-start; }
+.expand-cancel-reason { font-weight: 500; color: var(--text-muted); min-width: 0;
+  max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── leads split view ────────────────────────────────────────────────── */
 .leads-page { display: flex; flex-direction: column; height: 100%; }

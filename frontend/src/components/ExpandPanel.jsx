@@ -219,6 +219,12 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
     .filter((a) => a.field === 'assigned_rm_ids')
     .slice()
     .reverse();
+  // Cancel reason is only ever written to the activity log (CancelVisitModal →
+  // /api/visits/cancel → metadata.reason); nothing mirrors it onto the row.
+  // activity comes back created_at DESC, so the first match is the latest cancel.
+  const cancelReason = item.stage === 'visit_cancelled'
+    ? (detail?.activity || []).find((a) => a.action === 'visit_cancelled')?.metadata?.reason
+    : null;
   const v = variation(full.price, full.oh_price);
   const listing = full.listing_link && !/^internal:\/\//.test(full.listing_link) ? full.listing_link : null;
   // Archived (soft-deleted) leads are read-only — nothing can be changed, only restored.
@@ -307,13 +313,16 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
 
       {show.includes('notes') && (
         <div className="expand-sec sec-notes">
-          <div className="expand-status-row">
+          <div className={'expand-status-row' + (cancelReason ? ' expand-status-row-stacked' : '')}>
             <span className="expand-status-cur">
               <span className="stage-dot" style={{ background: STAGE_DOT_COLOR[item.stage] }} />
               <span className="expand-status-name">{stageLabel(item.stage)}</span>
               {item.stage === 'visit_scheduled' && item.visit_overdue && <span className="stage-overdue">Overdue</span>}
               {item.stage_reason && item.stage !== 'visit_cancelled' && <span className="muted"> · {supplyReasonLabel(item.stage_reason)}</span>}
+              {/* Truncation is CSS (ellipsis); title= gives the full text on hover. */}
+              {cancelReason && <span className="expand-cancel-reason" title={cancelReason}>· {cancelReason}</span>}
             </span>
+            <span className="expand-status-actions">
             {canScheduleRevisit && (
               <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowSchedule(true)}><IconCalendar size={13} /> Schedule Revisit</button>
             )}
@@ -331,6 +340,7 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
             {canEditStage && (
               <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowStatus(true)}><IconEdit size={13} /> Edit</button>
             )}
+            </span>
           </div>
           {detail === null ? (
             <div className="muted" style={{ fontSize: 13 }}>Loading notes…</div>
