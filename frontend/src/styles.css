@@ -231,7 +231,8 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
   border-right: 1px solid var(--sidebar-border); overflow: hidden;
 }
 .sidebar-brand { display: flex; align-items: center; gap: 11px; padding: 6px 8px 6px; min-height: 40px; }
-.sidebar-brand .brand-mark { display: none; width: 34px; height: 34px; border-radius: 9px; object-fit: contain; background: #fff; padding: 3px; flex-shrink: 0; box-shadow: var(--shadow-sm); }
+.sidebar-brand .brand-mark { display: none; width: 34px; height: 34px; object-fit: contain; flex-shrink: 0; }
+[data-theme='dark'] .sidebar-brand .brand-mark { filter: brightness(0) invert(1); }
 /* The lockup art is black-on-transparent, so it rides a white plate — invisible
    on the light sidebar (#fff), and what keeps it legible in dark mode. */
 .sidebar-brand .brand-logo { width: 100%; height: auto; object-fit: contain; padding: 4px 2px; }
