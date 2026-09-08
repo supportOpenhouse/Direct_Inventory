@@ -231,9 +231,14 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
   border-right: 1px solid var(--sidebar-border); overflow: hidden;
 }
 .sidebar-brand { display: flex; align-items: center; gap: 11px; padding: 6px 8px 6px; min-height: 40px; }
-.sidebar-brand img { width: 34px; height: 34px; border-radius: 9px; object-fit: contain; background: #fff; padding: 3px; flex-shrink: 0; box-shadow: var(--shadow-sm); }
-.sidebar-brand .brand-name { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: var(--sidebar-fg-strong); line-height: 1; white-space: nowrap; }
-.sidebar-brand .brand-sub { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--brand); font-weight: 700; white-space: nowrap; }
+.sidebar-brand .brand-mark { display: none; width: 34px; height: 34px; border-radius: 9px; object-fit: contain; background: #fff; padding: 3px; flex-shrink: 0; box-shadow: var(--shadow-sm); }
+/* The lockup art is black-on-transparent, so it rides a white plate — invisible
+   on the light sidebar (#fff), and what keeps it legible in dark mode. */
+.sidebar-brand .brand-logo { width: 100%; height: auto; object-fit: contain; background: #fff; border-radius: 10px; padding: 7px 9px; box-shadow: var(--shadow-sm); }
+/* Dark mode: no plate, invert the art instead. The PNG is RGBA, so invert only
+   touches the ink — black wordmark → white — and hue-rotate(180deg) undoes what
+   invert did to the orange (#f4611a → #fd6a23, near-identical). */
+[data-theme='dark'] .sidebar-brand .brand-logo { background: none; box-shadow: none; filter: invert(1) hue-rotate(180deg); }
 .sidebar-collapse-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 6px 0 12px; padding: 7px; border-radius: 9px; border: 1px solid var(--sidebar-border); background: transparent; color: var(--sidebar-fg-dim); transition: background var(--t), color var(--t); }
 .sidebar-collapse-btn:hover { background: var(--sidebar-hover); color: var(--sidebar-fg-strong); }
 .sidebar-collapse-btn .scb-chev { transition: transform var(--t-move); transform: rotate(180deg); }
@@ -274,12 +279,13 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2);
 .sidebar-user .su-role { font-size: 11px; color: var(--sidebar-fg-dim); text-transform: capitalize; }
 
 /* collapsed state — icon-only rail */
-.app-shell.collapsed .brand-text,
+.app-shell.collapsed .brand-logo,
 .app-shell.collapsed .sidebar-section-label,
 .app-shell.collapsed .nav-label,
 .app-shell.collapsed .sidebar-user .su-text,
 .app-shell.collapsed .sidebar-collapse-btn .scb-label { display: none; }
 .app-shell.collapsed .sidebar-brand { justify-content: center; }
+.app-shell.collapsed .brand-mark { display: block; }
 .app-shell.collapsed .nav-item { justify-content: center; padding: 9px; }
 .app-shell.collapsed .sidebar-user { justify-content: center; }
 .app-shell.collapsed .sidebar-collapse-btn .scb-chev { transform: rotate(0deg); }
@@ -1782,3 +1788,21 @@ td.inv-society-fire .inv-clip-society {
 /* User-edit modal: three fields per row (Mobile/Manager/Status and City/Micro/Society). */
 .ue-row3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; margin-bottom: 16px; }
 @media (max-width: 640px) { .ue-row3 { grid-template-columns: 1fr; } }
+
+/* ── theme wipe ──────────────────────────────────────────────────────────
+   Toggling light/dark runs through the native View Transitions API: the new
+   snapshot (painted above the old by default) is clipped in from one of four
+   edges, picked at random per toggle in ThemeContext. --wipe-from inherits
+   from <html> into the ::view-transition pseudo tree. Browsers without
+   document.startViewTransition never get the attribute and just cut. */
+html[data-wipe='ltr'] { --wipe-from: 0 100% 0 0; }
+html[data-wipe='rtl'] { --wipe-from: 0 0 0 100%; }
+html[data-wipe='ttb'] { --wipe-from: 0 0 100% 0; }
+html[data-wipe='btt'] { --wipe-from: 100% 0 0 0; }
+@keyframes theme-wipe { from { clip-path: inset(var(--wipe-from)); } to { clip-path: inset(0 0 0 0); } }
+/* The old frame holds still underneath — animating it too just muddies the edge. */
+::view-transition-old(root) { animation: none; }
+::view-transition-new(root) { animation: theme-wipe .55s var(--ease) both; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}

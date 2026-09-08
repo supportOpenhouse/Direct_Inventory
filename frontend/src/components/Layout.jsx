@@ -180,12 +180,10 @@ export default function Layout() {
   return (
     <div className={`app-shell ${collapsed ? 'collapsed' : ''}`}>
       <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
+        {/* Full lockup when expanded; the square mark takes over on the collapsed rail. */}
         <div className="sidebar-brand">
-          <img src="/openhouse-logo.png" alt="Openhouse" />
-          <div className="brand-text">
-            <div className="brand-name">Open<span style={{ fontWeight: 400 }}>house</span></div>
-            <div className="brand-sub">Direct Inventory</div>
-          </div>
+          <img className="brand-mark" src="/openhouse-logo.png" alt="Openhouse" />
+          <img className="brand-logo" src="/direct_inventory_logo.png" alt="Openhouse · Direct Inventory" />
         </div>
 
         <button className="sidebar-collapse-btn" onClick={toggleCollapse} title={collapsed ? 'Expand' : 'Collapse'} aria-label="Toggle sidebar">
