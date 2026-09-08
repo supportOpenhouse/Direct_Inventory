@@ -92,8 +92,7 @@ export function AuthProvider({ children }) {
             <div className="login-hero wc-hero">
               <DottedSurface />
               <div className="lh-brand">
-                <img src="/openhouse-logo.png" alt="Openhouse" />
-                <span>Open<span style={{ fontWeight: 400 }}>house</span></span>
+                <img src="/oh_full_logo.png" alt="Openhouse" />
               </div>
               <div>
                 <h2>Direct Inventory Portal</h2>
