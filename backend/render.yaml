@@ -50,17 +50,24 @@ services:
       - key: BONVOICE_WEBHOOK_SECRET
         sync: false
 
-  # Auto-assign POC for leads that arrived unassigned (bulk-seed etc).
-  # mode='missing' → only empty assignments, never overwrites. Every 15 min.
-  # Auto-assign POC for leads that arrived unassigned (bulk-seed etc). Every 15 min.
+  # All scheduled jobs in ONE cron, every 10 min — scripts/run_all_crons.py runs, in order:
+  #   1. supply-sync        mirror cp_inventory_status → inventory.stage (+ Bonvoice call-log pull,
+  #                         best-effort, no-ops until the BONVOICE_* vars are set)
+  #   2. assign-missing     assign_missing_batch('missing') — only empty assignments, never overwrites
+  #   3. backfill-locality  inventory.locality from master_societies (only rows that differ)
+  # Each job is isolated so one failing doesn't skip the others; the run exits 1 if any failed.
+  #
+  # (The auto-dialer tick loop is NOT a cron — it runs as a daemon thread inside the web service
+  # above, via start_background_dialer() in wsgi.py. A Postgres advisory lock elects a single ticker
+  # across the gunicorn workers. Set DIALER_ENABLED=0 on the web service to turn dialling off.)
   - type: cron
-    name: direct-inventory-assign-missing
+    name: direct-inventory-crons
     env: python
     region: singapore
     rootDir: backend
-    schedule: "*/15 * * * *"
+    schedule: "*/10 * * * *"
     buildCommand: pip install -r requirements.txt
-    startCommand: python -m scripts.run_assign_missing
+    startCommand: python -m scripts.run_all_crons
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
@@ -68,27 +75,7 @@ services:
         sync: false
       - key: PROPERTIES_DB_URL
         sync: false
-
-  # Supply Closure Tracker sync (mirror cp_inventory_status → inventory.stage), and
-  # piggy-backs the Bonvoice call-log pull-sync (run_supply_sync.main() runs both).
-  # Every 5 min. The Bonvoice step is best-effort and no-ops until the BONVOICE_* vars
-  # below are set, so it never affects the supply-sync pass.
-  - type: cron
-    name: direct-inventory-supply-sync
-    env: python
-    region: singapore
-    rootDir: backend
-    schedule: "*/5 * * * *"
-    buildCommand: pip install -r requirements.txt
-    startCommand: python -m scripts.run_supply_sync
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.7
-      - key: DATABASE_URL
-        sync: false
-      - key: PROPERTIES_DB_URL
-        sync: false
-      # Bonvoice call-log sync (piggy-backed) — set these in the dashboard.
+      # Bonvoice call-log sync (piggy-backed on supply-sync) — set these in the dashboard.
       - key: BONVOICE_BASE_URL
         sync: false
       - key: BONVOICE_TOKEN
@@ -100,33 +87,4 @@ services:
       - key: BONVOICE_DID
         sync: false
       - key: BONVOICE_SYNC_LOOKBACK_DAYS
-        sync: false
-
-  # (The Bonvoice call-log pull-sync is NOT a separate cron — it's piggy-backed on the
-  # */15 assign-missing cron above. scripts/run_bonvoice_sync.py is still runnable
-  # standalone if you ever want to split it back out.)
-
-  # (The auto-dialer tick loop is NOT a separate service — it runs as a daemon thread
-  # inside the web service above, via start_background_dialer() in wsgi.py. A Postgres
-  # advisory lock elects a single ticker across the gunicorn workers. Set DIALER_ENABLED=0
-  # on the web service to turn dialling off.)
-
-  # Backfill inventory.locality from PROPERTIES_DB.master_societies (matches on
-  # society name, case/whitespace-insensitive). Daily at 10:00 IST.
-  # Render cron schedules are UTC — 10:00 IST = 04:30 UTC (IST is UTC+5:30, and
-  # India has no DST, so this holds year-round).
-  - type: cron
-    name: direct-inventory-backfill-locality
-    env: python
-    region: singapore
-    rootDir: backend
-    schedule: "30 4 * * *"
-    buildCommand: pip install -r requirements.txt
-    startCommand: python -m scripts.backfill_locality_from_master
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.7
-      - key: DATABASE_URL
-        sync: false
-      - key: PROPERTIES_DB_URL
         sync: false
