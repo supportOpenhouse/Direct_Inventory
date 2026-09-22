@@ -1,0 +1,13 @@
+{
+  "name": "oh-supply-meta",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Openhouse Supply — Meta lead-ad landing page and lead-capture endpoint.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  }
+}
