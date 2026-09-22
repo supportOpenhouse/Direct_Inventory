@@ -327,6 +327,57 @@
     min-height:16px;
   }
 
+  /* ---------- society autocomplete ---------- */
+  .combo{ position:relative; }
+  .combo-list{
+    position:absolute;
+    top:calc(100% + 6px);
+    left:0;
+    right:0;
+    z-index:20;
+    margin:0;
+    padding:6px;
+    list-style:none;
+    background:var(--card);
+    border:1.5px solid var(--border);
+    border-radius:10px;
+    box-shadow:0 10px 28px rgba(34,34,34,.12);
+    /* ~5.5 rows, so it's clear the list scrolls */
+    max-height:268px;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .combo-option{
+    padding:11px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:15.5px;
+    font-weight:500;
+    color:var(--charcoal);
+    line-height:1.3;
+  }
+  .combo-option .loc{
+    display:block;
+    margin-top:2px;
+    font-size:12.5px;
+    font-weight:400;
+    color:var(--slate);
+  }
+  .combo-option mark{
+    background:transparent;
+    color:var(--orange);
+    font-weight:700;
+  }
+  /* Hover and keyboard selection share one look, so the highlighted row
+     always means the same thing however you're navigating. */
+  .combo-option:hover,
+  .combo-option[aria-selected="true"]{ background:#FFF1EA; }
+  .combo-empty{
+    padding:11px 12px;
+    font-size:14px;
+    color:var(--slate);
+  }
+
   .sorry-box{
     margin-top:12px;
     padding:14px 14px;
@@ -464,16 +515,13 @@
       <p class="eyebrow">Property details</p>
       <h1 class="q">Which society is it in?</h1>
       <p class="hint">Start typing to find it.</p>
-      <input class="field" type="text" id="f-society" placeholder="e.g. DLF Regal Gardens" list="societyList" autocomplete="off" />
-      <!-- Dev note: replace this list with the real society names (ideally filtered by the city picked in step 4) -->
-      <datalist id="societyList">
-        <option value="DLF Regal Gardens"></option>
-        <option value="M3M Merlin"></option>
-        <option value="Sobha City"></option>
-        <option value="Godrej Habitat"></option>
-        <option value="ATS Pristine"></option>
-        <option value="Gaur City"></option>
-      </datalist>
+      <div class="combo">
+        <input class="field" type="text" id="f-society" placeholder="e.g. DLF Regal Gardens"
+               autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false"
+               role="combobox" aria-expanded="false" aria-autocomplete="list"
+               aria-controls="societyOptions" />
+        <ul class="combo-list" id="societyOptions" role="listbox" hidden></ul>
+      </div>
       <div class="sorry-box" id="societySorry" hidden>
         <strong>Sorry, we don't cover this society yet.</strong>
         <span>Openhouse currently only operates in the societies listed here. We're expanding fast — check back soon.</span>
@@ -530,26 +578,58 @@
   "use strict";
 
   var TOTAL_STEPS = 8;
-  /* Dev note: keep this list in sync with the #societyList datalist options above. */
-  var SOCIETY_LIST = [
-    "DLF Regal Gardens", "M3M Merlin", "Sobha City",
-    "Godrej Habitat", "ATS Pristine", "Gaur City"
-  ];
+  /* Societies come from master_societies (active only) via /api/societies,
+     grouped by city. SOCIETIES_BY_CITY stays empty until that resolves; while
+     it is empty every name is accepted, so a slow or failed load can never
+     trap someone on this step. */
+  var SOCIETIES_BY_CITY = null;
+
+  /* Societies for the city picked in step 4; all of them if no city yet. */
+  function currentSocieties(){
+    if (!SOCIETIES_BY_CITY) return [];
+    if (state.city && SOCIETIES_BY_CITY[state.city]) return SOCIETIES_BY_CITY[state.city];
+    var all = [];
+    for (var city in SOCIETIES_BY_CITY) all = all.concat(SOCIETIES_BY_CITY[city]);
+    return all;
+  }
+
   function findSociety(value){
     var v = value.trim().toLowerCase();
     if (!v) return null;
-    for (var i = 0; i < SOCIETY_LIST.length; i++){
-      if (SOCIETY_LIST[i].toLowerCase() === v) return SOCIETY_LIST[i];
+    var list = currentSocieties();
+    if (!list.length) return value.trim() || null;  /* list unavailable — accept */
+    for (var i = 0; i < list.length; i++){
+      if (list[i].n.toLowerCase() === v) return list[i].n;
     }
     return null;
   }
+
   function societyPossible(value){
     var v = value.trim().toLowerCase();
     if (!v) return true;
-    for (var i = 0; i < SOCIETY_LIST.length; i++){
-      if (SOCIETY_LIST[i].toLowerCase().indexOf(v) !== -1) return true;
+    var list = currentSocieties();
+    if (!list.length) return true;
+    for (var i = 0; i < list.length; i++){
+      if (list[i].n.toLowerCase().indexOf(v) !== -1) return true;
     }
     return false;
+  }
+
+  /* Top matches for `value`. Names that START with the query rank above ones
+     that merely contain it, so typing "lotus" leads with "Lotus ..." rather
+     than "3C Lotus ...". */
+  function matchSocieties(value, limit){
+    var v = value.trim().toLowerCase();
+    var list = currentSocieties();
+    if (!v) return list.slice(0, limit);
+    var starts = [], contains = [];
+    for (var i = 0; i < list.length; i++){
+      var idx = list[i].n.toLowerCase().indexOf(v);
+      if (idx === 0) starts.push(list[i]);
+      else if (idx > 0) contains.push(list[i]);
+      if (starts.length >= limit) break;
+    }
+    return starts.concat(contains).slice(0, limit);
   }
 
   var state = {
@@ -685,7 +765,14 @@
     var grid = document.getElementById(gridId);
     function select(el){
       if (!el) return;
+      var previous = state[stateKey];
       state[stateKey] = el.getAttribute("data-value");
+      /* Societies are scoped to the city, so going back and changing it must
+         clear a society chosen from the old city's list — otherwise the lead
+         arrives with a society that isn't in the city it claims. */
+      if (stateKey === "city" && previous && previous !== state[stateKey]){
+        clearSociety();
+      }
       Array.prototype.forEach.call(grid.querySelectorAll(".choice"), function(c){
         c.classList.toggle("selected", c === el);
       });
@@ -709,22 +796,160 @@
   bindChoiceGrid("cityGrid", "city", 4);
   bindChoiceGrid("bhkGrid", "bhk", 5);
 
+  /* ---- society autocomplete ---- */
+  /* Reset the field when the city changes. Declared (not assigned to a var) so
+     bindChoiceGrid above can call it — hoisting makes the order safe. */
+  function clearSociety(){
+    state.society = "";
+    societyInput.value = "";
+    societySorry.hidden = true;
+    closeSuggestions();
+  }
+
   var societySorry = document.getElementById("societySorry");
-  document.getElementById("f-society").addEventListener("input", function(e){
+  var societyInput = document.getElementById("f-society");
+  var societyOptions = document.getElementById("societyOptions");
+  var MAX_SUGGESTIONS = 8;
+  var activeIndex = -1;      /* highlighted row, -1 = none */
+  var suggestions = [];
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"]/g, function(c){
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c];
+    });
+  }
+
+  /* Bold the matched span so it's obvious why each row is here. */
+  function highlight(name, query){
+    var q = query.trim();
+    if (!q) return escapeHtml(name);
+    var idx = name.toLowerCase().indexOf(q.toLowerCase());
+    if (idx === -1) return escapeHtml(name);
+    return escapeHtml(name.slice(0, idx)) +
+           "<mark>" + escapeHtml(name.slice(idx, idx + q.length)) + "</mark>" +
+           escapeHtml(name.slice(idx + q.length));
+  }
+
+  function closeSuggestions(){
+    societyOptions.hidden = true;
+    societyOptions.innerHTML = "";
+    societyInput.setAttribute("aria-expanded", "false");
+    activeIndex = -1;
+    suggestions = [];
+  }
+
+  function setActive(index){
+    var rows = societyOptions.querySelectorAll(".combo-option");
+    for (var i = 0; i < rows.length; i++){
+      rows[i].setAttribute("aria-selected", i === index ? "true" : "false");
+    }
+    activeIndex = index;
+    if (index >= 0 && rows[index]) rows[index].scrollIntoView({ block: "nearest" });
+  }
+
+  function openSuggestions(query){
+    /* Nothing to suggest until the list has loaded. */
+    if (!currentSocieties().length) return closeSuggestions();
+
+    suggestions = matchSocieties(query, MAX_SUGGESTIONS);
+    if (!suggestions.length){
+      closeSuggestions();
+      return;
+    }
+
+    var html = "";
+    for (var i = 0; i < suggestions.length; i++){
+      var s = suggestions[i];
+      html += '<li class="combo-option" role="option" aria-selected="false" data-index="' + i + '">' +
+                highlight(s.n, query) +
+                (s.l ? '<span class="loc">' + escapeHtml(s.l) + "</span>" : "") +
+              "</li>";
+    }
+    societyOptions.innerHTML = html;
+    societyOptions.hidden = false;
+    societyInput.setAttribute("aria-expanded", "true");
+    setActive(-1);
+  }
+
+  function chooseSociety(index){
+    var picked = suggestions[index];
+    if (!picked) return;
+    societyInput.value = picked.n;
+    state.society = picked.n;
+    societySorry.hidden = true;
+    closeSuggestions();
+    setError(6, "");
+    validateStep(6);
+  }
+
+  societyInput.addEventListener("input", function(e){
     var value = e.target.value;
     var exact = findSociety(value);
     state.society = exact || value;
     var possible = societyPossible(value);
     societySorry.hidden = !(value.trim().length >= 2 && !possible);
+    openSuggestions(value);
     setError(6, "");
     validateStep(6);
   });
-  document.getElementById("f-society").addEventListener("blur", function(e){
+
+  societyInput.addEventListener("focus", function(e){
+    if (e.target.value.trim()) openSuggestions(e.target.value);
+  });
+
+  /* Arrow keys move through the list; Enter takes the highlighted row.
+     Enter with nothing highlighted falls through to the global handler,
+     which advances the step. */
+  societyInput.addEventListener("keydown", function(e){
+    if (societyOptions.hidden){
+      if (e.key === "ArrowDown" && e.target.value.trim()){
+        e.preventDefault();
+        openSuggestions(e.target.value);
+      }
+      return;
+    }
+    if (e.key === "ArrowDown"){
+      e.preventDefault();
+      setActive((activeIndex + 1) % suggestions.length);
+    } else if (e.key === "ArrowUp"){
+      e.preventDefault();
+      setActive(activeIndex <= 0 ? suggestions.length - 1 : activeIndex - 1);
+    } else if (e.key === "Enter" && activeIndex >= 0){
+      e.preventDefault();
+      e.stopPropagation();
+      chooseSociety(activeIndex);
+    } else if (e.key === "Escape"){
+      closeSuggestions();
+    }
+  });
+
+  /* mousedown, not click: blur fires first and would close the list. */
+  societyOptions.addEventListener("mousedown", function(e){
+    var row = e.target.closest(".combo-option");
+    if (!row) return;
+    e.preventDefault();
+    chooseSociety(parseInt(row.getAttribute("data-index"), 10));
+  });
+
+  societyInput.addEventListener("blur", function(e){
+    /* Let a tap on a row land before the list disappears. */
+    setTimeout(closeSuggestions, 120);
     var value = e.target.value;
     if (value.trim().length >= 2 && !findSociety(value)){
       societySorry.hidden = false;
     }
   });
+
+  /* Load the society list once, up front, so it's ready by the time anyone
+     reaches step 6. A failure leaves the field accepting free text. */
+  fetch("/api/societies")
+    .then(function(res){ return res.json(); })
+    .then(function(data){
+      if (!data || !data.ok || !data.cities) return;
+      SOCIETIES_BY_CITY = data.cities;
+      if (current === 6) validateStep(6);
+    })
+    .catch(function(){ /* free-text fallback */ });
 
   document.getElementById("f-price").addEventListener("input", function(e){
     state.price = e.target.value;
