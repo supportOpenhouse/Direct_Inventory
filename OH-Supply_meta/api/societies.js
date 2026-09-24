@@ -9,23 +9,7 @@
  * for an hour and served stale for a day while revalidating. A society added
  * in the DB shows up in the form within the hour with no redeploy.
  */
-import { Pool } from "pg";
-
-let pool;
-
-function getPool() {
-  if (!pool) {
-    const connectionString = process.env.PROPERTIES_DB_URL;
-    if (!connectionString) throw new Error("PROPERTIES_DB_URL is not set");
-    pool = new Pool({
-      connectionString,
-      max: 1,
-      idleTimeoutMillis: 10_000,
-      connectionTimeoutMillis: 10_000,
-    });
-  }
-  return pool;
-}
+import { getPool, rejectNonMethod } from "./_lib.js";
 
 // DISTINCT because a society can appear more than once per city in the master
 // list; ordering by name keeps the suggestion list alphabetical for free.
@@ -46,13 +30,10 @@ const QUERY = `
 const EMPTY = { ok: false, cities: {} };
 
 export default async function handler(req, res) {
-  if (req.method !== "GET") {
-    res.setHeader("Allow", "GET");
-    return res.status(405).json({ ok: false, error: "method_not_allowed" });
-  }
+  if (rejectNonMethod(req, res, "GET")) return;
 
   try {
-    const { rows } = await getPool().query(QUERY);
+    const { rows } = await getPool("PROPERTIES_DB_URL").query(QUERY);
 
     // { "Gurgaon": [{ n: "DLF Regal Gardens", l: "Sector 90" }, ...], ... }
     // Short keys because this payload is downloaded by every visitor on a

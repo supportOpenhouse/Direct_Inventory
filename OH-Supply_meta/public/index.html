@@ -1,4 +1,5 @@
-<title>Sell Your Flat</title>
+<title>Sell Your Flat - Openhouse</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <style>
   :root{
     --orange:#FF6B2B;
@@ -16,68 +17,479 @@
 
   *{box-sizing:border-box;}
 
+  html{
+    scroll-behavior:smooth;
+    -webkit-text-size-adjust:100%;
+    text-size-adjust:100%;
+  }
+
   body{
+    margin:0;
     background:var(--bg);
     color:var(--charcoal);
     font-family:'Poppins','Segoe UI',Roboto,Arial,sans-serif;
-    padding-inline:16px;
-    padding-block:28px;
-    min-height:100%;
-    display:flex;
-    justify-content:center;
     font-size:16px;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  img{max-width:100%; display:block;}
+
+  .wrap{
+    width:100%;
+    max-width:1100px;
+    margin:0 auto;
+    padding-inline:20px;
+  }
+
+  /* ================= HERO BANNER ================= */
+  .hero-banner{
+    position:relative;
+    background-size:cover;
+    background-position:center 38%;
+    background-color:#3a2c22;
+    color:var(--white);
+    text-align:center;
+    padding-block:46px 52px;
+  }
+  .hero-banner::before{
+    content:"";
+    position:absolute; inset:0;
+    background:linear-gradient(180deg, rgba(20,16,12,.58) 0%, rgba(20,16,12,.5) 45%, rgba(20,16,12,.72) 100%);
+  }
+  .hero-banner-inner{
+    position:relative;
+    z-index:1;
+    max-width:460px;
+    margin:0 auto;
+    padding-inline:20px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:12px;
+  }
+  .hero-logo{
+    height:24px;
+    width:auto;
+    filter:brightness(0) invert(1);
+  }
+  .hero-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    background:linear-gradient(135deg, var(--orange), var(--yellow));
+    color:var(--white);
+    font-weight:700;
+    font-size:12.5px;
+    letter-spacing:.01em;
+    padding:7px 14px;
+    border-radius:999px;
+    box-shadow:0 8px 20px -8px rgba(255,107,43,.6);
+  }
+  .hero-banner h1{
+    margin:2px 0 0;
+    font-size:23px;
+    line-height:1.3;
+    font-weight:700;
+    letter-spacing:-0.01em;
+    text-wrap:balance;
+  }
+  @media (min-width:480px){
+    .hero-banner h1{font-size:27px;}
+    .hero-badge{font-size:13.5px; padding:8px 16px;}
+  }
+  @media (min-width:768px){
+    .hero-banner{padding-block:64px 70px;}
+    .hero-banner h1{font-size:32px;}
+  }
+
+  /* ================= CTA / FORM SECTION ================= */
+  .cta-section{
+    padding-block:30px 40px;
+  }
+  .cta-sub{
+    text-align:center;
+    max-width:440px;
+    margin:0 auto 22px;
+    font-size:14.5px;
+    line-height:1.6;
+    color:var(--slate);
+  }
+  @media (min-width:480px){
+    .cta-sub{font-size:15.5px; margin-bottom:26px;}
+  }
+  .hero-form-eyebrow{
+    color:var(--orange);
+    font-weight:700;
+    font-size:12.5px;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    margin:0 0 10px;
+    text-align:center;
+  }
+
+  /* ================= SECTIONS ================= */
+  .section{
+    padding-block:34px;
+  }
+  @media (min-width:640px){
+    .section{padding-block:44px;}
+  }
+  .section.alt{background:var(--white);}
+  .section-head{
+    text-align:center;
+    max-width:640px;
+    margin:0 auto 30px;
+  }
+  .section-eyebrow{
+    font-size:12.5px;
+    font-weight:700;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--orange);
+    margin:0 0 8px;
+  }
+  .section-head h2{
+    font-size:24px;
+    line-height:1.3;
+    font-weight:700;
+    color:var(--charcoal);
+    margin:0 0 10px;
+    text-wrap:balance;
+  }
+  .section-head p{
+    font-size:15px;
+    line-height:1.6;
+    color:var(--slate);
+    margin:0;
+  }
+
+  .feature-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    max-width:640px;
+    margin:0 auto;
+  }
+  @media (min-width:480px){
+    .feature-grid{gap:14px;}
+  }
+  .feature-card{
+    background:var(--card);
+    border:1.5px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px 12px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  @media (min-width:480px){
+    .feature-card{padding:20px 18px; gap:8px;}
+  }
+  .feature-icon{
+    width:32px; height:32px;
+    border-radius:9px;
+    background:linear-gradient(135deg, var(--orange), var(--yellow));
+    color:var(--white);
+    display:flex; align-items:center; justify-content:center;
+    font-size:15px;
+    font-weight:700;
+    flex:none;
+  }
+  @media (min-width:480px){
+    .feature-icon{width:38px; height:38px; border-radius:10px; font-size:17px;}
+  }
+  .feature-card h3{
+    margin:2px 0 0;
+    font-size:13.5px;
+    font-weight:700;
+    color:var(--charcoal);
+  }
+  @media (min-width:480px){
+    .feature-card h3{font-size:15.5px;}
+  }
+  .feature-card p{
+    margin:0;
+    font-size:12px;
+    line-height:1.5;
+    color:var(--slate);
+  }
+  @media (min-width:480px){
+    .feature-card p{font-size:13.5px; line-height:1.55;}
+  }
+
+  .success-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    max-width:760px;
+    margin:0 auto;
+  }
+  .success-grid .success-card:last-child{grid-column:1 / -1;}
+  @media (min-width:480px){
+    .success-grid{gap:14px;}
+  }
+  @media (min-width:640px){
+    .success-grid{grid-template-columns:repeat(3,1fr);}
+    .success-grid .success-card:last-child{grid-column:auto;}
+  }
+  .success-card{
+    text-align:center;
+    padding:16px 12px;
+    background:var(--card);
+    border:1.5px solid var(--border);
+    border-radius:var(--radius);
+  }
+  @media (min-width:480px){
+    .success-card{padding:22px 16px;}
+  }
+  .success-card .num{
+    width:30px; height:30px;
+    margin:0 auto 10px;
+    border-radius:50%;
+    background:var(--charcoal);
+    color:var(--white);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700;
+    font-size:13px;
+  }
+  @media (min-width:480px){
+    .success-card .num{width:34px; height:34px; margin-bottom:12px; font-size:14px;}
+  }
+  .success-card h3{
+    margin:0 0 6px;
+    font-size:13.5px;
+    font-weight:700;
+  }
+  @media (min-width:480px){
+    .success-card h3{font-size:15px;}
+  }
+  .success-card p{
+    margin:0;
+    font-size:12px;
+    line-height:1.5;
+    color:var(--slate);
+  }
+  @media (min-width:480px){
+    .success-card p{font-size:13.5px; line-height:1.55;}
+  }
+
+  /* Transformation */
+  .transform-images{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    max-width:560px;
+    margin:0 auto 26px;
+  }
+  .transform-images figure{
+    margin:0;
+    border-radius:var(--radius);
+    overflow:hidden;
+    border:1.5px solid var(--border);
+    position:relative;
+  }
+  .transform-images img{
+    width:100%;
+    height:140px;
+    object-fit:cover;
+    display:block;
+  }
+  @media (min-width:480px){
+    .transform-images img{height:180px;}
+  }
+  .transform-images figcaption{
+    position:absolute;
+    top:10px; left:10px;
+    background:rgba(34,34,34,.78);
+    color:var(--white);
+    font-size:11.5px;
+    font-weight:700;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    padding:4px 10px;
+    border-radius:999px;
+  }
+  .stats-row{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+    max-width:640px;
+    margin:0 auto;
+  }
+  .stat{
+    text-align:center;
+    padding:16px 6px;
+  }
+  .stat .pct{
+    font-size:21px;
+    font-weight:800;
+    background:linear-gradient(135deg, var(--orange), var(--yellow));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  @media (min-width:480px){
+    .stat .pct{font-size:26px;}
+  }
+  .stat .label{
+    font-size:12px;
+    color:var(--slate);
+    line-height:1.4;
+    margin-top:4px;
+  }
+
+  /* Testimonial */
+  .testimonial-card{
+    max-width:600px;
+    margin:0 auto;
+    background:var(--card);
+    border:1.5px solid var(--border);
+    border-radius:var(--radius);
+    padding:26px 22px;
+    position:relative;
+  }
+  .testimonial-quote-mark{
+    font-size:44px;
+    line-height:1;
+    font-weight:800;
+    color:var(--yellow);
+    margin:0 0 4px;
+  }
+  .testimonial-card p.quote{
+    font-size:15px;
+    line-height:1.65;
+    color:var(--charcoal);
+    margin:0 0 18px;
+  }
+  .testimonial-person{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .testimonial-person img{
+    width:46px; height:46px;
+    border-radius:50%;
+    object-fit:cover;
+    flex:none;
+  }
+  .testimonial-person .name{
+    font-weight:700;
+    font-size:14px;
+    color:var(--charcoal);
+  }
+  .testimonial-person .role{
+    font-size:12.5px;
+    color:var(--slate);
+    margin-top:1px;
+  }
+  .testimonial-headline{
+    display:inline-block;
+    font-size:12px;
+    font-weight:700;
+    color:#1E8E3E;
+    background:#EAF6EE;
+    padding:4px 10px;
+    border-radius:999px;
+    margin-bottom:14px;
+  }
+
+  /* Recently sold */
+  .sold-list{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:10px;
+    max-width:700px;
+    margin:0 auto;
+  }
+  .sold-chip{
+    background:var(--card);
+    border:1.5px solid var(--border);
+    border-radius:999px;
+    padding:10px 16px;
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--charcoal);
+    display:flex;
+    align-items:center;
+    gap:7px;
+  }
+  .sold-chip .dot{
+    width:7px; height:7px;
+    border-radius:50%;
+    background:#1E8E3E;
+    flex:none;
+  }
+
+  /* Assistance banner */
+  .assist-banner{
+    max-width:640px;
+    margin:0 auto;
+    background:linear-gradient(135deg, #2B2320, #3a2c22);
+    color:var(--white);
+    border-radius:14px;
+    padding:26px 22px;
+    text-align:center;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+  }
+  .assist-banner h3{
+    margin:0;
+    font-size:18px;
+    font-weight:700;
+  }
+  .assist-banner p{
+    margin:0;
+    font-size:13.5px;
+    color:#D8D3CC;
+    line-height:1.55;
+    max-width:420px;
+  }
+  .assist-banner a{
+    margin-top:6px;
+    display:inline-block;
+    background:var(--white);
+    color:var(--charcoal);
+    text-decoration:none;
+    font-weight:700;
+    font-size:14px;
+    padding:12px 22px;
+    border-radius:10px;
+  }
+
+  /* ================= LEAD FORM (embedded) ================= */
+  .form-section{
+    padding-block:46px 56px;
+  }
+  .form-lead-in{
+    text-align:center;
+    max-width:520px;
+    margin:0 auto 22px;
+  }
+  .form-lead-in .section-eyebrow{margin-bottom:8px;}
+  .form-lead-in h2{
+    font-size:23px;
+    font-weight:700;
+    margin:0 0 8px;
+    color:var(--charcoal);
+    text-wrap:balance;
+  }
+  .form-lead-in p{
+    font-size:14.5px;
+    color:var(--slate);
+    margin:0;
+    line-height:1.55;
   }
 
   .shell{
     width:100%;
     max-width:440px;
+    margin:0 auto;
     display:flex;
     flex-direction:column;
     gap:18px;
-  }
-
-  /* ---------- header ---------- */
-  .brand{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    gap:8px;
-    padding-block:4px 2px;
-  }
-  .brand img{height:24px;width:auto;display:block;}
-  .brand h2{
-    margin:0;
-    font-size:14.5px;
-    font-weight:500;
-    color:var(--slate);
-    text-align:center;
-  }
-
-  .progress-wrap{
-    display:flex;
-    align-items:center;
-    gap:10px;
-  }
-  .progress-track{
-    flex:1;
-    height:5px;
-    border-radius:999px;
-    background:var(--border);
-    overflow:hidden;
-  }
-  .progress-fill{
-    height:100%;
-    border-radius:999px;
-    background:var(--orange);
-    transition:width .35s ease;
-  }
-  .progress-label{
-    font-size:13px;
-    font-weight:500;
-    color:var(--slate);
-    white-space:nowrap;
-    font-variant-numeric:tabular-nums;
   }
 
   /* ---------- card ---------- */
@@ -88,6 +500,8 @@
     padding:28px 22px 22px;
     box-shadow:0 1px 2px rgba(34,34,34,.03), 0 8px 20px -16px rgba(34,34,34,.14);
     position:relative;
+    color:var(--charcoal);
+    text-align:left;
   }
 
   .eyebrow{
@@ -114,6 +528,23 @@
     line-height:1.55;
   }
 
+  /* ---------- field groups (details screen) ---------- */
+  .field-group{
+    margin-bottom:20px;
+  }
+  .field-group:last-of-type{margin-bottom:0;}
+  .field-label{
+    display:block;
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--charcoal);
+    margin-bottom:8px;
+  }
+  .field-label .opt{
+    font-weight:400;
+    color:var(--slate);
+  }
+
   /* ---------- inputs ---------- */
   .field{
     width:100%;
@@ -121,7 +552,6 @@
   }
   input[type="text"],
   input[type="tel"],
-  input[type="email"],
   input[type="number"],
   select{
     width:100%;
@@ -129,6 +559,7 @@
     font-size:16.5px;
     font-weight:500;
     color:var(--charcoal);
+    -webkit-text-fill-color:var(--charcoal);
     background:var(--input-bg);
     border:1.5px solid var(--border);
     border-radius:10px;
@@ -137,11 +568,23 @@
     transition:border-color .15s ease, background .15s ease;
     appearance:none;
     -webkit-appearance:none;
+    touch-action:manipulation;
+    -webkit-user-select:text;
+    user-select:text;
+    pointer-events:auto;
   }
-  input::placeholder{color:#9C9A96; font-weight:400;}
+  input::placeholder{
+    color:#9C9A96;
+    font-weight:400;
+    -webkit-text-fill-color:#9C9A96;
+    opacity:1;
+  }
   input:focus, select:focus{
     border-color:var(--charcoal);
     background:var(--white);
+  }
+  button, a, .choice{
+    touch-action:manipulation;
   }
 
   .phone-row{
@@ -163,22 +606,6 @@
     color:var(--slate);
   }
 
-  .select-wrap{position:relative;}
-  .select-wrap select{
-    padding-right:40px;
-    cursor:pointer;
-  }
-  .select-wrap::after{
-    content:"";
-    position:absolute;
-    right:16px; top:50%;
-    width:9px; height:9px;
-    border-right:2px solid var(--slate);
-    border-bottom:2px solid var(--slate);
-    transform:translateY(-70%) rotate(45deg);
-    pointer-events:none;
-  }
-
   .price-wrap{
     position:relative;
     display:flex;
@@ -195,6 +622,114 @@
     font-weight:500; color:var(--slate); font-size:13.5px;
     background:var(--input-bg);
     pointer-events:none;
+  }
+
+  /* ---------- OTP boxes ---------- */
+  .otp-row{
+    display:flex;
+    gap:8px;
+    justify-content:space-between;
+  }
+  .otp-box{
+    width:15.5%;
+    aspect-ratio:1/1;
+    text-align:center;
+    font-size:20px;
+    font-weight:600;
+    font-variant-numeric:tabular-nums;
+    background:var(--input-bg);
+    border:1.5px solid var(--border);
+    border-radius:10px;
+    outline:none;
+    color:var(--charcoal);
+    padding:0;
+  }
+  .otp-box:focus{border-color:var(--charcoal); background:var(--white);}
+
+  .resend-row{
+    margin-top:16px;
+    font-size:13.5px;
+    color:var(--slate);
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .resend-link{
+    font-weight:600;
+    color:var(--charcoal);
+    text-decoration:underline;
+    cursor:pointer;
+    background:none;
+    border:none;
+    font-family:inherit;
+    font-size:inherit;
+    padding:0;
+  }
+  .resend-link:disabled{
+    color:var(--slate);
+    text-decoration:none;
+    cursor:default;
+    font-weight:500;
+  }
+
+  /* ---------- society autocomplete ---------- */
+  .autocomplete{position:relative;}
+  .autocomplete-list{
+    position:absolute;
+    left:0; right:0;
+    top:calc(100% + 6px);
+    background:var(--white);
+    border:1.5px solid var(--border);
+    border-radius:10px;
+    box-shadow:0 12px 24px -12px rgba(34,34,34,.22);
+    /* rows are two lines now (name + locality), so show ~4 of them */
+    max-height:248px;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    z-index:20;
+  }
+  .autocomplete-item{
+    padding:12px 16px;
+    font-size:15px;
+    font-weight:500;
+    color:var(--charcoal);
+    cursor:pointer;
+  }
+  .autocomplete-item:hover,
+  .autocomplete-item.active{
+    background:var(--input-bg);
+  }
+  .autocomplete-item + .autocomplete-item{
+    border-top:1px solid var(--border);
+  }
+  /* Locality under the name, to tell apart societies that share a name. */
+  .autocomplete-loc{
+    display:block;
+    margin-top:2px;
+    font-size:12.5px;
+    font-weight:400;
+    color:var(--slate);
+  }
+
+  .sorry-box{
+    margin-top:12px;
+    padding:14px 14px;
+    border-radius:10px;
+    background:#FCF3F1;
+    border:1.5px solid #F1D8D2;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .sorry-box strong{
+    font-size:14px;
+    font-weight:600;
+    color:#B3261E;
+  }
+  .sorry-box span{
+    font-size:13px;
+    color:var(--slate);
+    line-height:1.5;
   }
 
   /* ---------- choice cards (radio) ---------- */
@@ -228,16 +763,8 @@
     color:var(--charcoal);
     font-weight:600;
   }
-  .choice .sub{
-    display:block;
-    font-weight:400;
-    font-size:12px;
-    color:var(--slate);
-    margin-top:2px;
-  }
-  .choice.selected .sub{color:var(--slate);}
 
-  /* ---------- privacy step ---------- */
+  /* ---------- review screen ---------- */
   .privacy-row{
     display:flex;
     align-items:flex-start;
@@ -279,6 +806,12 @@
   }
   .summary-row dt{color:var(--slate);}
   .summary-row dd{margin:0; font-weight:600; text-align:right;}
+  .summary-row.verified dd{
+    color:#1E8E3E;
+    display:flex;
+    align-items:center;
+    gap:4px;
+  }
 
   /* ---------- nav buttons ---------- */
   .nav-row{
@@ -327,78 +860,6 @@
     min-height:16px;
   }
 
-  /* ---------- society autocomplete ---------- */
-  .combo{ position:relative; }
-  .combo-list{
-    position:absolute;
-    top:calc(100% + 6px);
-    left:0;
-    right:0;
-    z-index:20;
-    margin:0;
-    padding:6px;
-    list-style:none;
-    background:var(--card);
-    border:1.5px solid var(--border);
-    border-radius:10px;
-    box-shadow:0 10px 28px rgba(34,34,34,.12);
-    /* ~5.5 rows, so it's clear the list scrolls */
-    max-height:268px;
-    overflow-y:auto;
-    -webkit-overflow-scrolling:touch;
-  }
-  .combo-option{
-    padding:11px 12px;
-    border-radius:8px;
-    cursor:pointer;
-    font-size:15.5px;
-    font-weight:500;
-    color:var(--charcoal);
-    line-height:1.3;
-  }
-  .combo-option .loc{
-    display:block;
-    margin-top:2px;
-    font-size:12.5px;
-    font-weight:400;
-    color:var(--slate);
-  }
-  .combo-option mark{
-    background:transparent;
-    color:var(--orange);
-    font-weight:700;
-  }
-  /* Hover and keyboard selection share one look, so the highlighted row
-     always means the same thing however you're navigating. */
-  .combo-option:hover,
-  .combo-option[aria-selected="true"]{ background:#FFF1EA; }
-  .combo-empty{
-    padding:11px 12px;
-    font-size:14px;
-    color:var(--slate);
-  }
-
-  .sorry-box{
-    margin-top:12px;
-    padding:14px 14px;
-    border-radius:10px;
-    background:#FCF3F1;
-    border:1.5px solid #F1D8D2;
-    display:flex;
-    flex-direction:column;
-    gap:4px;
-  }
-  .sorry-box strong{
-    font-size:14px;
-    font-weight:600;
-    color:#B3261E;
-  }
-  .sorry-box span{
-    font-size:13px;
-    color:var(--slate);
-    line-height:1.5;
-  }
-
   .footnote{
     text-align:center;
     font-size:12px;
@@ -433,158 +894,497 @@
     font-variant-numeric:tabular-nums;
   }
 
+  /* ---------- contact ---------- */
+  .contact-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    max-width:640px;
+    margin:0 auto 20px;
+  }
+  .contact-grid .contact-card:last-child{grid-column:1 / -1;}
+  @media (min-width:480px){
+    .contact-grid{gap:12px; margin-bottom:26px;}
+  }
+  @media (min-width:640px){
+    .contact-grid{grid-template-columns:repeat(3,1fr);}
+    .contact-grid .contact-card:last-child{grid-column:auto;}
+  }
+  .contact-card{
+    text-align:center;
+    background:var(--card);
+    border:1.5px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px 10px;
+  }
+  @media (min-width:480px){
+    .contact-card{padding:18px 14px;}
+  }
+  .contact-label{
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--slate);
+    margin-bottom:6px;
+  }
+  @media (min-width:480px){
+    .contact-label{font-size:12px;}
+  }
+  .contact-value{
+    display:block;
+    font-size:14px;
+    font-weight:700;
+    color:var(--charcoal);
+    text-decoration:none;
+  }
+  @media (min-width:480px){
+    .contact-value{font-size:16px;}
+  }
+  .contact-value:hover{color:var(--orange);}
+  .contact-value.small{
+    font-size:12.5px;
+    font-weight:600;
+  }
+  @media (min-width:480px){
+    .contact-value.small{font-size:14px;}
+  }
+  .office-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    max-width:760px;
+    margin:0 auto;
+  }
+  @media (min-width:480px){
+    .office-grid{gap:12px;}
+  }
+  .office-card{
+    background:var(--input-bg);
+    border:1.5px solid var(--border);
+    border-radius:var(--radius);
+    padding:12px 12px;
+  }
+  @media (min-width:480px){
+    .office-card{padding:16px 16px;}
+  }
+  .office-card h4{
+    margin:0 0 6px;
+    font-size:13.5px;
+    font-weight:700;
+    color:var(--charcoal);
+  }
+  .office-card p{
+    margin:0;
+    font-size:12.5px;
+    line-height:1.55;
+    color:var(--slate);
+  }
+
+  .social-row{
+    display:flex;
+    justify-content:center;
+    gap:12px;
+    margin-top:28px;
+  }
+  .social-icon{
+    width:38px; height:38px;
+    border-radius:50%;
+    background:var(--charcoal);
+    color:var(--white);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-decoration:none;
+    transition:background .15s ease;
+  }
+  .social-icon:hover{background:var(--orange);}
+
+  /* ---------- page footer ---------- */
+  .page-footer{
+    text-align:center;
+    padding:26px 16px 40px;
+    font-size:12px;
+    color:var(--slate);
+  }
+  .page-footer a{color:var(--slate);}
+
   [hidden]{display:none !important;}
 
   @media (max-width:380px){
     .card{padding:22px 16px 18px;}
     h1.q{font-size:20px;}
+    .otp-box{font-size:17px;}
+    .hero-banner h1{font-size:20px;}
   }
 </style>
 
-<div class="shell">
-
-  <div class="brand">
-    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA8sAAADDCAYAAAC1SoNfAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAOdEVYdFNvZnR3YXJlAEZpZ21hnrGWYwAANJdJREFUeAHt3f+V47b1NvDn6+P/sx34pgJvKghSQdYVLFKB1xWIqcCbCiRXYKcC0hWsXQGZCuxUMK9uKL6jHY/4S/eCAPV8zsEZezUjgiAI4hIg+H8ga3JOb8/pzeW/v7r89/D/1793S3f5+ftV0n/77+Vnd/m3X0BERERERETm/g+0lpxTOKev8RwgC9LTgLk7p1+v/ptBNBERERER0R0YLM+jo8IaDP/98nMYOc7VMOr88zk1l0REREREREQzMVi+LZzTXy8/A8rXnNO/Lz858kxERERERESz6EhxOKfjOf12Tk87Tu1lPwOIiIiIiIiIXhHwGAEyA2ciIiIiIiIapc8cH/C4AfJY4HzANguVERERERER0UbCOdUoK4DdKv0IjjYTERERERHtlj6LfABHkdem9pwiiIiIiIiIaBcYJPsEzQIiIiIiIiIqDoNk/6D5ACIiIiIiIioCg+T0QXMEERERERERZetbMEhm0ExERERERET/E8DVrXNJunq2gIiIiIiIiDajU66/R1nB5KOkw+X4EBERERERUUKccp1/as/pHYiIiIiIiMidgFOuS0tHcGo2ERERERGRGx2l5GhymalF/2w5ERERERFRMf4PeRteB/UB5evO6fdL6iZ+982LJChfdU7/BBERERERUQFyDpbfoqwVlocg+Jdz+vXy/7/gOUi+lwbNb69+fo2+bN6iHFoe32D6ZgERERERERG9ooRFvHR68RH9qPfWAWtAnw+9uaD5yr3cAoiIiIiIiGiRXF8JpcG7BqMalArypsF7RN4Loh1AREREREREk3R6cY7BnQbIAeW+O1jzrQuknZDfaP33ICIiIiIiopsE+U4fjtiXiLxuSnwCXy9FRERERET0BzpluEU+wdveg+WBoB9tzqHsWzBgJiIiIiIi+v/eI/+FvCL2L2L7oFm3LyAiIiIiInpw75FHMMxg+VnEtkGz3jgp6VVYREREREREpvTVUFsHwQyWb4vYLmhmwExERERERA/pgHwCYQbL4yK2CZoZMBMRERER0UMpaUSZwfKzCgyY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" alt="Openhouse" />
-    <h2>We sell your flat in 90 days, guaranteed</h2>
+<!-- ================= HERO BANNER ================= -->
+<section class="hero-banner" style="background-image:url('img/hero-1-94a03bf8c5.jpg');">
+  <div class="hero-banner-inner">
+    <img class="hero-logo" src="img/hero-2-9de4eae382.png" alt="Openhouse" />
+    <span class="hero-badge"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> We Guarantee to Sell Your House in 90 Days</span>
+    <h1>Get a Guaranteed Offer in 24 Hrs on Your Flat</h1>
   </div>
+</section>
 
-  <div class="progress-wrap" id="progressWrap">
-    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
-    <div class="progress-label" id="progressLabel">Step 1 of 7</div>
-  </div>
+<!-- ================= CTA / LEAD FORM ================= -->
+<section class="cta-section" id="leadFormSection">
+  <div class="wrap">
+    <p class="cta-sub">The fastest way to sell your house in Gurgaon, Noida &amp; Ghaziabad - at the best price.</p>
+    <p class="hero-form-eyebrow">Get started - takes 2 minutes</p>
+    <div class="shell">
+      <form class="card" id="leadForm" novalidate>
 
-  <form class="card" id="leadForm" novalidate>
+        <!-- Page 1a: Phone -->
+        <section class="screen" data-screen="phone">
+          <p class="eyebrow">Verify your number</p>
+          <h1 class="q">What's your contact number?</h1>
+          <p class="hint">We'll text you a one-time code to confirm it's really you.</p>
+          <div class="phone-row">
+            <div class="cc">+91</div>
+            <input class="field" type="tel" id="f-phone" placeholder="8796744155" inputmode="numeric" maxlength="10" autocomplete="tel" />
+          </div>
+          <p class="error-msg" data-error="phone"></p>
+        </section>
 
-    <!-- Step 1: Name -->
-    <section class="step" data-step="1">
-      <p class="eyebrow">Let's get started</p>
-      <h1 class="q">What's your name?</h1>
-      <p class="hint">So our team knows who they're speaking with.</p>
-      <input class="field" type="text" id="f-name" placeholder="Openhouse" autocomplete="name" />
-      <p class="error-msg" data-error="1"></p>
-    </section>
+        <!-- Page 1b: OTP -->
+        <section class="screen" data-screen="otp" hidden>
+          <p class="eyebrow">Verify your number</p>
+          <h1 class="q">Enter the code</h1>
+          <p class="hint" id="otpHint">We've sent a 6-digit code to your number.</p>
+          <div class="otp-row" id="otpRow">
+            <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-otp-index="0" autocomplete="one-time-code" />
+            <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-otp-index="1" />
+            <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-otp-index="2" />
+            <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-otp-index="3" />
+            <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-otp-index="4" />
+            <input class="otp-box" type="text" inputmode="numeric" maxlength="1" data-otp-index="5" />
+          </div>
+          <div class="resend-row">
+            <span id="resendText">Didn't get it?</span>
+            <button type="button" class="resend-link" id="resendBtn">Resend in 0:30</button>
+          </div>
+          <!-- The code is sent by /api/otp/send and checked by
+               /api/otp/verify; /api/lead then refuses any submission whose
+               phone has no verified, unconsumed code. -->
+          <p class="error-msg" data-error="otp"></p>
+        </section>
 
-    <!-- Step 2: Phone -->
-    <section class="step" data-step="2" hidden>
-      <p class="eyebrow">Stay in touch</p>
-      <h1 class="q">Your contact number?</h1>
-      <p class="hint">Our team will call you to discuss your flat.</p>
-      <div class="phone-row">
-        <div class="cc">+91</div>
-        <input class="field" type="tel" id="f-phone" placeholder="8796744155" inputmode="numeric" maxlength="10" autocomplete="tel" />
+        <!-- Page 2: Property details (single page, all fields) -->
+        <section class="screen" data-screen="details" hidden>
+          <p class="eyebrow">Property details</p>
+          <h1 class="q">Tell us about your flat</h1>
+          <p class="hint">A few quick details so our team can prepare your offer.</p>
+
+          <div class="field-group">
+            <label class="field-label" for="f-name">Your name</label>
+            <input class="field" type="text" id="f-name" placeholder="Openhouse" autocomplete="name" />
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Which city is your flat in?</label>
+            <div class="choice-grid cols-3" id="cityGrid">
+              <div class="choice" data-value="Gurgaon" tabindex="0" role="button">Gurgaon</div>
+              <div class="choice" data-value="Noida" tabindex="0" role="button">Noida</div>
+              <div class="choice" data-value="Ghaziabad" tabindex="0" role="button">Ghaziabad</div>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">What's the configuration?</label>
+            <div class="choice-grid" id="bhkGrid">
+              <div class="choice" data-value="2 BHK" tabindex="0" role="button">2 BHK</div>
+              <div class="choice" data-value="3 BHK" tabindex="0" role="button">3 BHK</div>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="f-society">Which society is it in?</label>
+            <div class="autocomplete" id="societyAutocomplete">
+              <input class="field" type="text" id="f-society" placeholder="Start typing your society name" autocomplete="off" />
+              <div class="autocomplete-list" id="societyOptions" hidden></div>
+            </div>
+            <!-- Dev note: replace SOCIETY_LIST in the script below with the real
+                 society names (ideally filtered by the city picked above). -->
+            <div class="sorry-box" id="societySorry" hidden>
+              <strong>Sorry, we don't cover this society yet.</strong>
+              <span>Openhouse currently only operates in the societies listed here. We're expanding fast - check back soon.</span>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="f-price">What price are you expecting?</label>
+            <div class="price-wrap">
+              <span class="price-prefix">₹</span>
+              <input class="field" type="number" id="f-price" placeholder="85" inputmode="decimal" min="1" step="0.1" />
+              <span class="price-suffix">Lacs</span>
+            </div>
+          </div>
+
+          <p class="error-msg" data-error="details"></p>
+        </section>
+
+        <!-- Page 3: Review + consent + submit -->
+        <section class="screen" data-screen="review" hidden>
+          <p class="eyebrow">Last step</p>
+          <h1 class="q">Review & submit</h1>
+          <dl class="summary" id="summaryBox"></dl>
+          <label class="privacy-row">
+            <input type="checkbox" id="f-consent" />
+            <span>I agree to Openhouse's <a href="https://www.openhouse.in/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a> and consent to being contacted about my listing.</span>
+          </label>
+          <p class="error-msg" data-error="review"></p>
+        </section>
+
+        <div class="nav-row" id="navRow">
+          <button type="button" class="btn-back" id="btnBack" aria-label="Go back">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+          <button type="button" class="btn-next" id="btnNext" disabled>Send OTP</button>
+        </div>
+      </form>
+
+      <!-- Thank you screen -->
+      <div class="card thanks" id="thanksCard" hidden>
+        <div class="thanks-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        <h1 class="q">Thank you!</h1>
+        <p class="hint">We've received your details. Our team will contact you shortly to discuss your listing.</p>
+        <div class="thanks-ref" id="thanksRef"></div>
       </div>
-      <p class="error-msg" data-error="2"></p>
-    </section>
 
-    <!-- Step 3: Email (optional) -->
-    <section class="step" data-step="3" hidden>
-      <p class="eyebrow">Optional</p>
-      <h1 class="q">What's your email address?</h1>
-      <p class="hint">We'll send your listing updates here. Feel free to skip this.</p>
-      <input class="field" type="email" id="f-email" placeholder="support@openhouse.in" autocomplete="email" />
-      <p class="error-msg" data-error="3"></p>
-    </section>
-
-    <!-- Step 4: City -->
-    <section class="step" data-step="4" hidden>
-      <p class="eyebrow">Location</p>
-      <h1 class="q">Which city is your flat in?</h1>
-      <p class="hint">Choose the city where your property is located.</p>
-      <div class="choice-grid cols-3" id="cityGrid">
-        <div class="choice" data-value="Gurgaon" tabindex="0" role="button">Gurgaon</div>
-        <div class="choice" data-value="Noida" tabindex="0" role="button">Noida</div>
-        <div class="choice" data-value="Ghaziabad" tabindex="0" role="button">Ghaziabad</div>
-      </div>
-      <p class="error-msg" data-error="4"></p>
-    </section>
-
-    <!-- Step 5: Configuration -->
-    <section class="step" data-step="5" hidden>
-      <p class="eyebrow">Property type</p>
-      <h1 class="q">What's the configuration?</h1>
-      <p class="hint">Select the type of flat you're selling.</p>
-      <div class="choice-grid" id="bhkGrid">
-        <div class="choice" data-value="2 BHK" tabindex="0" role="button">2 BHK</div>
-        <div class="choice" data-value="3 BHK" tabindex="0" role="button">3 BHK</div>
-      </div>
-      <p class="error-msg" data-error="5"></p>
-    </section>
-
-    <!-- Step 6: Society -->
-    <section class="step" data-step="6" hidden>
-      <p class="eyebrow">Property details</p>
-      <h1 class="q">Which society is it in?</h1>
-      <p class="hint">Start typing to find it.</p>
-      <div class="combo">
-        <input class="field" type="text" id="f-society" placeholder="e.g. DLF Regal Gardens"
-               autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false"
-               role="combobox" aria-expanded="false" aria-autocomplete="list"
-               aria-controls="societyOptions" />
-        <ul class="combo-list" id="societyOptions" role="listbox" hidden></ul>
-      </div>
-      <div class="sorry-box" id="societySorry" hidden>
-        <strong>Sorry, we don't cover this society yet.</strong>
-        <span>Openhouse currently only operates in the societies listed here. We're expanding fast — check back soon.</span>
-      </div>
-      <p class="error-msg" data-error="6"></p>
-    </section>
-
-    <!-- Step 7: Price -->
-    <section class="step" data-step="7" hidden>
-      <p class="eyebrow">Almost done</p>
-      <h1 class="q">What price are you expecting?</h1>
-      <p class="hint">Give us a rough figure — you can always revise it later.</p>
-      <div class="price-wrap">
-        <span class="price-prefix">₹</span>
-        <input class="field" type="number" id="f-price" placeholder="85" inputmode="decimal" min="1" step="0.1" />
-        <span class="price-suffix">Lacs</span>
-      </div>
-      <p class="error-msg" data-error="7"></p>
-    </section>
-
-    <!-- Step 8: Consent + submit -->
-    <section class="step" data-step="8" hidden>
-      <p class="eyebrow">Last step</p>
-      <h1 class="q">Ready to submit?</h1>
-      <dl class="summary" id="summaryBox"></dl>
-      <label class="privacy-row">
-        <input type="checkbox" id="f-consent" />
-        <span>I agree to Openhouse's <a href="https://www.openhouse.in/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a> and consent to being contacted about my listing.</span>
-      </label>
-      <p class="error-msg" data-error="8"></p>
-    </section>
-
-    <div class="nav-row" id="navRow">
-      <button type="button" class="btn-back" id="btnBack" aria-label="Go back">←</button>
-      <button type="button" class="btn-next" id="btnNext" disabled>Continue</button>
+      <p class="footnote">Openhouse - Guaranteed sale in 90 days</p>
     </div>
-  </form>
-
-  <!-- Thank you screen -->
-  <div class="card thanks" id="thanksCard" hidden>
-    <div class="thanks-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-    </div>
-    <h1 class="q">Thank you!</h1>
-    <p class="hint">We've received your details. Our team will contact you shortly to discuss your listing.</p>
-    <div class="thanks-ref" id="thanksRef"></div>
   </div>
+</section>
 
-  <p class="footnote">Openhouse · Guaranteed sale in 90 days</p>
+<!-- ================= GET THE BEST PRICE ================= -->
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="section-eyebrow">Why sell with Openhouse</p>
+      <h2>Get The Best Price For Your House</h2>
+      <p>We handle everything for you - from finding buyers and arranging property visits to managing negotiations and closing the deal.</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">₹</div>
+        <h3>Fix the Price - Best Value</h3>
+        <p>We visit the property, do inspection and quote you the best price.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+        <h3>Due Diligence</h3>
+        <p>Verify legal ownership, loan status, property dues and other important papers to avoid any future complications.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>Instant Token</h3>
+        <p>We offer you an instant token for your property.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">90</div>
+        <h3>Sell Guarantee</h3>
+        <p>We guarantee to sell your house within 90 days.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= KEY TO SUCCESS ================= -->
+<section class="section alt">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="section-eyebrow">How we do it</p>
+      <h2>Our Key To Success</h2>
+      <p>Our process ensures your property is presented at its best and reaches the right buyers quickly, resulting in faster, smoother transactions.</p>
+    </div>
+    <div class="success-grid">
+      <div class="success-card">
+        <div class="num">1</div>
+        <h3>Beautiful Home Sells Faster</h3>
+        <p>We invest to uplift and beautify your house - beautiful homes sell faster.</p>
+      </div>
+      <div class="success-card">
+        <div class="num">2</div>
+        <h3>100x Broker Network</h3>
+        <p>Our large network of brokers helps us amplify the reach multiple times.</p>
+      </div>
+      <div class="success-card">
+        <div class="num">3</div>
+        <h3>Hassle Free &amp; Fast Transaction</h3>
+        <p>Quick visit scheduling, loan negotiation, paperwork and financing.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= TRANSFORMATION ================= -->
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="section-eyebrow">Home staging</p>
+      <h2>See the Transformation</h2>
+      <p>Our professional staging services enhance your property's appeal, helping you attract more buyers and sell faster at better prices.</p>
+    </div>
+    <div class="transform-images">
+      <figure>
+        <figcaption>Before</figcaption>
+        <img src="img/hero-3-c128a71de8.jpg" alt="Living room before Openhouse staging" />
+      </figure>
+      <figure>
+        <figcaption>After</figcaption>
+        <img src="img/hero-4-242720dd50.jpg" alt="Living room after Openhouse staging" />
+      </figure>
+    </div>
+    <div class="stats-row">
+      <div class="stat">
+        <div class="pct">85%</div>
+        <div class="label">Less time on market vs. non&#8209;staged homes</div>
+      </div>
+      <div class="stat">
+        <div class="pct">73%</div>
+        <div class="label">Faster sale for professionally staged properties</div>
+      </div>
+      <div class="stat">
+        <div class="pct">86%</div>
+        <div class="label">Buyers better visualize a staged home as their own</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= TESTIMONIAL (sellers only) ================= -->
+<section class="section alt">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="section-eyebrow">In their words</p>
+      <h2>What Our Sellers Say</h2>
+    </div>
+    <div class="testimonial-card">
+      <span class="testimonial-headline">Swift and smooth experience in selling</span>
+      <div class="testimonial-quote-mark">&ldquo;</div>
+      <p class="quote">I wanted to take a moment to thank you for the excellent experience working with your team. It was truly a pleasure, everyone was very thorough, responsive, and professional throughout the process. I really appreciate the attention to detail and the smooth way everything was handled. I would certainly recommend OpenHouse to my friends and contacts. Wishing you continued success, and thank you once again.</p>
+      <div class="testimonial-person">
+        <img src="img/hero-5-1d3a69f164.jpg" alt="Sanjay Rastogi" />
+        <div>
+          <div class="name">Sanjay Rastogi</div>
+          <div class="role">Group Head (Corporate Finance), Olam Agri</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= RECENTLY SOLD ================= -->
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="section-eyebrow">Track record</p>
+      <h2>A Few Homes We've Recently Sold</h2>
+      <p>A small sample of societies where our sellers got their guaranteed offer.</p>
+    </div>
+    <div class="sold-list">
+      <span class="sold-chip"><span class="dot"></span>Divyansh Onyx</span>
+      <span class="sold-chip"><span class="dot"></span>Coco County</span>
+      <span class="sold-chip"><span class="dot"></span>Ajnara Homes</span>
+      <span class="sold-chip"><span class="dot"></span>Gardenia Square 1</span>
+      <span class="sold-chip"><span class="dot"></span>Amrapali Silicon City</span>
+      <span class="sold-chip"><span class="dot"></span>Eros Sampoornam</span>
+      <span class="sold-chip"><span class="dot"></span>Moti Residency</span>
+      <span class="sold-chip"><span class="dot"></span>Ace Aspire</span>
+      <span class="sold-chip"><span class="dot"></span>Antriksh Heights</span>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ASSISTANCE ================= -->
+<section class="section alt">
+  <div class="wrap">
+    <div class="assist-banner">
+      <h3>Need any assistance?</h3>
+      <p>Not sure where to start, or have a question about your specific flat? Scroll up and fill the quick form - our team will personally walk you through your guaranteed offer. Prefer to talk first? Call or WhatsApp us below.</p>
+      <a href="#leadFormSection">Start My Free Offer</a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CONTACT ================= -->
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="section-eyebrow">Get in touch</p>
+      <h2>We're Here to Help You</h2>
+      <p>Have questions about our services or need assistance with your property? Reach out to our team directly.</p>
+    </div>
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="contact-label">Call Us</div>
+        <a class="contact-value" href="tel:+918065453090">+91 80654 53090</a>
+      </div>
+      <div class="contact-card">
+        <div class="contact-label">Email Us</div>
+        <a class="contact-value" href="mailto:support@openhouse.in">support@openhouse.in</a>
+      </div>
+      <div class="contact-card">
+        <div class="contact-label">Visit Us</div>
+        <div class="contact-value small">Mon–Sat: 10:00 AM – 7:00 PM</div>
+      </div>
+    </div>
+    <div class="office-grid">
+      <div class="office-card">
+        <h4>Gurugram (Headquarters)</h4>
+        <p>414-415, 4th Floor, Suncity Success Tower, Golf Course Extension Road, Sector 65, Gurugram, Haryana - 122101</p>
+      </div>
+      <div class="office-card">
+        <h4>Noida</h4>
+        <p>Unit No. B401, B402, B403 &amp; B405, 4th Floor, Tower 4, NX One, Tech Zone 4 Greater Noida West, Uttar Pradesh - 201306</p>
+      </div>
+      <div class="office-card">
+        <h4>Raj Nagar Extension (Ghaziabad)</h4>
+        <p>F-108, First Floor, VVIP STYLE Mall, Raj Nagar Extension, Ghaziabad, Uttar Pradesh - 201003</p>
+      </div>
+      <div class="office-card">
+        <h4>Crossings Republik (Ghaziabad)</h4>
+        <p>427, 4th floor, Plot no. C-2, Orbit Plaza, Crossings Republik, Ghaziabad, Uttar Pradesh - 201016</p>
+      </div>
+    </div>
+
+    <div class="social-row">
+      <a class="social-icon" href="https://www.facebook.com/people/Openhouse/61568972962066/" target="_blank" rel="noopener" aria-label="Openhouse on Facebook">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5 3.66 9.15 8.44 9.94v-7.03H7.9v-2.91h2.54V9.85c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.23.2 2.23.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.91h-2.33V22c4.78-.79 8.44-4.94 8.44-9.94Z"/></svg>
+      </a>
+      <a class="social-icon" href="https://www.instagram.com/openhouse_in/" target="_blank" rel="noopener" aria-label="Openhouse on Instagram">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2.2c2.7 0 3 .01 4.1.06 1.05.05 1.79.22 2.43.47.66.26 1.22.6 1.77 1.15.55.55.9 1.11 1.15 1.77.25.64.42 1.38.47 2.43.05 1.1.06 1.4.06 4.1s-.01 3-.06 4.1c-.05 1.05-.22 1.79-.47 2.43a4.9 4.9 0 0 1-1.15 1.77 4.9 4.9 0 0 1-1.77 1.15c-.64.25-1.38.42-2.43.47-1.1.05-1.4.06-4.1.06s-3-.01-4.1-.06c-1.05-.05-1.79-.22-2.43-.47a4.9 4.9 0 0 1-1.77-1.15 4.9 4.9 0 0 1-1.15-1.77c-.25-.64-.42-1.38-.47-2.43C2.21 15 2.2 14.7 2.2 12s.01-3 .06-4.1c.05-1.05.22-1.79.47-2.43.26-.66.6-1.22 1.15-1.77A4.9 4.9 0 0 1 5.65 2.55c.64-.25 1.38-.42 2.43-.47C9.18 2.03 9.5 2.02 12.2 2.02Zm0 1.8c-2.65 0-2.96.01-4.01.06-.9.04-1.4.19-1.72.32-.43.17-.74.37-1.07.7-.33.33-.53.64-.7 1.07-.13.32-.28.82-.32 1.72-.05 1.05-.06 1.36-.06 4.01s.01 2.96.06 4.01c.04.9.19 1.4.32 1.72.17.43.37.74.7 1.07.33.33.64.53 1.07.7.32.13.82.28 1.72.32 1.05.05 1.36.06 4.01.06s2.96-.01 4.01-.06c.9-.04 1.4-.19 1.72-.32.43-.17.74-.37 1.07-.7.33-.33.53-.64.7-1.07.13-.32.28-.82.32-1.72.05-1.05.06-1.36.06-4.01s-.01-2.96-.06-4.01c-.04-.9-.19-1.4-.32-1.72a2.8 2.8 0 0 0-.7-1.07 2.8 2.8 0 0 0-1.07-.7c-.32-.13-.82-.28-1.72-.32-1.05-.05-1.36-.06-4.01-.06Zm0 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 1.8a2.7 2.7 0 1 0 0 5.4 2.7 2.7 0 0 0 0-5.4Zm4.68-1.98a1.05 1.05 0 1 1 0 2.1 1.05 1.05 0 0 1 0-2.1Z"/></svg>
+      </a>
+      <a class="social-icon" href="https://www.linkedin.com/company/openhouse-ind" target="_blank" rel="noopener" aria-label="Openhouse on LinkedIn">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 9h4v12H3V9Zm7 0h3.8v1.64h.05c.53-1 1.82-2.05 3.75-2.05 4 0 4.74 2.63 4.74 6.05V21h-4v-5.6c0-1.34-.02-3.06-1.87-3.06-1.87 0-2.16 1.46-2.16 2.96V21h-4V9Z"/></svg>
+      </a>
+      <a class="social-icon" href="https://www.youtube.com/@OpenHouse_at" target="_blank" rel="noopener" aria-label="Openhouse on YouTube">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M23.5 6.5s-.23-1.64-.94-2.36c-.9-.95-1.9-.95-2.36-1.01C17 2.8 12 2.8 12 2.8h-.01s-5 0-8.2.33c-.46.06-1.46.06-2.36 1.01C.73 4.86.5 6.5.5 6.5S.25 8.42.25 10.35v1.31C.25 13.58.5 15.5.5 15.5s.23 1.64.93 2.36c.9.95 2.08.92 2.6 1.02 1.9.18 8 .34 8 .34s5.01-.01 8.2-.34c.47-.06 1.47-.06 2.37-1.02.71-.72.94-2.36.94-2.36s.25-1.92.25-3.85v-1.31c0-1.93-.25-3.85-.25-3.85ZM9.68 14.75V7.97l6.47 3.4-6.47 3.38Z"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<div class="page-footer">
+  Openhouse - helping you sell your flat in Gurgaon, Noida &amp; Ghaziabad, guaranteed in 90 days.<br />
+  <a href="tel:+918065453090">+91 80654 53090</a> | <a href="mailto:support@openhouse.in">support@openhouse.in</a>
 </div>
 
 <script>
 (function(){
   "use strict";
 
-  var TOTAL_STEPS = 8;
   /* Societies come from master_societies (active only) via /api/societies,
-     grouped by city. SOCIETIES_BY_CITY stays empty until that resolves; while
-     it is empty every name is accepted, so a slow or failed load can never
-     trap someone on this step. */
+     grouped by city. Null until that resolves; while it is null every name is
+     accepted, so a slow or failed load can never trap someone on this step. */
   var SOCIETIES_BY_CITY = null;
+  var MAX_SUGGESTIONS = 8;
 
-  /* Societies for the city picked in step 4; all of them if no city yet. */
+  /* Societies for the city picked above; all of them if no city yet. */
   function currentSocieties(){
     if (!SOCIETIES_BY_CITY) return [];
     if (state.city && SOCIETIES_BY_CITY[state.city]) return SOCIETIES_BY_CITY[state.city];
@@ -604,101 +1404,89 @@
     return null;
   }
 
-  function societyPossible(value){
-    var v = value.trim().toLowerCase();
-    if (!v) return true;
-    var list = currentSocieties();
-    if (!list.length) return true;
-    for (var i = 0; i < list.length; i++){
-      if (list[i].n.toLowerCase().indexOf(v) !== -1) return true;
-    }
-    return false;
-  }
-
-  /* Top matches for `value`. Names that START with the query rank above ones
-     that merely contain it, so typing "lotus" leads with "Lotus ..." rather
-     than "3C Lotus ...". */
-  function matchSocieties(value, limit){
+  /* Top matches. Names that START with the query rank above ones that merely
+     contain it, so typing "lotus" leads with "Lotus ..." not "3C Lotus ...". */
+  function matchingSocieties(value){
     var v = value.trim().toLowerCase();
     var list = currentSocieties();
-    if (!v) return list.slice(0, limit);
+    if (!v || !list.length) return [];
     var starts = [], contains = [];
     for (var i = 0; i < list.length; i++){
       var idx = list[i].n.toLowerCase().indexOf(v);
       if (idx === 0) starts.push(list[i]);
       else if (idx > 0) contains.push(list[i]);
-      if (starts.length >= limit) break;
+      if (starts.length >= MAX_SUGGESTIONS) break;
     }
-    return starts.concat(contains).slice(0, limit);
+    return starts.concat(contains).slice(0, MAX_SUGGESTIONS);
   }
 
+  var SCREENS = ["phone", "otp", "details", "review"];
+  var NEXT_LABEL = {
+    phone: "Send OTP",
+    otp: "Verify & Continue",
+    details: "Continue",
+    review: "Submit"
+  };
+
   var state = {
-    name: "",
     phone: "",
-    email: "",
+    otp: "",
+    name: "",
     city: "",
     bhk: "",
     society: "",
     price: "",
     consent: false
   };
-  var current = 1;
+  var currentIndex = 0;
+  var resendTimer = null;
 
-  var progressFill = document.getElementById("progressFill");
-  var progressLabel = document.getElementById("progressLabel");
   var btnBack = document.getElementById("btnBack");
   var btnNext = document.getElementById("btnNext");
   var leadForm = document.getElementById("leadForm");
   var thanksCard = document.getElementById("thanksCard");
-  var progressWrap = document.getElementById("progressWrap");
 
-  function $step(n){ return document.querySelector('.step[data-step="' + n + '"]'); }
-  function $err(n){ return document.querySelector('.error-msg[data-error="' + n + '"]'); }
-  function setError(n, msg){ var e = $err(n); if(e) e.textContent = msg || ""; }
+  function $screen(name){ return document.querySelector('.screen[data-screen="' + name + '"]'); }
+  function $err(name){ return document.querySelector('.error-msg[data-error="' + name + '"]'); }
+  function setError(name, msg){ var e = $err(name); if (e) e.textContent = msg || ""; }
 
-  function updateProgress(){
-    var pct = Math.round((current - 1) / (TOTAL_STEPS - 1) * 100);
-    progressFill.style.width = pct + "%";
-    progressLabel.textContent = "Step " + current + " of " + TOTAL_STEPS;
+  function showScreen(){
+    var screen = SCREENS[currentIndex];
+    SCREENS.forEach(function(name){
+      var s = $screen(name);
+      if (s) s.hidden = (name !== screen);
+    });
+    btnBack.style.visibility = (currentIndex === 0) ? "hidden" : "visible";
+    btnNext.textContent = NEXT_LABEL[screen];
+    if (screen === "otp") startResendTimer();
+    if (screen === "review") buildSummary();
+    validateScreen(screen);
+    focusFirstField(screen);
   }
 
-  function showStep(n){
-    for (var i = 1; i <= TOTAL_STEPS; i++){
-      var s = $step(i);
-      if (s) s.hidden = (i !== n);
-    }
-    btnBack.style.visibility = (n === 1) ? "hidden" : "visible";
-    btnNext.textContent = (n === TOTAL_STEPS) ? "Submit" : "Continue";
-    if (n === TOTAL_STEPS) buildSummary();
-    updateProgress();
-    validateStep(n);
-    focusFirstField(n);
-  }
-
-  function focusFirstField(n){
-    var activeStep = $step(n);
-    if (!activeStep) return;
-    var focusable = activeStep.querySelector('input[type="text"], input[type="tel"], input[type="email"], input[type="number"]');
-    if (focusable){
-      /* slight delay so the newly-shown field is focusable and mobile
-         keyboards don't fight the hidden->visible swap */
-      setTimeout(function(){ focusable.focus(); }, 60);
-    }
+  function focusFirstField(screen){
+    var target;
+    if (screen === "phone") target = document.getElementById("f-phone");
+    else if (screen === "otp") target = document.querySelector('.otp-box[data-otp-index="0"]');
+    else if (screen === "details") target = document.getElementById("f-name");
+    if (target) setTimeout(function(){ target.focus(); }, 60);
   }
 
   function buildSummary(){
     var box = document.getElementById("summaryBox");
     var rows = [
+      ["Phone", "+91 " + state.phone, true],
       ["Name", state.name],
-      ["Phone", "+91 " + state.phone],
       ["City", state.city],
       ["Configuration", state.bhk],
       ["Society", state.society],
-      ["Expected price", state.price ? ("₹" + state.price + " Lacs") : "—"]
+      ["Expected price", state.price ? ("₹" + state.price + " Lacs") : "-"]
     ];
-    if (state.email) rows.splice(2, 0, ["Email", state.email]);
+    var checkSvg = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>';
     box.innerHTML = rows.map(function(r){
-      return '<div class="summary-row"><dt>' + r[0] + '</dt><dd>' + escapeHtml(String(r[1] || "—")) + '</dd></div>';
+      var verifiedTick = r[2] ? (' <span aria-hidden="true" style="display:inline-flex;">' + checkSvg + '</span>') : "";
+      return '<div class="summary-row' + (r[2] ? ' verified' : '') + '"><dt>' + r[0] + '</dt><dd>' +
+        escapeHtml(String(r[1] || "-")) + verifiedTick + '</dd></div>';
     }).join("");
   }
 
@@ -708,31 +1496,23 @@
     });
   }
 
-  function validateStep(n){
+  function validateScreen(screen){
     var ok = false;
-    switch(n){
-      case 1:
-        ok = state.name.trim().length >= 2;
-        break;
-      case 2:
+    switch(screen){
+      case "phone":
         ok = /^[6-9]\d{9}$/.test(state.phone.trim());
         break;
-      case 3:
-        ok = state.email.trim() === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.email.trim());
+      case "otp":
+        ok = /^\d{6}$/.test(state.otp);
         break;
-      case 4:
-        ok = !!state.city;
+      case "details":
+        ok = state.name.trim().length >= 2 &&
+             !!state.city &&
+             !!state.bhk &&
+             !!findSociety(state.society) &&
+             !!state.price && parseFloat(state.price) > 0;
         break;
-      case 5:
-        ok = !!state.bhk;
-        break;
-      case 6:
-        ok = !!findSociety(state.society);
-        break;
-      case 7:
-        ok = !!state.price && parseFloat(state.price) > 0;
-        break;
-      case 8:
+      case "review":
         ok = !!state.consent;
         break;
     }
@@ -740,247 +1520,341 @@
     return ok;
   }
 
-  /* ---- field bindings ---- */
-  document.getElementById("f-name").addEventListener("input", function(e){
-    state.name = e.target.value;
-    setError(1, "");
-    validateStep(1);
-  });
-
+  /* ---- Page 1a: phone ---- */
   var phoneInput = document.getElementById("f-phone");
   phoneInput.addEventListener("input", function(e){
     e.target.value = e.target.value.replace(/\D/g, "").slice(0, 10);
     state.phone = e.target.value;
-    setError(2, "");
-    validateStep(2);
+    setError("phone", "");
+    validateScreen("phone");
   });
 
-  document.getElementById("f-email").addEventListener("input", function(e){
-    state.email = e.target.value;
-    setError(3, "");
-    validateStep(3);
+  /* ---- Page 1b: OTP ---- */
+  var otpBoxes = Array.prototype.slice.call(document.querySelectorAll(".otp-box"));
+  var otpHint = document.getElementById("otpHint");
+  var resendBtn = document.getElementById("resendBtn");
+
+  function readOtp(){
+    return otpBoxes.map(function(b){ return b.value; }).join("");
+  }
+
+  otpBoxes.forEach(function(box, i){
+    box.addEventListener("input", function(e){
+      e.target.value = e.target.value.replace(/\D/g, "").slice(0, 1);
+      state.otp = readOtp();
+      setError("otp", "");
+      validateScreen("otp");
+      if (e.target.value && otpBoxes[i + 1]) otpBoxes[i + 1].focus();
+    });
+    box.addEventListener("keydown", function(e){
+      if (e.key === "Backspace" && !box.value && otpBoxes[i - 1]){
+        otpBoxes[i - 1].focus();
+      }
+    });
+    box.addEventListener("paste", function(e){
+      var text = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "");
+      if (!text) return;
+      e.preventDefault();
+      for (var j = 0; j < otpBoxes.length; j++){
+        otpBoxes[j].value = text[j] || "";
+      }
+      state.otp = readOtp();
+      setError("otp", "");
+      validateScreen("otp");
+      var lastFilled = Math.min(text.length, otpBoxes.length) - 1;
+      if (otpBoxes[lastFilled]) otpBoxes[lastFilled].focus();
+    });
   });
 
-  function bindChoiceGrid(gridId, stateKey, errorIndex){
+  function startResendTimer(){
+    otpHint.textContent = "We've sent a 6-digit code to +91 " + state.phone;
+    clearInterval(resendTimer);
+    var seconds = 30;
+    resendBtn.disabled = true;
+    resendBtn.textContent = "Resend in 0:" + (seconds < 10 ? "0" : "") + seconds;
+    resendTimer = setInterval(function(){
+      seconds -= 1;
+      if (seconds <= 0){
+        clearInterval(resendTimer);
+        resendBtn.disabled = false;
+        resendBtn.textContent = "Resend OTP";
+        return;
+      }
+      resendBtn.textContent = "Resend in 0:" + (seconds < 10 ? "0" : "") + seconds;
+    }, 1000);
+  }
+
+  /* POST JSON and always resolve to a parsed body, so callers can branch on
+     data.error instead of juggling both HTTP status and network failures. */
+  function postJson(url, payload){
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).then(function(res){
+      return res.json()
+        .catch(function(){ return { ok: false, error: "bad_response" }; })
+        .then(function(data){ return { status: res.status, data: data || {} }; });
+    });
+  }
+
+  /* Error copy. Anything unlisted falls back to a generic retry message —
+     server error codes are not something to show a seller verbatim. */
+  var OTP_ERRORS = {
+    invalid_phone:     "That doesn't look like a valid mobile number.",
+    otp_unavailable:   "SMS isn't available right now. Please try again shortly.",
+    too_soon:          "Please wait a few seconds before requesting another code.",
+    too_many_requests: "Too many attempts. Please try again in an hour.",
+    send_failed:       "We couldn't send the code. Please check the number and try again.",
+    incorrect_code:    "That code isn't right. Please check and try again.",
+    otp_expired:       "That code has expired. Tap resend to get a new one.",
+    already_used:      "That code has already been used. Tap resend to get a new one.",
+    no_otp_sent:       "We couldn't find a code for this number. Tap resend.",
+    too_many_attempts: "Too many incorrect attempts. Tap resend to get a new code."
+  };
+  function otpMessage(error, fallback){
+    return OTP_ERRORS[error] || fallback;
+  }
+
+  /* Send (or resend) a code. `screen` decides where errors are shown. */
+  function requestOtp(screen){
+    return postJson("/api/otp/send", { phone: "+91" + state.phone.trim() })
+      .then(function(r){
+        if (r.data && r.data.ok) return true;
+        setError(screen, otpMessage(r.data && r.data.error,
+          "We couldn't send the code. Please try again."));
+        return false;
+      })
+      .catch(function(){
+        setError(screen, "Network error. Please check your connection and try again.");
+        return false;
+      });
+  }
+
+  resendBtn.addEventListener("click", function(){
+    if (resendBtn.disabled) return;
+    resendBtn.disabled = true;
+    setError("otp", "");
+    requestOtp("otp").then(function(sent){
+      if (!sent){
+        /* Let them try again immediately rather than sit through the timer. */
+        resendBtn.disabled = false;
+        resendBtn.textContent = "Resend OTP";
+        return;
+      }
+      otpBoxes.forEach(function(b){ b.value = ""; });
+      state.otp = "";
+      validateScreen("otp");
+      otpBoxes[0].focus();
+      startResendTimer();
+    });
+  });
+
+  /* ---- Page 2: details (single page) ---- */
+  document.getElementById("f-name").addEventListener("input", function(e){
+    state.name = e.target.value;
+    setError("details", "");
+    validateScreen("details");
+  });
+
+  /* Society: custom searchable dropdown */
+  var societyInput = document.getElementById("f-society");
+  var societyOptions = document.getElementById("societyOptions");
+  var societySorry = document.getElementById("societySorry");
+
+  function bindChoiceGrid(gridId, stateKey){
     var grid = document.getElementById(gridId);
     function select(el){
       if (!el) return;
       var previous = state[stateKey];
       state[stateKey] = el.getAttribute("data-value");
-      /* Societies are scoped to the city, so going back and changing it must
-         clear a society chosen from the old city's list — otherwise the lead
-         arrives with a society that isn't in the city it claims. */
+      /* Societies are scoped to the city, so changing it must clear a society
+         picked from the old city's list — otherwise the lead arrives with a
+         society that isn't in the city it claims. */
       if (stateKey === "city" && previous && previous !== state[stateKey]){
-        clearSociety();
+        state.society = "";
+        societyInput.value = "";
+        societySorry.hidden = true;
+        societyOptions.hidden = true;
       }
       Array.prototype.forEach.call(grid.querySelectorAll(".choice"), function(c){
         c.classList.toggle("selected", c === el);
       });
-      setError(errorIndex, "");
-      validateStep(errorIndex);
+      setError("details", "");
+      validateScreen("details");
     }
     grid.addEventListener("click", function(e){
       select(e.target.closest(".choice"));
     });
-    /* keyboard: Space/Enter selects the focused choice card (mouse/touch
-       clicks already select it; this covers a physical keyboard) */
     grid.addEventListener("keydown", function(e){
       if (e.key !== "Enter" && e.key !== " ") return;
       var el = e.target.closest(".choice");
       if (!el) return;
       e.preventDefault();
-      e.stopPropagation(); /* select this keystroke; a second Enter continues */
+      e.stopPropagation();
       select(el);
     });
   }
-  bindChoiceGrid("cityGrid", "city", 4);
-  bindChoiceGrid("bhkGrid", "bhk", 5);
+  bindChoiceGrid("cityGrid", "city");
+  bindChoiceGrid("bhkGrid", "bhk");
 
-  /* ---- society autocomplete ---- */
-  /* Reset the field when the city changes. Declared (not assigned to a var) so
-     bindChoiceGrid above can call it — hoisting makes the order safe. */
-  function clearSociety(){
-    state.society = "";
-    societyInput.value = "";
-    societySorry.hidden = true;
-    closeSuggestions();
+
+  /* Each match is { n: name, l: locality }. The locality disambiguates the
+     handful of societies that share a name across localities. */
+  function renderSocietyOptions(matches){
+    societyOptions.innerHTML = matches.map(function(s){
+      return '<div class="autocomplete-item" data-value="' + escapeHtml(s.n) + '">' +
+               escapeHtml(s.n) +
+               (s.l ? '<span class="autocomplete-loc">' + escapeHtml(s.l) + "</span>" : "") +
+             "</div>";
+    }).join("");
+    societyOptions.hidden = matches.length === 0;
   }
 
-  var societySorry = document.getElementById("societySorry");
-  var societyInput = document.getElementById("f-society");
-  var societyOptions = document.getElementById("societyOptions");
-  var MAX_SUGGESTIONS = 8;
-  var activeIndex = -1;      /* highlighted row, -1 = none */
-  var suggestions = [];
-
-  function escapeHtml(s){
-    return s.replace(/[&<>"]/g, function(c){
-      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c];
-    });
-  }
-
-  /* Bold the matched span so it's obvious why each row is here. */
-  function highlight(name, query){
-    var q = query.trim();
-    if (!q) return escapeHtml(name);
-    var idx = name.toLowerCase().indexOf(q.toLowerCase());
-    if (idx === -1) return escapeHtml(name);
-    return escapeHtml(name.slice(0, idx)) +
-           "<mark>" + escapeHtml(name.slice(idx, idx + q.length)) + "</mark>" +
-           escapeHtml(name.slice(idx + q.length));
-  }
-
-  function closeSuggestions(){
-    societyOptions.hidden = true;
-    societyOptions.innerHTML = "";
-    societyInput.setAttribute("aria-expanded", "false");
-    activeIndex = -1;
-    suggestions = [];
-  }
-
-  function setActive(index){
-    var rows = societyOptions.querySelectorAll(".combo-option");
-    for (var i = 0; i < rows.length; i++){
-      rows[i].setAttribute("aria-selected", i === index ? "true" : "false");
-    }
-    activeIndex = index;
-    if (index >= 0 && rows[index]) rows[index].scrollIntoView({ block: "nearest" });
-  }
-
-  function openSuggestions(query){
-    /* Nothing to suggest until the list has loaded. */
-    if (!currentSocieties().length) return closeSuggestions();
-
-    suggestions = matchSocieties(query, MAX_SUGGESTIONS);
-    if (!suggestions.length){
-      closeSuggestions();
-      return;
-    }
-
-    var html = "";
-    for (var i = 0; i < suggestions.length; i++){
-      var s = suggestions[i];
-      html += '<li class="combo-option" role="option" aria-selected="false" data-index="' + i + '">' +
-                highlight(s.n, query) +
-                (s.l ? '<span class="loc">' + escapeHtml(s.l) + "</span>" : "") +
-              "</li>";
-    }
-    societyOptions.innerHTML = html;
-    societyOptions.hidden = false;
-    societyInput.setAttribute("aria-expanded", "true");
-    setActive(-1);
-  }
-
-  function chooseSociety(index){
-    var picked = suggestions[index];
-    if (!picked) return;
-    societyInput.value = picked.n;
-    state.society = picked.n;
-    societySorry.hidden = true;
-    closeSuggestions();
-    setError(6, "");
-    validateStep(6);
-  }
-
-  societyInput.addEventListener("input", function(e){
-    var value = e.target.value;
+  function refreshSociety(value){
     var exact = findSociety(value);
     state.society = exact || value;
-    var possible = societyPossible(value);
-    societySorry.hidden = !(value.trim().length >= 2 && !possible);
-    openSuggestions(value);
-    setError(6, "");
-    validateStep(6);
-  });
+    var matches = matchingSocieties(value);
+    var trimmed = value.trim();
 
-  societyInput.addEventListener("focus", function(e){
-    if (e.target.value.trim()) openSuggestions(e.target.value);
-  });
-
-  /* Arrow keys move through the list; Enter takes the highlighted row.
-     Enter with nothing highlighted falls through to the global handler,
-     which advances the step. */
-  societyInput.addEventListener("keydown", function(e){
-    if (societyOptions.hidden){
-      if (e.key === "ArrowDown" && e.target.value.trim()){
-        e.preventDefault();
-        openSuggestions(e.target.value);
-      }
-      return;
-    }
-    if (e.key === "ArrowDown"){
-      e.preventDefault();
-      setActive((activeIndex + 1) % suggestions.length);
-    } else if (e.key === "ArrowUp"){
-      e.preventDefault();
-      setActive(activeIndex <= 0 ? suggestions.length - 1 : activeIndex - 1);
-    } else if (e.key === "Enter" && activeIndex >= 0){
-      e.preventDefault();
-      e.stopPropagation();
-      chooseSociety(activeIndex);
-    } else if (e.key === "Escape"){
-      closeSuggestions();
-    }
-  });
-
-  /* mousedown, not click: blur fires first and would close the list. */
-  societyOptions.addEventListener("mousedown", function(e){
-    var row = e.target.closest(".combo-option");
-    if (!row) return;
-    e.preventDefault();
-    chooseSociety(parseInt(row.getAttribute("data-index"), 10));
-  });
-
-  societyInput.addEventListener("blur", function(e){
-    /* Let a tap on a row land before the list disappears. */
-    setTimeout(closeSuggestions, 120);
-    var value = e.target.value;
-    if (value.trim().length >= 2 && !findSociety(value)){
+    if (exact){
+      renderSocietyOptions([]);
+      societySorry.hidden = true;
+    } else if (trimmed.length >= 1 && matches.length > 0){
+      renderSocietyOptions(matches);
+      societySorry.hidden = true;
+    } else if (trimmed.length >= 2 && matches.length === 0){
+      renderSocietyOptions([]);
       societySorry.hidden = false;
+    } else {
+      renderSocietyOptions([]);
+      societySorry.hidden = true;
     }
+    setError("details", "");
+    validateScreen("details");
+  }
+
+  societyInput.addEventListener("input", function(e){ refreshSociety(e.target.value); });
+  societyInput.addEventListener("focus", function(e){ refreshSociety(e.target.value); });
+
+  societyOptions.addEventListener("click", function(e){
+    var item = e.target.closest(".autocomplete-item");
+    if (!item) return;
+    var value = item.getAttribute("data-value");
+    societyInput.value = value;
+    refreshSociety(value);
+    societyOptions.hidden = true;
+  });
+
+  document.addEventListener("click", function(e){
+    if (!e.target.closest("#societyAutocomplete")) societyOptions.hidden = true;
   });
 
   /* Load the society list once, up front, so it's ready by the time anyone
-     reaches step 6. A failure leaves the field accepting free text. */
+     gets past the OTP. A failure leaves the field accepting free text. */
   fetch("/api/societies")
     .then(function(res){ return res.json(); })
     .then(function(data){
       if (!data || !data.ok || !data.cities) return;
       SOCIETIES_BY_CITY = data.cities;
-      if (current === 6) validateStep(6);
+      if (societyInput.value) refreshSociety(societyInput.value);
     })
     .catch(function(){ /* free-text fallback */ });
 
   document.getElementById("f-price").addEventListener("input", function(e){
     state.price = e.target.value;
-    setError(7, "");
-    validateStep(7);
+    setError("details", "");
+    validateScreen("details");
   });
 
+  /* ---- Page 3: review ---- */
   document.getElementById("f-consent").addEventListener("change", function(e){
     state.consent = e.target.checked;
-    setError(8, "");
-    validateStep(8);
+    setError("review", "");
+    validateScreen("review");
   });
 
   /* ---- nav ---- */
   btnBack.addEventListener("click", function(){
-    if (current > 1){
-      current -= 1;
-      showStep(current);
+    if (currentIndex > 0){
+      currentIndex -= 1;
+      showScreen();
     }
   });
 
-  btnNext.addEventListener("click", function(){
-    if (!validateStep(current)) return;
+  /* Guards every network-backed step: one in-flight request at a time, with
+     the button showing what's happening. */
+  var busy = false;
+  function withBusy(label, work){
+    if (busy) return;
+    busy = true;
+    var previousLabel = btnNext.textContent;
+    btnNext.disabled = true;
+    btnNext.textContent = label;
+    work().then(function(advanced){
+      busy = false;
+      if (advanced) return;          /* showScreen() resets the button */
+      btnNext.textContent = previousLabel;
+      validateScreen(SCREENS[currentIndex]);
+    });
+  }
 
-    if (current < TOTAL_STEPS){
-      current += 1;
-      showStep(current);
+  btnNext.addEventListener("click", function(){
+    var screen = SCREENS[currentIndex];
+    if (!validateScreen(screen)) return;
+
+    if (screen === "phone"){
+      withBusy("Sending OTP…", function(){
+        return requestOtp("phone").then(function(sent){
+          if (!sent) return false;
+          currentIndex += 1;
+          showScreen();              /* also starts the resend timer */
+          return true;
+        });
+      });
       return;
     }
 
-    submitLead();
+    if (screen === "otp"){
+      withBusy("Verifying…", function(){
+        return postJson("/api/otp/verify", {
+          phone: "+91" + state.phone.trim(),
+          code: state.otp
+        }).then(function(r){
+          if (r.data && r.data.ok){
+            currentIndex += 1;
+            showScreen();
+            return true;
+          }
+          var error = r.data && r.data.error;
+          var message = otpMessage(error, "That code isn't right. Please try again.");
+          /* Warn as the attempt budget runs down, before it locks out. */
+          if (error === "incorrect_code" && typeof r.data.attempts_left === "number"
+              && r.data.attempts_left > 0 && r.data.attempts_left <= 2){
+            message += " " + r.data.attempts_left + " attempt" +
+                       (r.data.attempts_left === 1 ? "" : "s") + " left.";
+          }
+          setError("otp", message);
+          /* Clear the boxes so the next attempt starts from empty. */
+          otpBoxes.forEach(function(b){ b.value = ""; });
+          state.otp = "";
+          otpBoxes[0].focus();
+          return false;
+        }).catch(function(){
+          setError("otp", "Network error. Please check your connection and try again.");
+          return false;
+        });
+      });
+      return;
+    }
+
+    if (currentIndex < SCREENS.length - 1){
+      currentIndex += 1;
+      showScreen();
+      return;
+    }
+
+    withBusy("Submitting…", submitLead);
   });
 
   /* Ad attribution: Meta appends these to the landing URL, so read them once
@@ -1002,15 +1876,10 @@
     };
   })();
 
-  var submitting = false;
-
   function submitLead(){
-    if (submitting) return;   /* double-tap / double Enter guard */
-
     var payload = {
-      name: state.name.trim(),
       phone: "+91" + state.phone.trim(),
-      email: state.email.trim() || null,
+      name: state.name.trim(),
       city: state.city,
       configuration: state.bhk,
       society: state.society.trim(),
@@ -1021,54 +1890,45 @@
       attribution: attribution
     };
 
-    submitting = true;
-    btnNext.disabled = true;
-    btnNext.textContent = "Submitting…";
-    setError(TOTAL_STEPS, "");
-
-    fetch("/api/lead", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    })
-      .then(function(res){
-        return res.json().catch(function(){ return {}; }).then(function(data){
-          if (!res.ok || !data.ok) throw new Error(data.error || "request_failed");
-          return data;
-        });
-      })
-      .then(function(data){
-        leadForm.hidden = true;
-        progressWrap.hidden = true;
-        thanksCard.hidden = false;
-        document.getElementById("thanksRef").textContent = "Ref: " + data.ref;
+    return postJson("/api/lead", payload)
+      .then(function(r){
+        if (r.data && r.data.ok){
+          leadForm.hidden = true;
+          thanksCard.hidden = false;
+          document.getElementById("thanksRef").textContent = "Ref: " + r.data.ref;
+          return true;
+        }
+        /* The OTP is consumed by a successful insert, so a verification that
+           no longer works means starting over from the phone screen. */
+        if (r.data && r.data.error === "phone_not_verified"){
+          setError("review", "Your verification expired. Please verify your number again.");
+          currentIndex = SCREENS.indexOf("phone");
+          showScreen();
+          return true;
+        }
+        setError("review", "Couldn't submit just now. Please try again.");
+        return false;
       })
       .catch(function(){
         /* Keep the filled form on screen so nothing has to be retyped. */
-        submitting = false;
-        btnNext.disabled = false;
-        btnNext.textContent = "Submit";
-        setError(TOTAL_STEPS,
-          "Couldn't submit just now. Please check your connection and try again.");
+        setError("review", "Network error. Please check your connection and try again.");
+        return false;
       });
   }
 
   leadForm.addEventListener("submit", function(e){ e.preventDefault(); });
 
-  /* Enter key on any text field advances to the next step (or submits
-     on the last one), same as tapping the Continue / Submit button —
-     so people don't have to reach for it on every screen. */
+  /* Enter key advances to the next screen (or submits on the last one)
+     from anywhere on the current screen — a text field, a selected
+     choice card, an OTP box, or the consent checkbox. */
   document.addEventListener("keydown", function(e){
     if (e.key !== "Enter") return;
-    if (!thanksCard.hidden) return; /* nothing left to do once submitted */
-    /* Space already selects a focused choice card / checkbox — let Enter
-       do the same job as tapping Continue / Submit, from anywhere on
-       the current step (a text field, a selected choice card, or the
-       consent checkbox), not just while typing. */
+    if (!thanksCard.hidden) return;
+    if (!societyOptions.hidden && document.activeElement === societyInput) return; /* let a suggestion be clicked */
     e.preventDefault();
     if (!btnNext.disabled) btnNext.click();
   });
 
-  showStep(current);
+  showScreen();
 })();
 </script>
