@@ -46,7 +46,7 @@ export default function CardDetailModal({ item, role, onUpdated, onClose: rawClo
           )}
         </div>
         <div className="inv-table-wrap" style={{ overflow: 'visible' }}>
-          <ExpandPanel item={item} role={role} onUpdated={onUpdated} canPost={canPost} showAssignedRm={showAssignedRm} viewOnly={viewOnly} />
+          <ExpandPanel item={item} role={role} onUpdated={onUpdated} canPost={canPost} showAssignedRm={showAssignedRm} viewOnly={viewOnly} showStage={false} />
         </div>
       </div>
     </div>

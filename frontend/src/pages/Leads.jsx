@@ -79,7 +79,7 @@ function ActionTable({ items, loading, role, onUpdated, primaryLabel, primaryMod
             return (
               <Fragment key={it.oh_id}>
                 <tr className={`inv-row ${isOpen ? 'inv-row-open' : ''}`} onClick={() => setOpenId(isOpen ? null : it.oh_id)}>
-                  <StarCell item={it} canSet={canSet} onUpdated={onUpdated} />
+                  <StarCell item={it} />
                   <td className="inv-td-society">
                     <div className="lead-society-line">
                       {isNew(it) && <NewBadge />}
@@ -272,7 +272,7 @@ export default function Leads() {
           {CITIES.map((c) => <button key={c} className={city === c ? 'tab tab-active' : 'tab'} onClick={() => setCity(c)}>{c}</button>)}
         </SlideTabs>
         <form className="search-form" onSubmit={onSearch}>
-          <input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Search any field — e.g. 1003 D2 Sahaj" />
+          <input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Search any field — e.g. 1709 Sahaj" />
           <button type="submit" className="btn-primary"><IconSearch size={16} /> Search</button>
           {qApplied && <button type="button" className="btn-ghost" onClick={() => { setQInput(''); setQApplied(''); }}>Clear</button>}
         </form>

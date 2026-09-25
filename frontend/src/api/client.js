@@ -1,16 +1,13 @@
-// Thin fetch wrapper around the Flask API, with a mock fallback.
+// Thin fetch wrapper around the Flask API.
 //
-// The backend is built later. Until then VITE_USE_MOCKS (default "true") makes
-// every call resolve from src/api/mock.js. Even with mocks off, a network
-// failure (no server) transparently falls back to mocks so the UI never hard-
-// crashes during local dev. Flip VITE_USE_MOCKS=false once the backend is live
-// and reachable to go fully real.
+// Mocks (src/api/mock.js) are opt-in and dev-only: VITE_USE_MOCKS=true under
+// `npm run dev`. A production build (`npm run build`) never serves sample data.
 
 import { mockApi } from './mock.js';
 import { toast } from '../utils/toast.js';
 
 const BASE = import.meta.env.VITE_API_BASE || '';
-const FORCE_MOCKS = String(import.meta.env.VITE_USE_MOCKS ?? 'true') !== 'false';
+const FORCE_MOCKS = import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === 'true';
 
 let token = null;
 // Guards the expiry notice: parallel 401s must not stack toasts/redirects.

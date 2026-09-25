@@ -1,65 +1,40 @@
-import { useEffect, useRef, useState } from 'react';
-import { api } from '../api/client.js';
+import { useState } from 'react';
+import CpMatchesModal from './CpMatchesModal.jsx';
 import { starColor, starClass } from '../utils/format.js';
 
-// Picker swatches, in display order. `none` clears the star.
-const SWATCHES = [
-  { value: 'yellow', color: 'var(--yellow)', label: 'Important' },
-  { value: 'green', color: 'var(--green)', label: 'Perfect' },
-  { value: 'red', color: 'var(--red)', label: 'Partial' },
-  { value: 'pink', color: '#fd4ad8', label: 'Reassign (Admin)' },
-  { value: 'blue', color: '#02f5d0', label: 'Reassign (Mgr)' },
-  { value: 'none', color: 'var(--text-faint)', label: 'Clear' },
-];
-
 /**
- * Star cell with a floating colour picker. Clicking the star opens a popover to
- * its right; picking a swatch writes star_color directly (yellow also sets
- * priority; everything else clears it). Touching a reassigned lead acknowledges
- * it (clears the reassigned flag). Shared by InventoryTable / Leads /
- * QualifiedLeads so the star behaves identically everywhere.
+ * Read-only star cell. The colour is set in one place only — the swatch row in
+ * EditDetailsModal ("✎ Edit Details" on the Property Details column) — so the
+ * star here just renders whatever star_color the row carries.
+ *
+ * cp_match is tracked in its own column and is NOT the star colour (a manual
+ * yellow/pink/blue would hide it). It renders as 10 short ticks around the
+ * star instead: green = perfect, red = partial. The two are independent.
+ * Clicking a ticked star opens CpMatchesModal — every matched CP submission.
  */
-export default function StarCell({ item, canSet, onUpdated, after = null }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+export default function StarCell({ item, after = null }) {
+  const [showMatches, setShowMatches] = useState(false);
   const color = starColor(item);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [open]);
-
-  async function pick(e, value) {
-    e.stopPropagation();
-    setOpen(false);
-    // yellow ⇒ priority; every other colour (and clear) ⇒ not priority.
-    const body = { star_color: value, priority: value === 'yellow' };
-    if (item.reassigned) body.reassigned = false; // manual touch = acknowledged
-    onUpdated({ ...item, ...body, ...(value === 'none' ? { star_color: 'none' } : {}) });
-    try { const r = await api.patch(`/api/inventory/${item.oh_id}`, body); if (r?.item) onUpdated(r.item); }
-    catch { onUpdated(item); }
-  }
-
-  if (!color && !canSet && !after) return <td className="inv-td-star" />;
+  const cp = item?.cp_match === 'perfect' || item?.cp_match === 'partial' ? item.cp_match : null;
+  // Always a star: no colour → the faint grey one (starClass(null) = prio-off).
+  const star = <span className={`prio-star ${starClass(color)}`} title="Star">★</span>;
   return (
-    <td className="inv-td-star" ref={ref} style={{ position: 'relative', overflow: 'visible' }}>
+    <td className="inv-td-star">
       <span className="star-call-wrap">
-        <button type="button" disabled={!canSet} title="Star"
-          className={`prio-star ${starClass(color)}`}
-          onClick={(e) => { e.stopPropagation(); if (canSet) setOpen((o) => !o); }}>★</button>
+        {cp ? (
+          <button type="button" className={`star-cp star-cp-${cp}`} title={`CP match: ${cp} — view matches`}
+            onClick={(e) => { e.stopPropagation(); setShowMatches(true); }}>
+            {star}
+          </button>
+        ) : star}
         {after}
       </span>
-      {open && (
-        <div className="star-picker" onClick={(e) => e.stopPropagation()}>
-          {SWATCHES.map((s) => (
-            <button key={s.value} type="button" className="star-swatch" title={s.label}
-              style={{ color: s.color }} onClick={(e) => pick(e, s.value)}>
-              {s.value === 'none' ? '⊘' : '★'}
-            </button>
-          ))}
-        </div>
+      {/* React bubbles through the tree even out of a fixed-position modal, so
+          without this a backdrop click would also toggle the row's expand. */}
+      {showMatches && (
+        <span onClick={(e) => e.stopPropagation()}>
+          <CpMatchesModal item={item} onClose={() => setShowMatches(false)} />
+        </span>
       )}
     </td>
   );

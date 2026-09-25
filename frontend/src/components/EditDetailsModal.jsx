@@ -4,6 +4,17 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { IconClose, IconHome, IconUser } from './icons.jsx';
 import { useModalExit } from '../utils/useModalExit.js';
 
+// Star colours, in display order. `none` clears the star. This modal is the ONLY
+// place star_color is set — the row stars render it read-only.
+const STAR_SWATCHES = [
+  { value: 'yellow', color: 'var(--yellow)', label: 'Important' },
+  { value: 'green', color: 'var(--green)', label: 'Perfect' },
+  { value: 'red', color: 'var(--red)', label: 'Partial' },
+  { value: 'pink', color: '#fd4ad8', label: 'Reassign (Admin)' },
+  { value: 'blue', color: '#02f5d0', label: 'Reassign (Mgr)' },
+  { value: 'none', color: 'var(--text-faint)', label: 'Clear' },
+];
+
 // Floors offered in the picker (mirrors AddInventoryModal): Top, Ground, 1–50.
 const BASE_FLOORS = ['Top', 'Ground', ...Array.from({ length: 50 }, (_, i) => String(i + 1))];
 
@@ -30,6 +41,7 @@ export default function EditDetailsModal({ item, onUpdated, onClose: rawClose })
     // Stored in rupees; shown/edited in lakhs (matches Add Inventory). Admin-only.
     price: item.price != null ? String(item.price / 100000) : '',
   });
+  const [star, setStar] = useState(item.star_color || 'none');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -79,6 +91,12 @@ export default function EditDetailsModal({ item, onUpdated, onClose: rawClose })
     for (const [k, v] of Object.entries(next)) {
       if (v !== (item[k] ?? null)) body[k] = v;
     }
+    // yellow ⇒ priority; every other colour (and clear) ⇒ not priority.
+    if (star !== (item.star_color || 'none')) {
+      body.star_color = star;
+      body.priority = star === 'yellow';
+      if (item.reassigned) body.reassigned = false; // manual touch = acknowledged
+    }
     const rmChanged = isAdmin && rmId !== (currentRmId != null ? String(currentRmId) : '');
     if (Object.keys(body).length === 0 && !rmChanged) { onClose(); return; }
     try {
@@ -106,6 +124,15 @@ export default function EditDetailsModal({ item, onUpdated, onClose: rawClose })
         <div className="modal-head-row">
           <h3>Edit</h3>
           <span className="role-chip">{item.oh_id}</span>
+          <span className="star-row">
+            {STAR_SWATCHES.map((sw) => (
+              <button key={sw.value} type="button" title={sw.label} aria-pressed={star === sw.value}
+                className={`star-swatch${star === sw.value ? ' star-swatch-on' : ''}`}
+                style={{ color: sw.color }} onClick={() => setStar(sw.value)}>
+                {sw.value === 'none' ? '⊘' : '★'}
+              </button>
+            ))}
+          </span>
           <button className="modal-close" onClick={onClose}><IconClose /></button>
         </div>
         <p className="modal-sub">{item.society || '—'}</p>

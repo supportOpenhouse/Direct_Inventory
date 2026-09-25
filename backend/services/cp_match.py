@@ -25,7 +25,10 @@ Normalization quirks worth knowing:
 
 CP DB connection is read-only; failure to reach it is non-fatal.
 
-Two entry points:
+The individual CP submission ids behind the verdict are persisted too, in
+`inventory.cp_match_ids` (046) — see _matches().
+
+Entry points:
   - annotate_cp_match(rows) — Python-side classifier used by the list endpoint
     as a fallback for individual rows that haven't been scanned yet (e.g.
     just inserted, or invalidated by a recent PATCH). One CP-DB query per
@@ -39,6 +42,7 @@ Two entry points:
 """
 from __future__ import annotations
 
+import json
 import logging
 
 import psycopg2
@@ -116,45 +120,63 @@ def _unit_compatible(d_floor: str, cp_floor: str, d_area, cp_area) -> bool:
     return _area_compatible(d_area, cp_area)
 
 
-def _classify(direct_row: dict, cp_index: dict[tuple, list[tuple]]) -> str | None:
-    """Classify one Direct row against the pre-built CP index.
+def _matches(direct_row: dict, cp_index: dict[tuple, list[tuple]]) -> list[dict]:
+    """Every CP submission compatible with one Direct row, each tagged with its
+    own kind, perfect first:  [{"id": 812, "match": "perfect"}, ...].
 
-    Index shape: { (society, bhk): [(floor, tower, unit_no, area), ...] }
+    Index shape: { (society, bhk): [(id, floor, tower, unit_no, area), ...] }
 
-    Returns 'perfect' | 'partial' | None.
+    Per-candidate rules (unchanged from the old early-return _classify):
+      - not unit-compatible (floor / area)                       → skip
+      - tower AND unit present on Direct and equal on CP          → perfect
+      - tower+unit fully populated on BOTH sides but different    → skip
+        (a definitive different flat, not a partial)
+      - otherwise                                                 → partial
     """
     s = _norm(direct_row.get("society"))
     b = _norm_bhk(direct_row.get("bedrooms"))
     if not s or b is None:
-        return None
+        return []
     candidates = cp_index.get((s, b))
     if not candidates:
-        return None
+        return []
 
     d_floor = _norm(direct_row.get("floor"))
     d_tower = _norm(direct_row.get("tower"))
     d_unit = _norm(direct_row.get("unit_no"))
     d_area = direct_row.get("area_sqft")
 
-    any_partial = False
-    for cf, ct, cu, ca in candidates:
+    out = []
+    for cid, cf, ct, cu, ca in candidates:
         if not _unit_compatible(d_floor, cf, d_area, ca):
             continue
         if d_tower and d_unit and d_tower == ct and d_unit == cu:
-            return "perfect"
-        # Both sides have tower+unit fully populated but they don't match:
-        # definitive mismatch, not a partial — skip this candidate.
+            out.append({"id": cid, "match": "perfect"})
+            continue
         if d_tower and d_unit and ct and cu:
             continue
-        any_partial = True
+        out.append({"id": cid, "match": "partial"})
+    out.sort(key=lambda m: (m["match"] != "perfect", m["id"]))
+    return out
 
-    return "partial" if any_partial else None
+
+def _verdict(matches: list[dict]) -> str | None:
+    """Roll a _matches() list up to the stored cp_match verdict."""
+    if any(m["match"] == "perfect" for m in matches):
+        return "perfect"
+    return "partial" if matches else None
+
+
+def _classify(direct_row: dict, cp_index: dict[tuple, list[tuple]]) -> str | None:
+    """'perfect' | 'partial' | None for one Direct row — any perfect candidate
+    wins, else any partial. Same verdicts as before _matches() existed."""
+    return _verdict(_matches(direct_row, cp_index))
 
 
 def _query_cp(keys: set) -> dict[tuple, list[tuple]]:
     """Run one CP-DB query for the given set of (society, bhk) keys.
 
-    Returns: { (s, b): [(floor, tower, unit_no, area), ...] }
+    Returns: { (s, b): [(id, floor, tower, unit_no, area), ...] }
 
     `area` is the raw CP area_sqft (REAL) — kept numeric for the ±25 sqft
     tolerance check in _classify. Both sides normalize bhk to leading digits.
@@ -172,7 +194,7 @@ def _query_cp(keys: set) -> dict[tuple, list[tuple]]:
         # logic as _norm_bhk. NULL (e.g. bhk='Studio') stays unmatchable.
         area_col = "       area_sqft AS a " if include_area else "       NULL::REAL AS a "
         return (
-            f"SELECT LOWER(TRIM(society_name)) AS s, "
+            f"SELECT id, LOWER(TRIM(society_name)) AS s, "
             f"       SUBSTRING(bhk::TEXT FROM '^[0-9]+') AS b, "
             f"       LOWER(TRIM(COALESCE(floor::TEXT, ''))) AS f, "
             f"       LOWER(TRIM(COALESCE(tower::TEXT, ''))) AS t, "
@@ -210,7 +232,7 @@ def _query_cp(keys: set) -> dict[tuple, list[tuple]]:
     index: dict[tuple, list[tuple]] = {}
     for cp in cp_rows:
         key = (cp["s"], cp["b"])
-        index.setdefault(key, []).append((cp["f"], cp["t"], cp["u"], cp["a"]))
+        index.setdefault(key, []).append((cp["id"], cp["f"], cp["t"], cp["u"], cp["a"]))
     return index
 
 
@@ -242,6 +264,33 @@ def annotate_cp_match(rows: list[dict]) -> None:
         r["cp_match"] = _classify(r, index) or "none"
 
 
+def fetch_cp_submissions(ids: list[int]) -> dict[int, dict] | None:
+    """Display fields for the given CP submission ids, keyed by id — backs the
+    star's "CP matches" popup. Returns None when the CP DB isn't configured.
+
+    Deleted submissions are returned too (with deleted_at set): the popup shows
+    what the stored ids point at, and flags the dead ones, rather than silently
+    shrinking the list. Seller contact fields are deliberately not selected.
+    """
+    conn = get_cp_conn()
+    if conn is None:
+        return None
+    if not ids:
+        conn.close()
+        return {}
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, public_id, society_name, tower, unit_no, floor, sqft, bhk, "
+                "       asking_price, status, submitted_at, submitted_by_name, deleted_at "
+                f"FROM {config.CP_INVENTORY_TABLE} WHERE id = ANY(%s)",
+                (list(ids),),
+            )
+            return {r["id"]: r for r in cur.fetchall()}
+    finally:
+        conn.close()
+
+
 CHUNK_SIZE = 500
 
 
@@ -259,7 +308,11 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
     UPDATE settles leftover NULL rows (NULL society / bedrooms — unmatchable)
     to 'none'.
 
-    To force a full rescan, run `UPDATE inventory SET cp_match = NULL` first.
+    A row is "unscanned" if EITHER cp_match or cp_match_ids is NULL — the latter
+    is how the 046 backfill works: the new column starts NULL everywhere, so the
+    next scan re-walks every lead without first wiping the verdicts.
+
+    To force a full rescan, run `UPDATE inventory SET cp_match_ids = NULL` first.
     """
     if not config.CP_DB_URL:
         raise RuntimeError("CP_DB_URL is not set — cannot run scan")
@@ -272,7 +325,7 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
         cur.execute(
             "SELECT id, society, bedrooms, floor, tower, unit_no, area_sqft "
             "FROM inventory "
-            "WHERE cp_match IS NULL "
+            "WHERE (cp_match IS NULL OR cp_match_ids IS NULL) "
             "  AND NOT consider_deleted "
             "  AND id > %s "
             "  AND society IS NOT NULL "
@@ -294,8 +347,9 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
 
             verdicts = []
             for r in rows:
-                verdict = _classify(r, cp_index) or "none"
-                verdicts.append((r["id"], verdict))
+                matches = _matches(r, cp_index)
+                verdict = _verdict(matches) or "none"
+                verdicts.append((r["id"], verdict, json.dumps(matches)))
                 if verdict == "perfect": perfect += 1
                 elif verdict == "partial": partial += 1
                 else: no_match += 1
@@ -306,12 +360,12 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
             # verdict clears a stale green/red.
             execute_values(
                 cur,
-                "UPDATE inventory AS i SET cp_match = v.verdict, "
+                "UPDATE inventory AS i SET cp_match = v.verdict, cp_match_ids = v.ids::jsonb, "
                 "  star_color = CASE "
                 "    WHEN i.star_color IS NULL OR i.star_color IN ('green','red') "
                 "      THEN CASE v.verdict WHEN 'perfect' THEN 'green' WHEN 'partial' THEN 'red' ELSE NULL END "
                 "    ELSE i.star_color END "
-                "FROM (VALUES %s) AS v(id, verdict) "
+                "FROM (VALUES %s) AS v(id, verdict, ids) "
                 "WHERE i.id = v.id",
                 verdicts, page_size=CHUNK_SIZE,
             )
@@ -321,10 +375,13 @@ def backfill_one_chunk(conn, cursor: str) -> dict:
         next_cursor = str(rows[-1]["id"]) if rows else cursor
 
         if done:
-            # Last chunk: settle leftover NULLs (NULL society / bedrooms —
-            # unmatchable, so they land at 'none').
+            # Last chunk: settle leftover NULLs — NULL society / bedrooms
+            # (unmatchable → 'none', []) and soft-deleted rows the scan skips
+            # (keep any verdict they had; they just get no ids).
             cur.execute(
-                "UPDATE inventory SET cp_match = 'none' WHERE cp_match IS NULL"
+                "UPDATE inventory SET cp_match = COALESCE(cp_match, 'none'), "
+                "  cp_match_ids = COALESCE(cp_match_ids, '[]'::jsonb) "
+                "WHERE cp_match IS NULL OR cp_match_ids IS NULL"
             )
             no_match += cur.rowcount
     conn.commit()

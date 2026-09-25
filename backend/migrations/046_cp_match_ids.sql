@@ -1,0 +1,24 @@
+-- 046_cp_match_ids.sql — persist WHICH CP submissions a lead matched, not just
+-- the verdict.
+--
+-- inventory.cp_match keeps holding the rolled-up verdict ('perfect' | 'partial' |
+-- 'none'). The new cp_match_ids holds every compatible CP submission behind it,
+-- each tagged with its own kind, perfect first:
+--
+--     [{"id": 812, "match": "perfect"}, {"id": 1040, "match": "partial"}]
+--
+--   * id    = CP DB <CP_INVENTORY_TABLE>.id (submissions.id, INTEGER PK)
+--   * NULL  = not scanned since this column existed (or invalidated by an edit to
+--             society / bedrooms / floor / tower / unit_no) — the next scan fills it
+--   * []    = scanned, no match
+--
+-- BACKFILL: no data is written here. The CP scan (services/cp_match.py
+-- backfill_one_chunk) now also picks up rows whose cp_match_ids IS NULL, so after
+-- running this migration, ONE run of the "CP Scan" button re-walks every lead and
+-- fills this column. cp_match is NOT reset, so stars / tick rings stay put while
+-- the scan runs.
+--
+-- Idempotent: ADD COLUMN IF NOT EXISTS. Additive only — safe to run before or
+-- after deploying the code that reads it.
+
+ALTER TABLE inventory ADD COLUMN IF NOT EXISTS cp_match_ids JSONB;

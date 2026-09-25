@@ -10,7 +10,7 @@ from flask import g, jsonify, request
 from ...db import get_conn
 from ...services.activity import log as log_activity, log_many, bind_assigned_mgr
 from ...services.assignment import resolve_assignment
-from ...services.cp_match import MATCH_INPUT_FIELDS
+from ...services.cp_match import MATCH_INPUT_FIELDS, fetch_cp_submissions
 from ...services.oh_id import next_oh_id
 from ..auth import require_auth
 from ._common import (
@@ -81,6 +81,42 @@ def get_one(oh_id: str):
         return jsonify(row)
     finally:
         conn.close()
+
+
+@bp.get("/<oh_id>/cp-matches")
+@require_auth()
+def cp_matches(oh_id: str):
+    """The CP submissions behind this lead's cp_match verdict — backs the star's
+    popup. Reads the ids the scan stored in cp_match_ids, then fetches their
+    display fields from the CP DB. Unscoped, same as get_one above.
+
+    Response: { scanned, cp_match, items: [{id, match, public_id, society_name,
+                tower, unit_no, floor, sqft, bhk, asking_price, status,
+                submitted_at, submitted_by_name, deleted_at} | {id, match, missing}] }
+      scanned=false → cp_match_ids is NULL (not yet re-scanned since 046, or an
+                      edit to a match field invalidated it) — run the CP scan.
+      missing=true  → the stored id no longer exists in the CP table at all.
+    """
+    conn = get_conn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT cp_match, cp_match_ids FROM inventory WHERE oh_id = %s", (oh_id,))
+            row = cur.fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return jsonify({"error": "not found"}), 404
+
+    stored = row["cp_match_ids"]
+    if stored is None:
+        return jsonify({"scanned": False, "cp_match": row["cp_match"], "items": []})
+
+    details = fetch_cp_submissions([m["id"] for m in stored])
+    if details is None:
+        return jsonify({"error": "CP DB not configured"}), 503
+    items = [{**details[m["id"]], **m} if m["id"] in details else {**m, "missing": True}
+             for m in stored]
+    return jsonify({"scanned": True, "cp_match": row["cp_match"], "items": items})
 
 
 @bp.get("/<oh_id>/visible-rms")
@@ -531,6 +567,7 @@ def update_one(oh_id: str):
             # the next scan reclassifies. Cheap NULL is better than a stale label.
             if invalidate_cp_match:
                 updates.append("cp_match = NULL")
+                updates.append("cp_match_ids = NULL")
 
             params.append(oh_id)
             cur.execute(

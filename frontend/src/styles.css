@@ -810,23 +810,51 @@ td.inv-society-fire .inv-clip-society {
 .inv-link:hover { text-decoration: underline; }
 
 /* priority star */
-.prio-star { background: transparent; border: 0; font-size: 16px; line-height: 1; padding: 2px; color: var(--text-faint); transition: transform var(--t-press), color var(--t); }
-.prio-star:hover { transform: scale(1.15); }
+.prio-star { display: inline-block; font-size: 16px; line-height: 1; padding: 2px; color: var(--text-faint); }
+/* CP-match burst: 10 short radial ticks around the star — green for a perfect
+   match, red for partial. Independent of the star's own colour, which carries
+   priority / reassign meaning, so both stay readable at once.
+   repeating-conic-gradient paints 10 thin wedges (one per 36deg, offset so a
+   tick sits at 12 o'clock); the radial mask cuts away the middle so only their
+   outer ends survive — i.e. ticks, not a pinwheel. */
+.star-cp { position: relative; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px;
+  /* It's a <button> (opens CpMatchesModal) — strip the UA chrome. */
+  background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+.star-cp > .prio-star { position: relative; }
+.star-cp::before {
+  content: ''; position: absolute; inset: -6px; border-radius: inherit;
+  background: repeating-conic-gradient(from -2deg, var(--cp-shine) 0 4deg, transparent 4deg 36deg);
+  -webkit-mask: radial-gradient(closest-side, transparent 68%, #000 70%, #000 97%, transparent 100%);
+  mask: radial-gradient(closest-side, transparent 68%, #000 70%, #000 97%, transparent 100%);
+  animation: cp-spin 12s linear infinite;
+}
+/* Hover doubles the speed by ADDING a second 12s spin rather than changing the
+   duration — a new duration re-times the running animation and the ticks jump.
+   The base spin drives `rotate`, the boost drives `transform`; the two compose,
+   so the base keeps its angle and the boost starts from 0 (no jump on enter;
+   leaving drops the boost's angle, a small snap). */
+.star-cp:hover::before { animation: cp-spin 12s linear infinite, cp-boost 12s linear infinite; }
+.star-cp-perfect { --cp-shine: var(--green); }
+.star-cp-partial { --cp-shine: var(--red); }
+@keyframes cp-spin { to { rotate: 1turn; } }
+@keyframes cp-boost { to { transform: rotate(1turn); } }
+@media (prefers-reduced-motion: reduce) {
+  /* Stop the spin but keep the ticks — they're the only cp_match cue. */
+  .star-cp::before, .star-cp:hover::before { animation: none; }
+}
 .prio-on { color: var(--yellow); }
 .cp-perfect { color: var(--green); }
 .cp-partial { color: var(--red); }
 .prio-off { color: var(--text-faint); }
 .reassign-admin { color: #fd4ad8; }   /* reassigned by admin */
 .reassign-manager { color: #02f5d0; } /* reassigned by manager */
-/* Floating star-colour picker, anchored to the right of the star. */
-.star-picker {
-  position: absolute; top: 50%; left: 100%; transform: translateY(-50%); margin-left: 6px;
-  display: flex; gap: 2px; padding: 4px 6px; z-index: 60; white-space: nowrap;
-  background: var(--surface, #fff); border: 1px solid var(--border, #e2e8f0);
-  border-radius: 9px; box-shadow: 0 6px 18px rgba(0, 0, 0, .16);
-}
-.star-swatch { background: transparent; border: 0; font-size: 17px; line-height: 1; padding: 1px 3px; cursor: pointer; transition: transform var(--t-press); }
+.star-swatch { background: transparent; border: 0; font-size: 17px; line-height: 1; padding: 1px 3px; cursor: pointer; transition: transform var(--t-press), opacity var(--t); }
 .star-swatch:hover { transform: scale(1.25); }
+/* Swatch row in the Edit Details header — unselected dim back, selected sits proud. */
+.star-row { display: inline-flex; align-items: center; gap: 1px; }
+.star-row .star-swatch { opacity: .3; }
+.star-row .star-swatch:hover { opacity: .7; }
+.star-row .star-swatch-on { opacity: 1; transform: scale(1.22); }
 .inv-td-star, .inv-th-star { width: 58px; text-align: center; }
 .inv-td-sel, .inv-th-sel { width: 34px; text-align: center; }
 
@@ -1808,3 +1836,13 @@ html[data-wipe='btt'] { --wipe-from: 100% 0 0 0; }
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
 }
+
+/* ── CP matches popup (CpMatchesModal) ─────────────────────────────────── */
+.cpm-list { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; }
+.cpm-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); }
+.cpm-kind { flex: none; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 8px; border-radius: var(--r-pill); }
+.cpm-kind-perfect { color: var(--green); background: color-mix(in srgb, var(--green) 14%, transparent); }
+.cpm-kind-partial { color: var(--red); background: color-mix(in srgb, var(--red) 14%, transparent); }
+.cpm-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cpm-title { font-weight: 600; }
+.cpm-meta { font-size: 12.5px; color: var(--text-muted); }

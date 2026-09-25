@@ -359,7 +359,7 @@ export default function InventoryBoard({
         {toolbarExtra}
         {/* Search + Filters pinned right; the input elongates to fill the gap. */}
         <form className="search-form" onSubmit={onSearch}>
-          <input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Search any field — e.g. 1003 D2 Sahaj" />
+          <input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Search any field — e.g. 1709 Sahaj" />
           <button type="submit" className="btn-primary"><IconSearch size={16} /> Search</button>
           {qApplied && <button type="button" className="btn-ghost" onClick={() => { setQInput(''); setQApplied(''); }}>Clear</button>}
         </form>

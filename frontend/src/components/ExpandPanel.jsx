@@ -197,7 +197,9 @@ function TicketsSection({ item, role, readOnly }) {
  * Distributed columns: Property Details · Pricing · Seller Details · Notes · Tickets.
  * `sections` lets a host trim what's shown (Leads keeps it lean).
  */
-export default function ExpandPanel({ item, role, onUpdated, canPost = true, sections, canEditStatus = true, showAssignedRm = true, viewOnly = false }) {
+// showStage=false drops the stage/actions row above Notes — CardDetailModal
+// already shows the stage in its own header, so it would be a duplicate.
+export default function ExpandPanel({ item, role, onUpdated, canPost = true, sections, canEditStatus = true, showAssignedRm = true, viewOnly = false, showStage = true }) {
   const show = sections || ['property', 'pricing', 'seller', 'notes', 'rm_history', 'tickets'];
   // List rows are slim (no note_thread); fetch the full record on mount and
   // render detail sections from it. The slim parent row doubles as the
@@ -313,35 +315,37 @@ export default function ExpandPanel({ item, role, onUpdated, canPost = true, sec
 
       {show.includes('notes') && (
         <div className="expand-sec sec-notes">
-          <div className={'expand-status-row' + (cancelReason ? ' expand-status-row-stacked' : '')}>
-            <span className="expand-status-cur">
-              <span className="stage-dot" style={{ background: STAGE_DOT_COLOR[item.stage] }} />
-              <span className="expand-status-name">{stageLabel(item.stage)}</span>
-              {item.stage === 'visit_scheduled' && item.visit_overdue && <span className="stage-overdue">Overdue</span>}
-              {item.stage_reason && item.stage !== 'visit_cancelled' && <span className="muted"> · {supplyReasonLabel(item.stage_reason)}</span>}
-              {/* Truncation is CSS (ellipsis); title= gives the full text on hover. */}
-              {cancelReason && <span className="expand-cancel-reason" title={cancelReason}>· {cancelReason}</span>}
-            </span>
-            <span className="expand-status-actions">
-            {canScheduleRevisit && (
-              <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowSchedule(true)}><IconCalendar size={13} /> Schedule Revisit</button>
-            )}
-            {canCancelVisit && (
-              <span className="visit-change-wrap">
-                <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowVisitMenu((v) => !v)}>Change Visit ▾</button>
-                {showVisitMenu && (
-                  <div className="reject-menu visit-change-menu" onMouseLeave={() => setShowVisitMenu(false)}>
-                    <button type="button" onClick={() => { setShowVisitMenu(false); setShowReschedule(true); }}>Reassign / Reschedule</button>
-                    <button type="button" onClick={() => { setShowVisitMenu(false); setShowCancel(true); }}><IconClose size={13} /> Cancel</button>
-                  </div>
-                )}
+          {showStage && (
+            <div className={'expand-status-row' + (cancelReason ? ' expand-status-row-stacked' : '')}>
+              <span className="expand-status-cur">
+                <span className="stage-dot" style={{ background: STAGE_DOT_COLOR[item.stage] }} />
+                <span className="expand-status-name">{stageLabel(item.stage)}</span>
+                {item.stage === 'visit_scheduled' && item.visit_overdue && <span className="stage-overdue">Overdue</span>}
+                {item.stage_reason && item.stage !== 'visit_cancelled' && <span className="muted"> · {supplyReasonLabel(item.stage_reason)}</span>}
+                {/* Truncation is CSS (ellipsis); title= gives the full text on hover. */}
+                {cancelReason && <span className="expand-cancel-reason" title={cancelReason}>· {cancelReason}</span>}
               </span>
-            )}
-            {canEditStage && (
-              <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowStatus(true)}><IconEdit size={13} /> Edit</button>
-            )}
-            </span>
-          </div>
+              <span className="expand-status-actions">
+              {canScheduleRevisit && (
+                <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowSchedule(true)}><IconCalendar size={13} /> Schedule Revisit</button>
+              )}
+              {canCancelVisit && (
+                <span className="visit-change-wrap">
+                  <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowVisitMenu((v) => !v)}>Change Visit ▾</button>
+                  {showVisitMenu && (
+                    <div className="reject-menu visit-change-menu" onMouseLeave={() => setShowVisitMenu(false)}>
+                      <button type="button" onClick={() => { setShowVisitMenu(false); setShowReschedule(true); }}>Reassign / Reschedule</button>
+                      <button type="button" onClick={() => { setShowVisitMenu(false); setShowCancel(true); }}><IconClose size={13} /> Cancel</button>
+                    </div>
+                  )}
+                </span>
+              )}
+              {canEditStage && (
+                <button type="button" className="btn-soft btn-edit-status" onClick={() => setShowStatus(true)}><IconEdit size={13} /> Edit</button>
+              )}
+              </span>
+            </div>
+          )}
           {detail === null ? (
             <div className="muted" style={{ fontSize: 13 }}>Loading notes…</div>
           ) : (

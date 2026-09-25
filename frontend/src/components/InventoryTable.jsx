@@ -268,7 +268,7 @@ export default function InventoryTable({
                       <input type="checkbox" readOnly checked={!!isSel} />
                     </td>
                   )}
-                  <StarCell item={item} canSet={canSetPriority && !item.consider_deleted} onUpdated={onUpdated}
+                  <StarCell item={item}
                     after={item.consider_deleted ? null : <CallButton ohId={item.oh_id} phone={item.seller_phone} />} />
                   {orderedCols.map((col) => cloneElement(col.cell(item, { ...boardCtx, v, flag, fireFollowup, noteCount }), { key: col.key }))}
                 </tr>
