@@ -844,9 +844,9 @@ td.inv-society-fire .inv-clip-society {
 }
 .prio-on { color: var(--yellow); }
 .cp-perfect { color: var(--green); }
-.cp-partial { color: var(--red); }
+.cp-partial { color: #f97316; }
 .prio-off { color: var(--text-faint); }
-.reassign-admin { color: #fd4ad8; }   /* reassigned by admin */
+.reassign-admin { color: #fe1492; }   /* reassigned by admin — the dark-mode brand hot pink */
 .reassign-manager { color: #02f5d0; } /* reassigned by manager */
 .star-swatch { background: transparent; border: 0; font-size: 17px; line-height: 1; padding: 1px 3px; cursor: pointer; transition: transform var(--t-press), opacity var(--t); }
 .star-swatch:hover { transform: scale(1.25); }
@@ -1846,3 +1846,9 @@ html[data-wipe='btt'] { --wipe-from: 100% 0 0 0; }
 .cpm-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .cpm-title { font-weight: 600; }
 .cpm-meta { font-size: 12.5px; color: var(--text-muted); }
+/* Cards with a CP public id link out to the CP portal. */
+.cpm-link { color: inherit; text-decoration: none; cursor: pointer; transition: border-color var(--t), background var(--t); }
+.cpm-link:hover { border-color: var(--brand); background: var(--brand-soft); }
+.cpm-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.cpm-go { margin-left: auto; align-self: center; flex: none; color: var(--text-muted); display: inline-flex; }
+.cpm-link:hover .cpm-go { color: var(--brand); }

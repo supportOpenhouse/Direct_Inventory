@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { formatDateShort, formatPrice } from '../utils/format.js';
-import { IconClose } from './icons.jsx';
+import { IconClose, IconExternal } from './icons.jsx';
 import { useModalExit } from '../utils/useModalExit.js';
+
+// A CP submission's page on the CP Inventory Portal, keyed by its public id.
+const CP_PORTAL = 'https://cp-inventory-portal.vercel.app/';
 
 /**
  * Every CP submission behind a lead's cp_match verdict — perfect first, then
@@ -48,8 +51,14 @@ export default function CpMatchesModal({ item, onClose: rawClose }) {
 
         {items.length > 0 && (
           <ul className="cpm-list">
-            {items.map((m) => (
-              <li key={m.id} className="cpm-item">
+            {items.map((m) => {
+              // Cards with a public id open it on the CP portal; the rest stay inert.
+              const href = !m.missing && m.public_id ? CP_PORTAL + encodeURIComponent(m.public_id) : null;
+              const Card = href ? 'a' : 'div';
+              return (
+              <li key={m.id}>
+                <Card className={`cpm-item${href ? ' cpm-link' : ''}`}
+                  {...(href && { href, target: '_blank', rel: 'noreferrer', title: `Open ${m.public_id} on CP portal` })}>
                 <span className={`cpm-kind cpm-kind-${m.match}`}>{m.match === 'perfect' ? 'Perfect' : 'Partial'}</span>
                 {m.missing ? (
                   <div className="cpm-body muted">Submission #{m.id} no longer exists in CP.</div>
@@ -70,8 +79,11 @@ export default function CpMatchesModal({ item, onClose: rawClose }) {
                     </div>
                   </div>
                 )}
+                {href && <span className="cpm-go"><IconExternal size={14} /></span>}
+                </Card>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </div>

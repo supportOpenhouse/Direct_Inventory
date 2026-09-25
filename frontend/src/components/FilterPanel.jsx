@@ -19,10 +19,10 @@ function presetRange(name) {
 }
 
 const STAR_OPTIONS = [
-  { key: 'partial', label: 'Partial', color: '#dc2626' },
+  { key: 'partial', label: 'Partial', color: '#f97316' },
   { key: 'perfect', label: 'Perfect', color: '#16a34a' },
   { key: 'important', label: 'Important', color: '#eab308' },
-  { key: 'reassigned_admin', label: 'Reassign (Admin)', color: '#fd4ad8' },
+  { key: 'reassigned_admin', label: 'Reassign (Admin)', color: '#fe1492' },
   { key: 'reassigned_manager', label: 'Reassign (Mgr)', color: '#02f5d0' },
   { key: 'blank', label: 'Blank', color: '#cbd5e1' },
 ];

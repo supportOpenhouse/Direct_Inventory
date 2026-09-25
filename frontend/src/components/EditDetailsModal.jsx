@@ -9,8 +9,8 @@ import { useModalExit } from '../utils/useModalExit.js';
 const STAR_SWATCHES = [
   { value: 'yellow', color: 'var(--yellow)', label: 'Important' },
   { value: 'green', color: 'var(--green)', label: 'Perfect' },
-  { value: 'red', color: 'var(--red)', label: 'Partial' },
-  { value: 'pink', color: '#fd4ad8', label: 'Reassign (Admin)' },
+  { value: 'red', color: '#f97316', label: 'Partial' },
+  { value: 'pink', color: '#fe1492', label: 'Reassign (Admin)' },
   { value: 'blue', color: '#02f5d0', label: 'Reassign (Mgr)' },
   { value: 'none', color: 'var(--text-faint)', label: 'Clear' },
 ];
