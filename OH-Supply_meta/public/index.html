@@ -704,6 +704,31 @@
     font-weight:500;
     color:var(--charcoal);
     cursor:pointer;
+    /* name+locality left, city pinned right */
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .autocomplete-main{
+    min-width:0;   /* lets a long society name ellipsize instead of shoving
+                      the city off the row */
+  }
+  .autocomplete-name{
+    display:block;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .autocomplete-city{
+    flex:none;
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:.02em;
+    color:var(--slate);
+    background:var(--bg);
+    border-radius:999px;
+    padding:3px 9px;
   }
   .autocomplete-item:hover,
   .autocomplete-item.active{
@@ -1394,9 +1419,9 @@
      grouped by city. Null until that resolves; while it is null every name is
      accepted, so a slow or failed load can never trap someone on this step. */
   var SOCIETIES_BY_CITY = null;
-  var MAX_SUGGESTIONS = 8;
 
-  /* Societies for the city picked above; all of them if no city yet. */
+  /* Societies for the city picked above; all of them if no city yet. Each
+     entry carries its city so the dropdown can show it on the right. */
   function currentSocieties(){
     if (!SOCIETIES_BY_CITY) return [];
     if (state.city && SOCIETIES_BY_CITY[state.city]) return SOCIETIES_BY_CITY[state.city];
@@ -1416,20 +1441,22 @@
     return null;
   }
 
-  /* Top matches. Names that START with the query rank above ones that merely
-     contain it, so typing "lotus" leads with "Lotus ..." not "3C Lotus ...". */
+  /* Every match, not a capped shortlist — the list scrolls, so someone whose
+     society ranks 12th can still reach it. Names that START with the query
+     come first, so typing "lotus" leads with "Lotus ..." not "3C Lotus ...".
+     An empty query returns the whole list for the chosen city. */
   function matchingSocieties(value){
     var v = value.trim().toLowerCase();
     var list = currentSocieties();
-    if (!v || !list.length) return [];
+    if (!list.length) return [];
+    if (!v) return list.slice();
     var starts = [], contains = [];
     for (var i = 0; i < list.length; i++){
       var idx = list[i].n.toLowerCase().indexOf(v);
       if (idx === 0) starts.push(list[i]);
       else if (idx > 0) contains.push(list[i]);
-      if (starts.length >= MAX_SUGGESTIONS) break;
     }
-    return starts.concat(contains).slice(0, MAX_SUGGESTIONS);
+    return starts.concat(contains);
   }
 
   var SCREENS = ["phone", "otp", "details", "review"];
@@ -1713,15 +1740,49 @@
 
   /* Each match is { n: name, l: locality }. The locality disambiguates the
      handful of societies that share a name across localities. */
-  function renderSocietyOptions(matches){
-    societyOptions.innerHTML = matches.map(function(s){
-      return '<div class="autocomplete-item" data-value="' + escapeHtml(s.n) + '">' +
-               escapeHtml(s.n) +
+  /* Name (+ locality) on the left, city on the right. */
+  function societyRowHtml(s){
+    return '<div class="autocomplete-item" data-value="' + escapeHtml(s.n) + '">' +
+             '<span class="autocomplete-main">' +
+               '<span class="autocomplete-name">' + escapeHtml(s.n) + "</span>" +
                (s.l ? '<span class="autocomplete-loc">' + escapeHtml(s.l) + "</span>" : "") +
-             "</div>";
-    }).join("");
-    societyOptions.hidden = matches.length === 0;
+             "</span>" +
+             (s.c ? '<span class="autocomplete-city">' + escapeHtml(s.c) + "</span>" : "") +
+           "</div>";
   }
+
+  /* Every match is reachable, but only a window of them sits in the DOM:
+     a city can have 468 societies, and rebuilding that many rows on each
+     keystroke visibly stutters on a mid-range phone. More rows are appended
+     as the list is scrolled. */
+  var RENDER_CHUNK = 40;
+  var shownMatches = [];      /* the full match list for the current query */
+  var shownCount = 0;         /* how many of them are currently in the DOM */
+
+  function appendSocietyRows(){
+    if (shownCount >= shownMatches.length) return;
+    var next = shownMatches.slice(shownCount, shownCount + RENDER_CHUNK);
+    societyOptions.insertAdjacentHTML("beforeend", next.map(societyRowHtml).join(""));
+    shownCount += next.length;
+  }
+
+  function renderSocietyOptions(matches){
+    shownMatches = matches;
+    shownCount = 0;
+    societyOptions.innerHTML = "";
+    societyOptions.hidden = matches.length === 0;
+    if (!matches.length) return;
+    appendSocietyRows();
+    societyOptions.scrollTop = 0;   /* new query starts at the top */
+  }
+
+  /* Within 200px of the bottom, add the next chunk. */
+  societyOptions.addEventListener("scroll", function(){
+    if (societyOptions.scrollTop + societyOptions.clientHeight >=
+        societyOptions.scrollHeight - 200){
+      appendSocietyRows();
+    }
+  });
 
   function refreshSociety(value){
     var exact = findSociety(value);
@@ -1732,10 +1793,12 @@
     if (exact){
       renderSocietyOptions([]);
       societySorry.hidden = true;
-    } else if (trimmed.length >= 1 && matches.length > 0){
+    } else if (matches.length > 0){
+      /* Includes the empty-query case: focusing the field lists every
+         society in the chosen city, so it can be browsed, not just searched. */
       renderSocietyOptions(matches);
       societySorry.hidden = true;
-    } else if (trimmed.length >= 2 && matches.length === 0){
+    } else if (trimmed.length >= 2){
       renderSocietyOptions([]);
       societySorry.hidden = false;
     } else {
@@ -1768,6 +1831,11 @@
     .then(function(res){ return res.json(); })
     .then(function(data){
       if (!data || !data.ok || !data.cities) return;
+      /* Stamp each entry with its city (the grouping key) so a row can show
+         the city even when the list spans all of them. */
+      for (var city in data.cities){
+        data.cities[city].forEach(function(s){ s.c = city; });
+      }
       SOCIETIES_BY_CITY = data.cities;
       if (societyInput.value) refreshSociety(societyInput.value);
     })

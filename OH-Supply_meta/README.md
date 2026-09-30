@@ -14,6 +14,7 @@ api/societies.js     GET  /api/societies   — the societies we cover, cached
 api/_lib.js          pools, phone/OTP helpers shared by the functions
 api/_kaleyra.js      Kaleyra SMS client
 schema.sql           both tables (idempotent)
+test/otp-flow.mjs    end-to-end test of the OTP gate (stubbed SMS)
 vercel.json          security + cache headers; no framework build
 ```
 
@@ -145,6 +146,15 @@ vercel dev                    # serves the page and all functions together
 page calls same-origin `/api/*` routes that only exist under the dev server.
 
 Note that local testing sends **real SMS** to whatever number you enter.
+
+### Tests
+
+```bash
+DATABASE_URL="…" node test/otp-flow.mjs
+```
+
+Exercises the whole OTP gate against a real database — the SMS call is stubbed,
+so nothing is sent and no credit is spent. Test rows are cleaned up afterwards.
 
 ## Notes
 
