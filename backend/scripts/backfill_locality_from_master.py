@@ -62,7 +62,14 @@ def main() -> int:
     conn = psycopg2.connect(inv_url)
     try:
         cur = conn.cursor()
-        cur.execute("CREATE TEMP TABLE _soc_loc (soc_lc TEXT PRIMARY KEY, locality TEXT)")
+        # DATABASE_URL is Neon's POOLED endpoint: server sessions are handed from
+        # client to client, and a temp table lives as long as its session — so a
+        # committed _soc_loc outlives this script and the next run that lands on
+        # that session dies with DuplicateTable. ON COMMIT DROP scopes it to this
+        # transaction (as supply_sync's _supply does). The DROP clears a copy left
+        # by a run from before this fix, still parked on some pooled session.
+        cur.execute("DROP TABLE IF EXISTS pg_temp._soc_loc")
+        cur.execute("CREATE TEMP TABLE _soc_loc (soc_lc TEXT PRIMARY KEY, locality TEXT) ON COMMIT DROP")
         execute_values(
             cur,
             "INSERT INTO _soc_loc (soc_lc, locality) VALUES %s ON CONFLICT (soc_lc) DO NOTHING",

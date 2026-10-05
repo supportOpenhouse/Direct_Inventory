@@ -31,3 +31,5 @@ graphify-out/
 apps_script/
 .pytest_cache/
 frontend-example/
+/docs
+/.vscode
