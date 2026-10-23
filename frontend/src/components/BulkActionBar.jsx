@@ -4,8 +4,10 @@ import { REJECT_REASONS, STAGES, stageLabel, todayISO } from '../utils/format.js
 
 /**
  * Floating bar shown in select-mode with ≥1 rows selected. Supports: change
- * stage (with reject-reason picker), assign RM, set follow-up date, toggle
- * priority. One POST /api/inventory/bulk-update for the whole selection.
+ * stage (with reject-reason picker), assign RM (optionally + a stage change in
+ * the same call), set follow-up date, toggle priority. One POST
+ * /api/inventory/bulk-update for the whole selection — the backend applies every
+ * field in `updates` in one transaction, so RM + stage land together or not at all.
  */
 export default function BulkActionBar({ selected, role, onCleared, onDone }) {
   const [action, setAction] = useState('');     // 'stage' | 'assign_rm' | 'follow_up' | 'priority_on' | 'priority_off'
@@ -22,6 +24,17 @@ export default function BulkActionBar({ selected, role, onCleared, onDone }) {
     api.get('/api/users?role=rm').then((r) => setRms(r.items || [])).catch(() => setRms([]));
   }, []);
 
+  // Adds stage (+ reject reason) to `updates`; returns an error string or null.
+  function addStage(updates) {
+    if (stage === 'visit_scheduled') return 'Visit Scheduled needs the per-row modal';
+    updates.stage = stage;
+    if (stage === 'rejected') {
+      if (!rejectReason) return 'Pick a reject reason';
+      updates.stage_reason = rejectReason;
+    }
+    return null;
+  }
+
   async function submit() {
     setError(null);
     const oh_ids = Array.from(selected);
@@ -29,15 +42,16 @@ export default function BulkActionBar({ selected, role, onCleared, onDone }) {
     const updates = {};
     if (action === 'stage') {
       if (!stage) { setError('Pick a stage'); return; }
-      if (stage === 'visit_scheduled') { setError('Visit Scheduled needs the per-row modal'); return; }
-      updates.stage = stage;
-      if (stage === 'rejected') {
-        if (!rejectReason) { setError('Pick a reject reason'); return; }
-        updates.stage_reason = rejectReason;
-      }
+      const err = addStage(updates);
+      if (err) { setError(err); return; }
     } else if (action === 'assign_rm') {
       if (!rmId) { setError('Pick an RM'); return; }
       updates.assigned_rm_ids = [Number(rmId)]; // replaces any existing assignment
+      // Stage is optional here — blank keeps each lead's current stage.
+      if (stage) {
+        const err = addStage(updates);
+        if (err) { setError(err); return; }
+      }
     } else if (action === 'follow_up') {
       if (!followUp) { setError('Pick a follow-up date'); return; }
       updates.follow_up_at = followUp;
@@ -63,7 +77,7 @@ export default function BulkActionBar({ selected, role, onCleared, onDone }) {
     <div className="bulk-bar">
       <span className="bulk-count">{selected.size} selected</span>
 
-      <select value={action} onChange={(e) => setAction(e.target.value)}>
+      <select value={action} onChange={(e) => { setAction(e.target.value); setStage(''); setRejectReason(''); }}>
         <option value="">— action —</option>
         <option value="stage">Change Stage</option>
         <option value="assign_rm">Assign RM</option>
@@ -72,10 +86,19 @@ export default function BulkActionBar({ selected, role, onCleared, onDone }) {
         {canSetPriority && <option value="priority_off">Unmark Priority</option>}
       </select>
 
-      {action === 'stage' && (
+      {action === 'assign_rm' && (
+        <select value={rmId} onChange={(e) => setRmId(e.target.value)}>
+          <option value="">— RM —</option>
+          {rms.map((u) => (
+            <option key={u.id} value={u.id}>{u.name || u.email}</option>
+          ))}
+        </select>
+      )}
+
+      {(action === 'stage' || action === 'assign_rm') && (
         <>
           <select value={stage} onChange={(e) => setStage(e.target.value)}>
-            <option value="">— stage —</option>
+            <option value="">{action === 'assign_rm' ? '— keep current stage —' : '— stage —'}</option>
             {STAGES.filter((s) => s !== 'visit_scheduled').map((s) => (
               <option key={s} value={s}>{stageLabel(s)}</option>
             ))}
@@ -89,15 +112,6 @@ export default function BulkActionBar({ selected, role, onCleared, onDone }) {
             </select>
           )}
         </>
-      )}
-
-      {action === 'assign_rm' && (
-        <select value={rmId} onChange={(e) => setRmId(e.target.value)}>
-          <option value="">— RM —</option>
-          {rms.map((u) => (
-            <option key={u.id} value={u.id}>{u.name || u.email}</option>
-          ))}
-        </select>
       )}
 
       {action === 'follow_up' && (
